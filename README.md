@@ -119,6 +119,22 @@ Like most regional delivery apps, Wasel earns mainly from a **commission on each
 
 ---
 
+## Brand Colors
+
+Wasel avoids the orange, red, yellow and green that most delivery apps in the region use. Its colors come from the **Ishtar Gate of Babylon**: deep lapis blue with gold.
+
+| Token | Light | Dark | Used for |
+| :--- | :--- | :--- | :--- |
+| Lapis (brand) | `#22379B` | `#1A2A7A` | Brand panels, splash screen, app icon background |
+| Gold | `#F2C75C` | `#F2C75C` | The واصل wordmark on lapis only, never on buttons or text |
+| Accent | `#22379B` | `#93A6FF` | Buttons, links, selected states |
+| Background | `#F2F4F9` | `#0D1020` | Page background |
+| Text | `#141A2E` | `#EDF0FA` | Body text |
+
+All text colors meet WCAG AA contrast (4.5:1 or better) in both modes.
+
+---
+
 ## 3. Technology Stack
 
 | Layer | Technology Choices | Rationale |

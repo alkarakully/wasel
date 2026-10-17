@@ -1,32 +1,39 @@
 :root {
-  --bg: #f4f4f5;
-  --surface: #fdfdfd;
-  --text: #18181b;
-  --muted: #52525b;
-  --border: #d4d4d8;
-  --accent: #c2410c;
-  --accent-hover: #9a3412;
-  --on-accent: #fffaf5;
-  --accent-soft: #fff1e8;
-  --error: #b91c1c;
-  --focus: #c2410c;
+  /* Wasel brand: Babylon lapis (Ishtar Gate blue) with gold kept for the wordmark only. */
+  --brand-bg: #22379b;
+  --brand-text: #f4f6ff;
+  --brand-gold: #f2c75c;
+
+  --bg: #f2f4f9;
+  --surface: #fbfcfe;
+  --text: #141a2e;
+  --muted: #4a5170;
+  --border: #d3d8e6;
+  --accent: #22379b;
+  --accent-hover: #182a7d;
+  --on-accent: #f4f6ff;
+  --accent-soft: #e6eafb;
+  --error: #b42318;
+  --focus: #22379b;
   --radius: 12px;
   --font: "SF Arabic", "Segoe UI", "Noto Sans Arabic", "Noto Sans", Tahoma, system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111113;
-    --surface: #18181b;
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
-    --border: #3f3f46;
-    --accent: #fb923c;
-    --accent-hover: #fdba74;
-    --on-accent: #1c1008;
-    --accent-soft: #2a1a10;
-    --error: #f87171;
-    --focus: #fb923c;
+    --brand-bg: #1a2a7a;
+
+    --bg: #0d1020;
+    --surface: #151a2f;
+    --text: #edf0fa;
+    --muted: #a3aac4;
+    --border: #2d3453;
+    --accent: #93a6ff;
+    --accent-hover: #b4c2ff;
+    --on-accent: #0d1330;
+    --accent-soft: #1c2450;
+    --error: #ff8a80;
+    --focus: #93a6ff;
   }
 }
 
@@ -52,10 +59,10 @@ body {
   grid-template-columns: minmax(320px, 5fr) 7fr;
 }
 
-/* Brand side: solid accent block with the wordmark. */
+/* Brand side: lapis block with the gold wordmark. */
 .brand {
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--brand-bg);
+  color: var(--brand-text);
   padding: 48px;
   display: flex;
   flex-direction: column;
@@ -68,6 +75,7 @@ body {
   font-size: clamp(4rem, 9vw, 7.5rem);
   font-weight: 800;
   line-height: 1.1;
+  color: var(--brand-gold);
 }
 
 .brand-line {
