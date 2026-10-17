@@ -42,6 +42,14 @@ class OrderSerializer(serializers.ModelSerializer):
             "delivery_pin",
             "items",
             "created_at",
+            "accepted_at",
+            "estimated_ready_at",
+            "ready_at",
+            "picked_up_at",
+            "delivered_at",
+            "cancelled_at",
+            "cancelled_by",
+            "cancel_reason",
             "updated_at",
         ]
 
@@ -74,6 +82,22 @@ class CartSerializer(serializers.Serializer):
 class PlaceOrderSerializer(CartSerializer):
     delivery_address = serializers.CharField(max_length=255)
     payment_type = serializers.ChoiceField(choices=Order.PaymentType.choices, default=Order.PaymentType.COD)
+
+
+class AcceptSerializer(serializers.Serializer):
+    prep_minutes = serializers.IntegerField(min_value=5, max_value=120)
+
+
+class ReasonSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
+
+
+class RejectSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=255)
+
+
+class DeliverSerializer(serializers.Serializer):
+    pin = serializers.RegexField(r"^\d{4}$", error_messages={"invalid": "The PIN is 4 digits."})
 
 
 def _money(amount):

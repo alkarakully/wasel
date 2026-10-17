@@ -76,6 +76,8 @@ No SMS provider is connected yet. With `DJANGO_DEBUG` off, SMS sending fails unt
 | `GET /api/orders/` | Login required. Orders where you are the customer, captain or vendor owner. The delivery PIN is shown to the customer only. |
 | `POST /api/orders/quote/` | Login required. Prices a cart without placing it (see below). |
 | `POST /api/orders/` | Login required. Places the order at exactly the quoted price. |
+| `POST /api/orders/{id}/<step>/` | Moves an order through its statuses (see below). |
+| `GET /api/orders/available/` | Captains only. Accepted orders no captain has taken yet, oldest first. |
 
 ## Placing orders
 
@@ -107,4 +109,27 @@ How the price is built (`orders/pricing.py`, values in `ORDER_PRICING` in settin
 
 Wallet orders are paid at once from the customer's balance; cash and card orders stay `pending` (no card gateway yet). Errors come back as `{"error": "<code>", "detail": "..."}` with codes such as `vendor_closed`, `out_of_delivery_area`, `product_unavailable`, `missing_required_option`, `offer_not_applicable` and `insufficient_wallet_balance`.
 
-Not built yet: an SMS provider, card payments, order status updates, WebSockets (Django Channels) and background jobs (Celery).
+## Order status flow
+
+```
+received --accept--> preparing --ready--> ready --pickup--> out_for_delivery --deliver (PIN)--> delivered
+   |                     ^                  ^
+   |-- cancel (customer) +-- claim (captain, once, while preparing or ready)
+   +-- reject (store)
+```
+
+| Step | Who | Body | Rule |
+| :--- | :--- | :--- | :--- |
+| `accept` | Store owner | `{"prep_minutes": 15}` (5-120) | Only from `received`. Sets the estimated ready time. |
+| `reject` | Store owner | `{"reason": "..."}` | Only from `received`. |
+| `ready` | Store owner | | Only from `preparing`. |
+| `cancel` | Customer | `{"reason": "..."}` (optional) | Only before the store accepts. |
+| `claim` | Any captain | | While `preparing` or `ready` and no captain yet. First captain wins; others get `already_claimed`. |
+| `pickup` | The order's captain | | Only from `ready`. |
+| `deliver` | The order's captain | `{"pin": "1234"}` | The customer reads the 4-digit PIN at the door. 5 wrong PINs lock the order until support steps in. |
+
+Every step returns the updated order, or `{"error", "detail"}`: `not_allowed` (403), `invalid_transition` or `already_claimed` (409), `wrong_pin` (400), `pin_locked` (423). Users who aren't part of an order get 404. Each step records its time (`accepted_at`, `ready_at`, `picked_up_at`, `delivered_at`, `cancelled_at`).
+
+Cancelled or rejected wallet orders are refunded to the wallet straight away. Cash orders are marked paid when delivered.
+
+Not built yet: live updates to the apps (WebSockets via Django Channels), push notifications, stuck-order alerts (Celery), automatic captain dispatch, an SMS provider and card payments.

@@ -27,6 +27,10 @@ class Order(models.Model):
         PAID = "paid", "Paid"
         REFUNDED = "refunded", "Refunded"
 
+    class CancelledBy(models.TextChoices):
+        CUSTOMER = "customer", "Customer"
+        VENDOR = "vendor", "Vendor"
+
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
     vendor = models.ForeignKey("vendors.Vendor", on_delete=models.PROTECT, related_name="orders")
     captain = models.ForeignKey(
@@ -54,6 +58,18 @@ class Order(models.Model):
     total_amount = money_field(default=0)
 
     delivery_pin = models.CharField(max_length=6, blank=True)
+    pin_attempts = models.PositiveSmallIntegerField(default=0)
+
+    # Status timeline, used for tracking and for spotting stuck orders.
+    accepted_at = models.DateTimeField(null=True, blank=True)
+    estimated_ready_at = models.DateTimeField(null=True, blank=True)
+    ready_at = models.DateTimeField(null=True, blank=True)
+    picked_up_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
+    cancelled_by = models.CharField(max_length=10, choices=CancelledBy.choices, blank=True)
+    cancel_reason = models.CharField(max_length=255, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -315,3 +315,152 @@ class PlaceOrderTests(PricingTestBase):
         self.assertError(self.place(payment_type="wallet"), "insufficient_wallet_balance")
         self.assertFalse(Order.objects.filter(customer=self.customer).exists())
         self.assertFalse(WalletTransaction.objects.exists())
+
+
+# --- Status flow ----------------------------------------------------------------
+
+
+class StatusFlowTests(PricingTestBase):
+    def setUp(self):
+        super().setUp()
+        self.captain = User.objects.create_user(phone="+9647700000030", role=User.Role.CAPTAIN)
+        self.other_captain = User.objects.create_user(phone="+9647700000031", role=User.Role.CAPTAIN)
+        self.order_id = self.place().json()["id"]
+
+    def step(self, user, name, **body):
+        self.client.force_authenticate(user)
+        return self.client.post(f"/api/orders/{self.order_id}/{name}/", body, format="json")
+
+    def order(self):
+        return Order.objects.get(pk=self.order_id)
+
+    def pin(self):
+        return self.order().delivery_pin
+
+    def deliver_ready_order(self):
+        self.step(self.owner, "accept", prep_minutes=15)
+        self.step(self.captain, "claim")
+        self.step(self.owner, "ready")
+        self.step(self.captain, "pickup")
+
+    def assertStepError(self, response, status_code, code):
+        self.assertEqual(response.status_code, status_code, response.content)
+        self.assertEqual(response.json()["error"], code)
+
+    def test_full_happy_path(self):
+        response = self.step(self.owner, "accept", prep_minutes=20)
+        self.assertEqual(response.status_code, 200, response.content)
+        self.assertEqual(response.json()["status"], "preparing")
+        order = self.order()
+        self.assertAlmostEqual((order.estimated_ready_at - order.accepted_at).total_seconds(), 20 * 60, delta=1)
+
+        self.assertEqual(self.step(self.captain, "claim").json()["status"], "preparing")
+        self.assertEqual(self.step(self.owner, "ready").json()["status"], "ready")
+        self.assertEqual(self.step(self.captain, "pickup").json()["status"], "out_for_delivery")
+
+        response = self.step(self.captain, "deliver", pin=self.pin())
+        self.assertEqual(response.status_code, 200, response.content)
+        body = response.json()
+        self.assertEqual(body["status"], "delivered")
+        self.assertEqual(body["payment_status"], "paid")  # cash collected at the door
+        self.assertIsNone(body["delivery_pin"])  # captain never sees it
+        order = self.order()
+        self.assertTrue(all([order.accepted_at, order.ready_at, order.picked_up_at, order.delivered_at]))
+
+    def test_steps_cannot_be_skipped(self):
+        self.assertStepError(self.step(self.owner, "ready"), 409, "invalid_transition")
+        self.step(self.owner, "accept", prep_minutes=10)
+        self.step(self.captain, "claim")
+        self.assertStepError(self.step(self.captain, "pickup"), 409, "invalid_transition")
+
+    def test_store_steps_need_the_store_owner(self):
+        response = self.step(self.customer, "accept", prep_minutes=10)
+        self.assertStepError(response, 403, "not_allowed")
+
+    def test_unrelated_users_get_404(self):
+        stranger = User.objects.create_user(phone="+9647700000040")
+        self.assertEqual(self.step(stranger, "cancel").status_code, 404)
+
+    def test_prep_minutes_is_validated(self):
+        self.assertEqual(self.step(self.owner, "accept", prep_minutes=500).status_code, 400)
+
+    def test_customer_can_cancel_before_store_accepts(self):
+        response = self.step(self.customer, "cancel", reason="Ordered by mistake")
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual((body["status"], body["cancelled_by"]), ("cancelled", "customer"))
+
+    def test_customer_cannot_cancel_after_store_accepts(self):
+        self.step(self.owner, "accept", prep_minutes=10)
+        self.assertStepError(self.step(self.customer, "cancel"), 409, "invalid_transition")
+
+    def test_store_rejects_with_reason(self):
+        self.assertEqual(self.step(self.owner, "reject").status_code, 400)  # reason required
+        response = self.step(self.owner, "reject", reason="Out of kebab today")
+        body = response.json()
+        self.assertEqual((body["status"], body["cancelled_by"], body["cancel_reason"]), ("cancelled", "vendor", "Out of kebab today"))
+
+    def test_cancelled_wallet_order_is_refunded(self):
+        User.objects.filter(pk=self.customer.pk).update(wallet_balance=30000)
+        self.client.force_authenticate(self.customer)
+        self.order_id = self.place(payment_type="wallet").json()["id"]
+
+        response = self.step(self.owner, "reject", reason="Closing early")
+        self.assertEqual(response.json()["payment_status"], "refunded")
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.wallet_balance, Decimal(30000))
+        self.assertEqual(
+            list(WalletTransaction.objects.filter(user=self.customer).order_by("created_at").values_list("type", "amount")),
+            [("payment", Decimal(-25250)), ("refund", Decimal(25250))],
+        )
+
+    def test_only_one_captain_can_claim(self):
+        self.step(self.owner, "accept", prep_minutes=10)
+        self.assertEqual(self.step(self.captain, "claim").status_code, 200)
+        self.assertEqual(self.step(self.captain, "claim").status_code, 200)  # repeat is harmless
+        self.assertStepError(self.step(self.other_captain, "claim"), 409, "already_claimed")
+
+    def test_customers_cannot_claim(self):
+        self.step(self.owner, "accept", prep_minutes=10)
+        self.assertStepError(self.step(self.customer, "claim"), 403, "not_allowed")
+
+    def test_claim_needs_store_to_accept_first(self):
+        self.assertStepError(self.step(self.captain, "claim"), 409, "invalid_transition")
+
+    def test_other_captain_cannot_pick_up_or_deliver(self):
+        self.deliver_ready_order()
+        self.assertEqual(self.step(self.other_captain, "deliver", pin=self.pin()).status_code, 404)
+
+    def test_wrong_pin_then_right_pin(self):
+        self.deliver_ready_order()
+        wrong = "0000" if self.pin() != "0000" else "1111"
+        response = self.step(self.captain, "deliver", pin=wrong)
+        self.assertStepError(response, 400, "wrong_pin")
+        self.assertIn("4 attempts left", response.json()["detail"])
+        self.assertEqual(self.order().pin_attempts, 1)
+        self.assertEqual(self.step(self.captain, "deliver", pin=self.pin()).json()["status"], "delivered")
+
+    def test_pin_locks_after_five_wrong_tries(self):
+        self.deliver_ready_order()
+        wrong = "0000" if self.pin() != "0000" else "1111"
+        for _ in range(5):
+            self.step(self.captain, "deliver", pin=wrong)
+        self.assertStepError(self.step(self.captain, "deliver", pin=self.pin()), 423, "pin_locked")
+        self.assertEqual(self.order().status, "out_for_delivery")
+
+    def test_available_lists_unclaimed_accepted_orders_for_captains(self):
+        self.client.force_authenticate(self.captain)
+        self.assertEqual(self.client.get("/api/orders/available/").json()["results"], [])
+
+        self.step(self.owner, "accept", prep_minutes=10)
+        self.client.force_authenticate(self.captain)
+        ids = [o["id"] for o in self.client.get("/api/orders/available/").json()["results"]]
+        self.assertEqual(ids, [self.order_id])
+
+        self.step(self.captain, "claim")
+        self.client.force_authenticate(self.other_captain)
+        self.assertEqual(self.client.get("/api/orders/available/").json()["results"], [])
+
+    def test_available_is_captains_only(self):
+        self.client.force_authenticate(self.customer)
+        self.assertEqual(self.client.get("/api/orders/available/").status_code, 403)
