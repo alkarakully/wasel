@@ -2,8 +2,11 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import F, Prefetch
 from django.utils import timezone
-from rest_framework import viewsets
+from rest_framework import permissions, serializers, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Offer, Product, Vendor
 from .serializers import OfferSerializer, VendorDetailSerializer, VendorSerializer
@@ -49,6 +52,44 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
                 Prefetch("products", queryset=Product.objects.prefetch_related("modifiers"))
             )
         return queryset
+
+    # --- Store owner -----------------------------------------------------------
+
+    @action(detail=False, permission_classes=[permissions.IsAuthenticated])
+    def mine(self, request):
+        """The signed-in owner's stores, with full menus."""
+        stores = (
+            Vendor.objects.filter(owner=request.user)
+            .order_by("name")
+            .prefetch_related(Prefetch("products", queryset=Product.objects.prefetch_related("modifiers")))
+        )
+        return Response(VendorDetailSerializer(stores, many=True).data)
+
+    @action(detail=True, methods=["post"], url_path="open", permission_classes=[permissions.IsAuthenticated])
+    def set_open(self, request, pk=None):
+        """POST {is_open} opens or closes the store for new orders."""
+        store = self.get_object()
+        if store.owner_id != request.user.pk:
+            return Response({"error": "not_allowed", "detail": "Only the store owner can do this."}, status=403)
+        store.is_open = serializers.BooleanField().to_internal_value(request.data.get("is_open"))
+        store.save(update_fields=["is_open"])
+        return Response({"id": store.pk, "is_open": store.is_open})
+
+
+class ProductAvailabilityView(APIView):
+    """POST /api/products/{id}/availability/ {is_available}: mark an item in or out of stock."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        product = Product.objects.select_related("vendor").filter(pk=pk).first()
+        if product is None:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        if product.vendor.owner_id != request.user.pk:
+            return Response({"error": "not_allowed", "detail": "Only the store owner can do this."}, status=403)
+        product.is_available = serializers.BooleanField().to_internal_value(request.data.get("is_available"))
+        product.save(update_fields=["is_available"])
+        return Response({"id": product.pk, "is_available": product.is_available})
 
 
 class OfferViewSet(viewsets.ReadOnlyModelViewSet):

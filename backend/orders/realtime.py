@@ -49,7 +49,7 @@ def _order_data(order):
 
 
 def _broadcast(order_id, was_available):
-    order = Order.objects.select_related("vendor", "captain__location").prefetch_related("items__modifiers").get(pk=order_id)
+    order = Order.objects.select_related("vendor", "captain__location").prefetch_related("items__product", "items__modifiers__modifier").get(pk=order_id)
     data = _order_data(order)
 
     # Only the customer gets the PIN; they read it to the captain at the door.

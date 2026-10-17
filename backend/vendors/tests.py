@@ -94,3 +94,50 @@ class VendorApiTests(TestCase):
         Offer.objects.create(title="Ended", type="percent", value=10, starts_at=now - timedelta(days=5), ends_at=now - timedelta(days=1))
         response = self.client.get("/api/offers/")
         self.assertEqual([offer["title"] for offer in response.json()["results"]], ["Live"])
+
+
+class StoreOwnerApiTests(TestCase):
+    def setUp(self):
+        self.owner = User.objects.create_user(phone="+9647800000030", role=User.Role.VENDOR)
+        self.other_owner = User.objects.create_user(phone="+9647800000031", role=User.Role.VENDOR)
+        self.store = make_vendor(self.owner, "Owner Grill", *TAHRIR, is_open=True)
+        make_vendor(self.other_owner, "Someone Else", *TAHRIR)
+        self.product = Product.objects.create(vendor=self.store, name_ar="تكة", price=8000)
+        self.client = APIClient()
+
+    def test_mine_lists_only_my_stores_with_menus(self):
+        self.client.force_authenticate(self.owner)
+        stores = self.client.get("/api/vendors/mine/").json()
+        self.assertEqual([s["name"] for s in stores], ["Owner Grill"])
+        self.assertEqual(stores[0]["products"][0]["name_ar"], "تكة")
+
+    def test_mine_needs_login(self):
+        self.assertEqual(self.client.get("/api/vendors/mine/").status_code, 401)
+
+    def test_owner_opens_and_closes_store(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(f"/api/vendors/{self.store.pk}/open/", {"is_open": False}, format="json")
+        self.assertEqual(response.json(), {"id": self.store.pk, "is_open": False})
+        self.store.refresh_from_db()
+        self.assertFalse(self.store.is_open)
+
+    def test_other_owner_cannot_close_my_store(self):
+        self.client.force_authenticate(self.other_owner)
+        response = self.client.post(f"/api/vendors/{self.store.pk}/open/", {"is_open": False}, format="json")
+        self.assertEqual(response.status_code, 403)
+
+    def test_open_needs_a_boolean(self):
+        self.client.force_authenticate(self.owner)
+        self.assertEqual(self.client.post(f"/api/vendors/{self.store.pk}/open/", {}, format="json").status_code, 400)
+
+    def test_owner_marks_item_out_of_stock(self):
+        self.client.force_authenticate(self.owner)
+        response = self.client.post(f"/api/products/{self.product.pk}/availability/", {"is_available": False}, format="json")
+        self.assertEqual(response.json(), {"id": self.product.pk, "is_available": False})
+        self.product.refresh_from_db()
+        self.assertFalse(self.product.is_available)
+
+    def test_other_owner_cannot_change_my_items(self):
+        self.client.force_authenticate(self.other_owner)
+        response = self.client.post(f"/api/products/{self.product.pk}/availability/", {"is_available": False}, format="json")
+        self.assertEqual(response.status_code, 403)

@@ -309,6 +309,16 @@ class PlaceOrderTests(PricingTestBase):
         self.client.force_authenticate(captain)
         self.assertIsNone(self.client.get(f"/api/orders/{order_id}/").json()["customer_contact"])
 
+    def test_items_carry_names_and_status_filter_works(self):
+        order_id = self.place().json()["id"]
+        self.client.force_authenticate(self.owner)
+        body = self.client.get("/api/orders/", {"status": "received,preparing"}).json()["results"]
+        self.assertEqual([o["id"] for o in body], [order_id])
+        kebab = next(item for item in body[0]["items"] if item["product"] == self.kebab.pk)
+        self.assertEqual(kebab["name"]["en"], "Kebab")
+        self.assertEqual(sorted(m["group_name"] for m in kebab["modifiers"]), ["Extras", "Size"])
+        self.assertEqual(self.client.get("/api/orders/", {"status": "delivered"}).json()["results"], [])
+
     def test_pin_hidden_from_vendor_owner(self):
         order_id = self.place().json()["id"]
         self.client.force_authenticate(self.owner)

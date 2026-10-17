@@ -4,18 +4,34 @@ from .models import TRACKED_STATUSES, CaptainLocation, Order, OrderItem, OrderIt
 from .pricing import round_dinars
 
 
+def names(obj):
+    return {"ar": obj.name_ar, "ku": obj.name_ku, "en": obj.name_en}
+
+
 class OrderItemModifierSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+    group_name = serializers.CharField(source="modifier.group_name", read_only=True)
+
     class Meta:
         model = OrderItemModifier
-        fields = ["modifier", "price_delta"]
+        fields = ["modifier", "group_name", "name", "price_delta"]
+
+    def get_name(self, item_modifier):
+        return names(item_modifier.modifier)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
     modifiers = OrderItemModifierSerializer(many=True, read_only=True)
+    # Names travel with the order so stores and captains see what to prepare.
+    name = serializers.SerializerMethodField()
+    unit_type = serializers.CharField(source="product.unit_type", read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "quantity", "unit_price", "line_total", "modifiers"]
+        fields = ["id", "product", "name", "unit_type", "quantity", "unit_price", "line_total", "modifiers"]
+
+    def get_name(self, item):
+        return names(item.product)
 
 
 def point_payload(point):

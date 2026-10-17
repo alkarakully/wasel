@@ -2,6 +2,7 @@ from django.contrib.gis.geos import Point
 from django.db.models import Q
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -23,6 +24,13 @@ from .serializers import (
 )
 from .services import place_order
 from .tracking import update_captain_location
+
+
+class OrderPagination(PageNumberPagination):
+    # A busy store board asks for all open orders at once (?page_size=100).
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 def pricing_error_response(error):
@@ -47,14 +55,19 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     lookup_value_regex = r"\d+"
+    pagination_class = OrderPagination
 
     def get_queryset(self):
         user = self.request.user
+        orders = Order.objects.all()
+        # ?status=received,preparing narrows the list (the store board uses it).
+        if statuses := self.request.query_params.get("status"):
+            orders = orders.filter(status__in=statuses.split(","))
         return (
-            Order.objects.filter(Q(customer=user) | Q(captain=user) | Q(vendor__owner=user))
+            orders.filter(Q(customer=user) | Q(captain=user) | Q(vendor__owner=user))
             .distinct()
             .select_related("vendor", "customer", "captain__location")
-            .prefetch_related("items__modifiers")
+            .prefetch_related("items__product", "items__modifiers__modifier")
         )
 
     @action(detail=False, methods=["post"])
@@ -164,7 +177,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             Order.objects.filter(status__in=[Order.Status.PREPARING, Order.Status.READY], captain__isnull=True)
             .order_by("created_at")
             .select_related("vendor", "customer", "captain__location")
-            .prefetch_related("items__modifiers")
+            .prefetch_related("items__product", "items__modifiers__modifier")
         )
         page = self.paginate_queryset(orders)
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
