@@ -132,4 +132,22 @@ Every step returns the updated order, or `{"error", "detail"}`: `not_allowed` (4
 
 Cancelled or rejected wallet orders are refunded to the wallet straight away. Cash orders are marked paid when delivered.
 
-Not built yet: live updates to the apps (WebSockets via Django Channels), push notifications, stuck-order alerts (Celery), automatic captain dispatch, an SMS provider and card payments.
+## Live order updates (WebSockets)
+
+Apps keep one socket open per signed-in user, using the same API token as REST:
+
+```
+ws://localhost:8000/ws/orders/?token=<token>
+```
+
+On connect the server sends `{"type": "connected", "user_id": 12}`. A missing or wrong token is accepted and then closed with code `4401`, so the app can tell it apart from a network drop. Send `{"type": "ping"}` to keep a mobile connection alive; the server answers `{"type": "pong"}`.
+
+| Message | Who gets it | When |
+| :--- | :--- | :--- |
+| `{"type": "order.updated", "order": {...}}` | The customer, the store owner and the order's captain | The order is placed or changes status. `order` is the same as `GET /api/orders/{id}/`; only the customer's copy includes `delivery_pin`. |
+| `{"type": "order.available", "order": {...}}` | All captains | A store accepts an order that has no captain yet. |
+| `{"type": "order.unavailable", "order_id": 12}` | All captains | That order was claimed or cancelled; remove it from the list. |
+
+Updates go through Redis (`REDIS_URL`), so they reach sockets on any server process. They are sent after the change is saved; if Redis is down the change still succeeds and the failure is logged. `runserver` serves both HTTP and WebSockets through Daphne.
+
+Not built yet: push notifications for when the app is closed, stuck-order alerts (Celery), automatic captain dispatch, captain GPS tracking, an SMS provider and card payments.

@@ -13,6 +13,8 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 INSTALLED_APPS = [
+    # Daphne first so `runserver` serves HTTP and WebSockets (ASGI).
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -22,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     "rest_framework",
     "rest_framework.authtoken",
+    "channels",
     "accounts",
     "subscriptions",
     "vendors",
@@ -57,6 +60,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "wasel.wsgi.application"
 ASGI_APPLICATION = "wasel.asgi.application"
+
+# Live order updates go through Redis so every server process can reach every socket.
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {"hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379/0")]},
+    }
+}
 
 DATABASES = {
     "default": dj_database_url.config(

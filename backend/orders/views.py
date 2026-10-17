@@ -6,7 +6,7 @@ from rest_framework.response import Response
 
 from accounts.models import User
 
-from . import workflow
+from . import realtime, workflow
 from .models import Order
 from .pricing import PricingError, build_quote
 from .serializers import (
@@ -89,6 +89,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             )
         except PricingError as error:
             return pricing_error_response(error)
+        realtime.broadcast_order(order.pk)
         order = self.get_queryset().get(pk=order.pk)
         return Response(self.get_serializer(order).data, status=status.HTTP_201_CREATED)
 
@@ -102,10 +103,12 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             serializer = input_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             data = serializer.validated_data
+        was_available = realtime.was_available(order)
         try:
             order = run(order.pk, request.user, **data)
         except workflow.WorkflowError as error:
             return Response({"error": error.code, "detail": error.detail}, status=error.status)
+        realtime.broadcast_order(order.pk, was_available)
         return Response(self.get_serializer(self.get_queryset().get(pk=order.pk)).data)
 
     @action(detail=True, methods=["post"])
@@ -141,6 +144,8 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
         except workflow.WorkflowError as error:
             return Response({"error": error.code, "detail": error.detail}, status=error.status)
+        # Before the claim it was waiting for a captain; now it isn't.
+        realtime.broadcast_order(order.pk, was_available=True)
         return Response(self.get_serializer(self.get_queryset().get(pk=order.pk)).data)
 
     @action(detail=False, methods=["get"])
