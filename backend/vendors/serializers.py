@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from orders.pricing import delivery_fee_for
+
 from .models import Offer, Product, ProductModifier, Vendor
 
 
@@ -30,6 +32,9 @@ class ProductSerializer(serializers.ModelSerializer):
 class VendorSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
+    # Only filled when the list is asked for a delivery spot (?lat=&lng=).
+    distance_km = serializers.SerializerMethodField()
+    delivery_fee = serializers.SerializerMethodField()
 
     class Meta:
         model = Vendor
@@ -43,7 +48,18 @@ class VendorSerializer(serializers.ModelSerializer):
             "delivery_radius_km",
             "is_open",
             "opening_hours",
+            "distance_km",
+            "delivery_fee",
         ]
+
+    def get_distance_km(self, vendor):
+        distance = getattr(vendor, "distance", None)
+        return round(distance.km, 2) if distance is not None else None
+
+    def get_delivery_fee(self, vendor):
+        # Standard fee before Wasel Plus or offers; checkout shows the final price.
+        distance = getattr(vendor, "distance", None)
+        return str(delivery_fee_for(distance.m)) if distance is not None else None
 
     def get_latitude(self, vendor):
         return vendor.location.y

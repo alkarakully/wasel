@@ -67,6 +67,13 @@ class VendorApiTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.names(response), ["Near Open", "Near Closed"])
 
+    def test_location_list_includes_distance_and_delivery_fee(self):
+        response = self.client.get("/api/vendors/", {"lat": TAHRIR[0], "lng": TAHRIR[1]})
+        near_open = response.json()["results"][0]
+        self.assertAlmostEqual(near_open["distance_km"], 1.0, delta=0.05)
+        self.assertEqual(near_open["delivery_fee"], "1500")
+        self.assertIsNone(self.client.get("/api/vendors/").json()["results"][0]["delivery_fee"])
+
     def test_cuisine_filter(self):
         response = self.client.get("/api/vendors/", {"cuisine": "eastern"})
         self.assertEqual(self.names(response), ["Near Open"])

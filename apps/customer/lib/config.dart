@@ -1,0 +1,21 @@
+/// Build-time settings. Override with --dart-define, for example:
+///   flutter run --dart-define=API_URL=http://localhost:8010
+class Config {
+  static const apiUrl = String.fromEnvironment(
+    'API_URL',
+    defaultValue: 'http://localhost:8000',
+  );
+
+  static const mapStyleLight = String.fromEnvironment(
+    'MAP_STYLE_LIGHT',
+    defaultValue: 'https://tiles.openfreemap.org/styles/positron',
+  );
+  static const mapStyleDark = String.fromEnvironment(
+    'MAP_STYLE_DARK',
+    defaultValue: 'https://tiles.openfreemap.org/styles/dark',
+  );
+
+  /// Used when the phone's location isn't available: Karrada, Baghdad.
+  static const fallbackLat = 33.3045;
+  static const fallbackLng = 44.4214;
+}

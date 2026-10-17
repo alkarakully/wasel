@@ -67,7 +67,9 @@ class Product(models.Model):
     is_available = models.BooleanField(default=True)
 
     class Meta:
-        ordering = ["menu_section", "id"]
+        # Menu order is the order the store added items; sections appear in
+        # the order their first item was added.
+        ordering = ["id"]
 
     def __str__(self):
         return self.name_en or self.name_ar
