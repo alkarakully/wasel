@@ -21,6 +21,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "django.contrib.gis",
     "rest_framework",
+    "rest_framework.authtoken",
     "accounts",
     "subscriptions",
     "vendors",
@@ -85,6 +86,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -92,4 +94,44 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    # Per client IP, on top of the per-phone limits in OTP below.
+    "DEFAULT_THROTTLE_RATES": {
+        "otp_request": "10/hour",
+        "otp_verify": "30/hour",
+    },
+}
+
+# Phone login codes.
+OTP = {
+    "CODE_TTL_SECONDS": 300,
+    "RESEND_SECONDS": 60,
+    "MAX_PER_HOUR": 5,
+    "MAX_ATTEMPTS": 5,
+    "SENDERS": {
+        "whatsapp": (
+            "accounts.otp.WhatsAppCloudSender"
+            if os.environ.get("WHATSAPP_TOKEN")
+            else "accounts.otp.ConsoleSender"
+            if DEBUG
+            else "accounts.otp.UnconfiguredSender"
+        ),
+        # No SMS provider chosen yet; codes go to the server log in development.
+        "sms": "accounts.otp.ConsoleSender" if DEBUG else "accounts.otp.UnconfiguredSender",
+    },
+}
+
+WHATSAPP = {
+    "TOKEN": os.environ.get("WHATSAPP_TOKEN", ""),
+    "PHONE_NUMBER_ID": os.environ.get("WHATSAPP_PHONE_NUMBER_ID", ""),
+    "TEMPLATE": os.environ.get("WHATSAPP_TEMPLATE", "wasel_login_code"),
+    "TEMPLATE_LANGUAGE": os.environ.get("WHATSAPP_TEMPLATE_LANGUAGE", "ar"),
+    "API_VERSION": os.environ.get("WHATSAPP_API_VERSION", "v21.0"),
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "root": {"handlers": ["console"], "level": "WARNING"},
 }

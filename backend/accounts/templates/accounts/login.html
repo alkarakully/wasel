@@ -1,0 +1,95 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>واصل | تسجيل الدخول</title>
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
+</head>
+<body>
+  <main class="shell">
+    <aside class="brand" aria-hidden="true">
+      <p class="brand-mark">واصل</p>
+      <p class="brand-line" data-i18n="brandLine">اطلب من مطاعمك وأسواقك المفضلة، ويوصلك الطلب لباب البيت.</p>
+    </aside>
+
+    <section class="panel">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="ar" aria-pressed="true">العربية</button>
+        <button type="button" data-lang="ku" aria-pressed="false">کوردی</button>
+        <button type="button" data-lang="en" aria-pressed="false">English</button>
+      </div>
+
+      <!-- Step 1: phone number -->
+      <form class="step" id="step-phone" novalidate>
+        <h1 data-i18n="phoneTitle">سجّل دخولك</h1>
+        <p class="lead" data-i18n="phoneLead">أدخل رقم هاتفك وسنرسل لك رمز الدخول.</p>
+
+        <div class="field">
+          <label for="phone" data-i18n="phoneLabel">رقم الهاتف</label>
+          <div class="phone-input" dir="ltr">
+            <span class="prefix">+964</span>
+            <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national"
+                   placeholder="0770 123 4567" aria-describedby="phone-help phone-error" required>
+          </div>
+          <p class="help" id="phone-help" data-i18n="phoneHelp">رقم عراقي يبدأ بـ 07</p>
+          <p class="error" id="phone-error" role="alert" hidden></p>
+        </div>
+
+        <fieldset class="field channels">
+          <legend data-i18n="channelLabel">أرسل الرمز عبر</legend>
+          <label class="channel">
+            <input type="radio" name="channel" value="whatsapp" checked>
+            <i class="ph ph-whatsapp-logo" aria-hidden="true"></i>
+            <span data-i18n="whatsapp">واتساب</span>
+          </label>
+          <label class="channel">
+            <input type="radio" name="channel" value="sms">
+            <i class="ph ph-chat-text" aria-hidden="true"></i>
+            <span data-i18n="sms">رسالة نصية</span>
+          </label>
+        </fieldset>
+
+        <button class="primary" type="submit" data-i18n="sendCode">أرسل الرمز</button>
+      </form>
+
+      <!-- Step 2: code -->
+      <form class="step" id="step-code" novalidate hidden>
+        <button type="button" class="back" id="change-number">
+          <i class="ph ph-arrow-right flip" aria-hidden="true"></i>
+          <span data-i18n="changeNumber">تغيير الرقم</span>
+        </button>
+        <h1 data-i18n="codeTitle">أدخل الرمز</h1>
+        <p class="lead" id="code-lead"></p>
+
+        <div class="field">
+          <label for="code" data-i18n="codeLabel">رمز الدخول</label>
+          <input id="code" name="code" class="code-input" dir="ltr" type="text" inputmode="numeric"
+                 autocomplete="one-time-code" maxlength="6" pattern="\d{6}"
+                 aria-describedby="code-error" required>
+          <p class="error" id="code-error" role="alert" hidden></p>
+        </div>
+
+        <button class="primary" type="submit" data-i18n="confirm">تأكيد</button>
+        <p class="resend">
+          <span id="resend-wait"></span>
+          <button type="button" class="link" id="resend" hidden data-i18n="resend">إعادة إرسال الرمز</button>
+        </p>
+      </form>
+
+      <!-- Step 3: signed in -->
+      <div class="step" id="step-done" hidden>
+        <i class="ph ph-check-circle done-icon" aria-hidden="true"></i>
+        <h1 id="done-title"></h1>
+        <p class="lead"><bdi dir="ltr" id="done-phone"></bdi></p>
+        <button class="secondary" type="button" id="logout" data-i18n="logout">تسجيل الخروج</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="{% static 'accounts/login.js' %}"></script>
+</body>
+</html>

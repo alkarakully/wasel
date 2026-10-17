@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User, WalletTransaction
+from .models import PhoneOTP, User, WalletTransaction
 
 
 @admin.register(User)
@@ -26,3 +26,15 @@ class WalletTransactionAdmin(admin.ModelAdmin):
     list_display = ["user", "type", "amount", "order", "created_at"]
     list_filter = ["type"]
     search_fields = ["user__phone"]
+
+
+@admin.register(PhoneOTP)
+class PhoneOTPAdmin(admin.ModelAdmin):
+    list_display = ["phone", "channel", "attempts", "created_at", "expires_at", "used_at"]
+    list_filter = ["channel"]
+    search_fields = ["phone"]
+    # Codes are hashed; nothing here is worth editing.
+    readonly_fields = [field.name for field in PhoneOTP._meta.fields]
+
+    def has_add_permission(self, request):
+        return False

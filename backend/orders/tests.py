@@ -37,7 +37,7 @@ class OrderApiTests(TestCase):
         return [order["id"] for order in self.client.get("/api/orders/").json()["results"]]
 
     def test_requires_login(self):
-        self.assertEqual(self.client.get("/api/orders/").status_code, 403)
+        self.assertEqual(self.client.get("/api/orders/").status_code, 401)
 
     def test_customer_captain_and_vendor_owner_see_the_order(self):
         for user in (self.customer, self.captain, self.owner):

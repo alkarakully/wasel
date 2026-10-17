@@ -60,6 +60,28 @@ class User(AbstractBaseUser, PermissionsMixin):
         return f"{self.name or self.phone} ({self.role})"
 
 
+class PhoneOTP(models.Model):
+    """A one-time login code sent to a phone number. Only a hash of the code is stored."""
+
+    class Channel(models.TextChoices):
+        WHATSAPP = "whatsapp", "WhatsApp"
+        SMS = "sms", "SMS"
+
+    phone = models.CharField(max_length=20, db_index=True)
+    code_hash = models.CharField(max_length=64)
+    channel = models.CharField(max_length=10, choices=Channel.choices)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Code for {self.phone} via {self.channel}"
+
+
 class WalletTransaction(models.Model):
     class Type(models.TextChoices):
         TOP_UP = "top_up", "Top-up"
