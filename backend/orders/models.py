@@ -21,6 +21,12 @@ class Order(models.Model):
         CARD = "card", "Card"
         WALLET = "wallet", "Wasel Wallet"
 
+    class PaymentStatus(models.TextChoices):
+        # Cash is collected by the captain; card waits for the payment gateway.
+        PENDING = "pending", "Pending"
+        PAID = "paid", "Paid"
+        REFUNDED = "refunded", "Refunded"
+
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
     vendor = models.ForeignKey("vendors.Vendor", on_delete=models.PROTECT, related_name="orders")
     captain = models.ForeignKey(
@@ -33,6 +39,7 @@ class Order(models.Model):
     offer = models.ForeignKey("vendors.Offer", on_delete=models.SET_NULL, null=True, blank=True, related_name="orders")
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.RECEIVED)
     payment_type = models.CharField(max_length=10, choices=PaymentType.choices, default=PaymentType.COD)
+    payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
 
     delivery_address = models.CharField(max_length=255)
     delivery_location = models.PointField(geography=True)

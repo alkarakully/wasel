@@ -73,6 +73,38 @@ No SMS provider is connected yet. With `DJANGO_DEBUG` off, SMS sending fails unt
 | `GET /api/vendors/` | `?lat=&lng=` shows only vendors that deliver there, nearest first; `?type=`, `?cuisine=`. Open vendors come first. |
 | `GET /api/vendors/{id}/` | Vendor with full menu and modifiers. |
 | `GET /api/offers/` | Offers running now; `?banner=1` for home banners. |
-| `GET /api/orders/` | Login required. Orders where you are the customer, captain or vendor owner. |
+| `GET /api/orders/` | Login required. Orders where you are the customer, captain or vendor owner. The delivery PIN is shown to the customer only. |
+| `POST /api/orders/quote/` | Login required. Prices a cart without placing it (see below). |
+| `POST /api/orders/` | Login required. Places the order at exactly the quoted price. |
 
-Not built yet: an SMS provider, placing orders, payments, WebSockets (Django Channels) and background jobs (Celery).
+## Placing orders
+
+Both endpoints take the same cart. Placing an order also needs `delivery_address` and optionally `payment_type` (`cod` default, `card`, `wallet`):
+
+```json
+{
+  "vendor": 1,
+  "items": [
+    {"product": 3, "quantity": 2, "modifiers": [7, 9]},
+    {"product": 5, "quantity": "1.5"}
+  ],
+  "delivery_latitude": 33.3496,
+  "delivery_longitude": 44.4009,
+  "offer": null,
+  "tip": 1000
+}
+```
+
+How the price is built (`orders/pricing.py`, values in `ORDER_PRICING` in settings):
+
+* **Subtotal:** each line is (product price + chosen options) × quantity. Per-kg items accept decimals; other items need whole numbers. Every required option group must be chosen.
+* **Delivery fee:** 1,500 IQD for the first 2 km, then 250 IQD per started km, rounded up to 250 IQD. The store must be open and the address inside its delivery radius.
+* **Service fee:** 500 IQD.
+* **Wasel Plus:** members get free delivery from a 15,000 IQD subtotal and a 250 IQD service fee.
+* **Offers:** the best running offer for that store or the whole platform is applied automatically. Sending `offer` uses that one instead, or fails with `offer_not_applicable`.
+* **Total:** subtotal + delivery fee + service fee + tip - discount.
+* **Commission:** the store's rate on the subtotal, or on the discounted subtotal when the store funds the offer. Platform offers don't reduce it, and it is 0 during the commission-free period. It is saved on the order but not shown to customers.
+
+Wallet orders are paid at once from the customer's balance; cash and card orders stay `pending` (no card gateway yet). Errors come back as `{"error": "<code>", "detail": "..."}` with codes such as `vendor_closed`, `out_of_delivery_area`, `product_unavailable`, `missing_required_option`, `offer_not_applicable` and `insufficient_wallet_balance`.
+
+Not built yet: an SMS provider, card payments, order status updates, WebSockets (Django Channels) and background jobs (Celery).

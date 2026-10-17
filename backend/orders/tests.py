@@ -49,3 +49,269 @@ class OrderApiTests(TestCase):
 
     def test_calculate_total(self):
         self.assertEqual(self.order.calculate_total(), 12500)
+
+
+# --- Pricing and placement --------------------------------------------------
+
+from datetime import timedelta  # noqa: E402
+from decimal import Decimal  # noqa: E402
+
+from django.utils import timezone  # noqa: E402
+
+from accounts.models import WalletTransaction  # noqa: E402
+from subscriptions.models import WaselPlusSubscription  # noqa: E402
+from vendors.models import Offer, Product, ProductModifier  # noqa: E402
+
+from .models import OrderItem, OrderItemModifier  # noqa: E402
+from .pricing import delivery_fee_for  # noqa: E402
+
+TAHRIR_LAT, TAHRIR_LNG = 33.3406, 44.4009
+NEAR = (TAHRIR_LAT + 0.009, TAHRIR_LNG)  # about 1 km north
+FARTHER = (TAHRIR_LAT + 0.04, TAHRIR_LNG)  # about 4.4 km north
+OUTSIDE = (TAHRIR_LAT + 0.08, TAHRIR_LNG)  # about 8.9 km, past the 5 km radius
+
+
+class PricingTestBase(TestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(phone="+9647700000020")
+        self.owner = User.objects.create_user(phone="+9647700000021", role=User.Role.VENDOR)
+        self.vendor = Vendor.objects.create(
+            owner=self.owner,
+            name="Tahrir Grill",
+            location=Point(TAHRIR_LNG, TAHRIR_LAT, srid=4326),
+            is_open=True,
+            commission_rate=Decimal("15"),
+        )
+        self.kebab = Product.objects.create(vendor=self.vendor, name_ar="كباب", name_en="Kebab", price=8000)
+        self.regular = ProductModifier.objects.create(
+            product=self.kebab, group_name="Size", name_ar="عادي", price_delta=0, is_required=True
+        )
+        self.large = ProductModifier.objects.create(
+            product=self.kebab, group_name="Size", name_ar="كبير", price_delta=2000, is_required=True
+        )
+        self.bread = ProductModifier.objects.create(
+            product=self.kebab, group_name="Extras", name_ar="صمون", price_delta=500
+        )
+        self.tomatoes = Product.objects.create(
+            vendor=self.vendor, name_ar="طماطة", name_en="Tomatoes", price=1500, unit_type=Product.UnitType.KG
+        )
+        self.client = APIClient()
+        self.client.force_authenticate(self.customer)
+
+    def cart(self, items=None, at=NEAR, **extra):
+        body = {
+            "vendor": self.vendor.pk,
+            "items": items
+            if items is not None
+            else [
+                {"product": self.kebab.pk, "quantity": 2, "modifiers": [self.large.pk, self.bread.pk]},
+                {"product": self.tomatoes.pk, "quantity": "1.5"},
+            ],
+            "delivery_latitude": at[0],
+            "delivery_longitude": at[1],
+        }
+        body.update(extra)
+        return body
+
+    def quote(self, **kwargs):
+        return self.client.post("/api/orders/quote/", self.cart(**kwargs), format="json")
+
+    def place(self, **kwargs):
+        body = self.cart(**kwargs)
+        body.setdefault("delivery_address", "Karrada, street 52, house 9")
+        return self.client.post("/api/orders/", body, format="json")
+
+    def assertError(self, response, code):
+        self.assertEqual(response.status_code, 400, response.content)
+        self.assertEqual(response.json()["error"], code)
+
+
+class QuoteTests(PricingTestBase):
+    def test_full_breakdown(self):
+        body = self.quote().json()
+        # Kebab: (8000 + 2000 large + 500 bread) x 2 = 21000; tomatoes 1500 x 1.5 kg = 2250.
+        self.assertEqual([item["line_total"] for item in body["items"]], ["21000", "2250"])
+        self.assertEqual(body["subtotal"], "23250")
+        self.assertEqual(body["delivery_fee"], "1500")
+        self.assertEqual(body["service_fee"], "500")
+        self.assertEqual(body["discount"], "0")
+        self.assertEqual(body["total_amount"], "25250")
+        self.assertFalse(body["wasel_plus"])
+        self.assertNotIn("commission_amount", body)
+
+    def test_delivery_fee_grows_per_started_km(self):
+        self.assertEqual(delivery_fee_for(900), 1500)
+        self.assertEqual(delivery_fee_for(2000), 1500)
+        self.assertEqual(delivery_fee_for(2001), 1750)
+        self.assertEqual(self.quote(at=FARTHER).json()["delivery_fee"], "2250")
+
+    def test_tip_is_added_to_total(self):
+        self.assertEqual(self.quote(tip=1000).json()["total_amount"], "26250")
+
+    def test_closed_vendor(self):
+        Vendor.objects.update(is_open=False)
+        self.assertError(self.quote(), "vendor_closed")
+
+    def test_outside_delivery_radius(self):
+        self.assertError(self.quote(at=OUTSIDE), "out_of_delivery_area")
+
+    def test_out_of_stock_product(self):
+        Product.objects.filter(pk=self.tomatoes.pk).update(is_available=False)
+        self.assertError(self.quote(), "product_unavailable")
+
+    def test_product_from_another_vendor(self):
+        other = Vendor.objects.create(owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
+        foreign = Product.objects.create(vendor=other, name_ar="شاي", price=500)
+        self.assertError(self.quote(items=[{"product": foreign.pk}]), "product_not_found")
+
+    def test_required_option_missing(self):
+        self.assertError(self.quote(items=[{"product": self.kebab.pk, "modifiers": [self.bread.pk]}]), "missing_required_option")
+
+    def test_option_from_another_product(self):
+        other = Product.objects.create(vendor=self.vendor, name_ar="شاي", price=500)
+        other_mod = ProductModifier.objects.create(product=other, group_name="Sugar", name_ar="سكر", price_delta=0)
+        items = [{"product": self.kebab.pk, "modifiers": [self.regular.pk, other_mod.pk]}]
+        self.assertError(self.quote(items=items), "invalid_modifier")
+
+    def test_fractional_quantity_only_for_kg_items(self):
+        items = [{"product": self.kebab.pk, "quantity": "1.5", "modifiers": [self.regular.pk]}]
+        self.assertError(self.quote(items=items), "invalid_quantity")
+
+    def test_empty_cart_is_rejected(self):
+        self.assertEqual(self.quote(items=[]).status_code, 400)
+
+
+class OfferAndCommissionTests(PricingTestBase):
+    def make_offer(self, vendor="self", **fields):
+        now = timezone.now()
+        return Offer.objects.create(
+            vendor=self.vendor if vendor == "self" else vendor,
+            title=fields.pop("title", "Offer"),
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(hours=1),
+            **fields,
+        )
+
+    def commission_of_placed_order(self, **kwargs):
+        response = self.place(**kwargs)
+        self.assertEqual(response.status_code, 201, response.content)
+        return Order.objects.get(pk=response.json()["id"]).commission_amount
+
+    def test_best_offer_applies_automatically(self):
+        self.make_offer(type=Offer.Type.FIXED, value=1000)
+        best = self.make_offer(type=Offer.Type.PERCENT, value=10)  # 2325 off 23250
+        body = self.quote().json()
+        self.assertEqual(body["offer"], best.pk)
+        self.assertEqual(body["discount"], "2325")
+        self.assertEqual(body["total_amount"], "22925")
+
+    def test_chosen_offer_below_minimum_is_rejected(self):
+        offer = self.make_offer(type=Offer.Type.FIXED, value=3000, min_order=30000)
+        self.assertError(self.quote(offer=offer.pk), "offer_not_applicable")
+
+    def test_expired_or_other_vendors_offers_never_apply(self):
+        other = Vendor.objects.create(owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
+        self.make_offer(vendor=other, type=Offer.Type.PERCENT, value=50)
+        expired = self.make_offer(type=Offer.Type.PERCENT, value=50)
+        Offer.objects.filter(pk=expired.pk).update(ends_at=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.quote().json()["discount"], "0")
+
+    def test_free_delivery_offer_discounts_the_delivery_fee(self):
+        self.make_offer(vendor=None, type=Offer.Type.FREE_DELIVERY)
+        body = self.quote(at=FARTHER).json()
+        self.assertEqual(body["delivery_fee"], "2250")
+        self.assertEqual(body["discount"], "2250")
+
+    def test_commission_on_full_subtotal_without_offer(self):
+        # 15% of 23250 = 3487.5, rounded to 3488.
+        self.assertEqual(self.commission_of_placed_order(), Decimal(3488))
+
+    def test_vendor_funded_discount_lowers_commission_base(self):
+        self.make_offer(type=Offer.Type.FIXED, value=3250)
+        # 15% of (23250 - 3250) = 3000
+        self.assertEqual(self.commission_of_placed_order(), Decimal(3000))
+
+    def test_platform_offer_does_not_lower_commission(self):
+        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=3250)
+        self.assertEqual(self.commission_of_placed_order(), Decimal(3488))
+
+    def test_no_commission_during_free_period(self):
+        Vendor.objects.update(commission_free_until=timezone.now() + timedelta(days=10))
+        self.assertEqual(self.commission_of_placed_order(), Decimal(0))
+
+
+class WaselPlusPricingTests(PricingTestBase):
+    def test_member_gets_free_delivery_above_minimum_and_lower_service_fee(self):
+        WaselPlusSubscription.objects.create(user=self.customer, status=WaselPlusSubscription.Status.ACTIVE)
+        body = self.quote().json()  # subtotal 23250 >= 15000
+        self.assertTrue(body["wasel_plus"])
+        self.assertEqual(body["delivery_fee"], "0")
+        self.assertEqual(body["service_fee"], "250")
+
+    def test_member_pays_delivery_below_minimum(self):
+        WaselPlusSubscription.objects.create(user=self.customer, status=WaselPlusSubscription.Status.ACTIVE)
+        body = self.quote(items=[{"product": self.tomatoes.pk, "quantity": 2}]).json()
+        self.assertEqual(body["delivery_fee"], "1500")
+        self.assertEqual(body["service_fee"], "250")
+
+    def test_expired_trial_is_not_a_member(self):
+        WaselPlusSubscription.objects.create(
+            user=self.customer,
+            status=WaselPlusSubscription.Status.TRIAL,
+            trial_end_date=timezone.now() - timedelta(days=1),
+        )
+        self.assertFalse(self.quote().json()["wasel_plus"])
+
+
+class PlaceOrderTests(PricingTestBase):
+    def test_requires_login(self):
+        self.client.force_authenticate(None)
+        self.assertEqual(self.place().status_code, 401)
+
+    def test_order_matches_quote_and_snapshots_prices(self):
+        quote = self.quote().json()
+        response = self.place()
+        self.assertEqual(response.status_code, 201, response.content)
+        body = response.json()
+        for field in ["subtotal", "delivery_fee", "service_fee", "discount", "total_amount"]:
+            self.assertEqual(body[field], quote[field], field)
+        self.assertEqual(body["payment_type"], "cod")
+        self.assertEqual(body["payment_status"], "pending")
+        self.assertRegex(body["delivery_pin"], r"^\d{4}$")
+
+        # Later price changes don't touch the placed order.
+        Product.objects.filter(pk=self.kebab.pk).update(price=99000)
+        ProductModifier.objects.filter(pk=self.large.pk).update(price_delta=50000)
+        item = OrderItem.objects.get(order_id=body["id"], product=self.kebab)
+        self.assertEqual((item.unit_price, item.line_total), (Decimal(10500), Decimal(21000)))
+        self.assertEqual(
+            sorted(OrderItemModifier.objects.filter(order_item=item).values_list("price_delta", flat=True)),
+            [Decimal(500), Decimal(2000)],
+        )
+
+    def test_delivery_address_is_required(self):
+        body = self.cart()
+        response = self.client.post("/api/orders/", body, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("delivery_address", response.json())
+
+    def test_pin_hidden_from_vendor_owner(self):
+        order_id = self.place().json()["id"]
+        self.client.force_authenticate(self.owner)
+        self.assertIsNone(self.client.get(f"/api/orders/{order_id}/").json()["delivery_pin"])
+
+    def test_wallet_payment_deducts_balance(self):
+        User.objects.filter(pk=self.customer.pk).update(wallet_balance=30000)
+        response = self.place(payment_type="wallet")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual(response.json()["payment_status"], "paid")
+        self.customer.refresh_from_db()
+        self.assertEqual(self.customer.wallet_balance, Decimal(30000 - 25250))
+        transaction = WalletTransaction.objects.get(user=self.customer)
+        self.assertEqual((transaction.type, transaction.amount), ("payment", Decimal(-25250)))
+
+    def test_wallet_with_too_little_balance_creates_nothing(self):
+        User.objects.filter(pk=self.customer.pk).update(wallet_balance=1000)
+        self.assertError(self.place(payment_type="wallet"), "insufficient_wallet_balance")
+        self.assertFalse(Order.objects.filter(customer=self.customer).exists())
+        self.assertFalse(WalletTransaction.objects.exists())

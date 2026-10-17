@@ -121,6 +121,23 @@ OTP = {
     },
 }
 
+# Order pricing in IQD. Example values; set the real ones before launch.
+ORDER_PRICING = {
+    # Delivery: base fee covers the first BASE_KM, then a fee per started km.
+    "DELIVERY_BASE_FEE": 1500,
+    "DELIVERY_BASE_KM": 2,
+    "DELIVERY_FEE_PER_KM": 250,
+    # Fees are rounded up to this step, matching how prices are quoted in Iraq.
+    "FEE_ROUNDING": 250,
+    "SERVICE_FEE": 500,
+    # Wasel Plus members: free delivery from this subtotal, and a lower service fee.
+    "PLUS_FREE_DELIVERY_MIN": 15000,
+    "PLUS_SERVICE_FEE": 250,
+    "MAX_ITEM_QUANTITY": 50,
+    "MAX_KG": 50,
+    "MAX_TIP": 50000,
+}
+
 WHATSAPP = {
     "TOKEN": os.environ.get("WHATSAPP_TOKEN", ""),
     "PHONE_NUMBER_ID": os.environ.get("WHATSAPP_PHONE_NUMBER_ID", ""),
