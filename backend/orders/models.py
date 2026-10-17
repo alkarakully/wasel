@@ -115,3 +115,33 @@ class Rating(models.Model):
 
     def __str__(self):
         return f"Rating for {self.order}"
+
+
+class StuckOrderAlert(models.Model):
+    """Raised for support when an order sits in one step too long; resolved once it moves on."""
+
+    class Reason(models.TextChoices):
+        NOT_ACCEPTED = "not_accepted", "Store hasn't accepted"
+        NOT_READY = "not_ready", "Past its ready time"
+        NO_CAPTAIN = "no_captain", "No captain has taken it"
+        NOT_PICKED_UP = "not_picked_up", "Ready but not picked up"
+        DELIVERY_LATE = "delivery_late", "Out for delivery too long"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="stuck_alerts")
+    reason = models.CharField(max_length=20, choices=Reason.choices)
+    created_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            # At most one open alert per order and reason.
+            models.UniqueConstraint(
+                fields=["order", "reason"],
+                condition=models.Q(resolved_at__isnull=True),
+                name="one_open_alert_per_order_reason",
+            )
+        ]
+
+    def __str__(self):
+        return f"Order #{self.order_id}: {self.get_reason_display()}"

@@ -24,9 +24,28 @@ services:
     environment:
       DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
       REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
       DJANGO_DEBUG: "1"
     ports:
       - "${WASEL_WEB_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Runs background jobs and, with -B, the periodic schedule. In production
+  # run beat as its own single process instead.
+  worker:
+    build: ./backend
+    command: celery -A wasel worker -B -l info
+    environment:
+      DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      DJANGO_DEBUG: "1"
     volumes:
       - ./backend:/app
     depends_on:

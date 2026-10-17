@@ -69,6 +69,15 @@ CHANNEL_LAYERS = {
     }
 }
 
+# Background jobs. Beat runs the periodic checks below.
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TIMEZONE = "Asia/Baghdad"
+CELERY_BEAT_SCHEDULE = {
+    "flag-stuck-orders": {"task": "orders.tasks.flag_stuck_orders", "schedule": 60.0},
+    "expire-wasel-plus-trials": {"task": "subscriptions.tasks.expire_wasel_plus_trials", "schedule": 15 * 60.0},
+}
+
 DATABASES = {
     "default": dj_database_url.config(
         default="postgis://wasel:wasel@localhost:5432/wasel",
@@ -148,6 +157,17 @@ ORDER_PRICING = {
     "MAX_KG": 50,
     "MAX_TIP": 50000,
 }
+
+# Minutes an order may sit in a step before support is alerted.
+STUCK_ORDER_MINUTES = {
+    "not_accepted": 5,  # after it was placed
+    "not_ready": 15,  # past the store's estimated ready time
+    "no_captain": 10,  # after the store accepted
+    "not_picked_up": 15,  # after it was marked ready
+    "delivery_late": 60,  # after pickup
+}
+
+WASEL_PLUS_TRIAL_DAYS = 14
 
 WHATSAPP = {
     "TOKEN": os.environ.get("WHATSAPP_TOKEN", ""),

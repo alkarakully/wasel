@@ -10,7 +10,7 @@ From the repository root:
 docker compose up
 ```
 
-The API is at http://localhost:8000/api/ and the admin at http://localhost:8000/admin/. If port 8000 (or 5432) is taken, pick others:
+This starts the API server, PostGIS, Redis and a Celery worker. The API is at http://localhost:8000/api/ and the admin at http://localhost:8000/admin/. If port 8000 (or 5432) is taken, pick others:
 
 ```bash
 WASEL_WEB_PORT=8010 WASEL_DB_PORT=5433 docker compose up
@@ -147,7 +147,27 @@ On connect the server sends `{"type": "connected", "user_id": 12}`. A missing or
 | `{"type": "order.updated", "order": {...}}` | The customer, the store owner and the order's captain | The order is placed or changes status. `order` is the same as `GET /api/orders/{id}/`; only the customer's copy includes `delivery_pin`. |
 | `{"type": "order.available", "order": {...}}` | All captains | A store accepts an order that has no captain yet. |
 | `{"type": "order.unavailable", "order_id": 12}` | All captains | That order was claimed or cancelled; remove it from the list. |
+| `{"type": "order.stuck", "alert": {...}}` | Staff users | An order has sat in one step too long (see below). |
+| `{"type": "wasel_plus.trial_ended"}` | That customer | Their free Wasel Plus trial has ended; offer the paid plan. |
 
 Updates go through Redis (`REDIS_URL`), so they reach sockets on any server process. They are sent after the change is saved; if Redis is down the change still succeeds and the failure is logged. `runserver` serves both HTTP and WebSockets through Daphne.
 
-Not built yet: push notifications for when the app is closed, stuck-order alerts (Celery), automatic captain dispatch, captain GPS tracking, an SMS provider and card payments.
+## Background jobs (Celery)
+
+The `worker` service runs Celery with its beat schedule (`celery -A wasel worker -B`). In production, run beat as its own single process (`celery -A wasel beat`) next to one or more workers.
+
+**Stuck-order alerts** (every minute). An order is flagged when it sits too long in one step (minutes in `STUCK_ORDER_MINUTES`):
+
+| Reason | Flagged when |
+| :--- | :--- |
+| `not_accepted` | The store hasn't accepted 5 minutes after the order was placed |
+| `not_ready` | Still preparing 15 minutes past the store's estimated ready time |
+| `no_captain` | No captain has taken it 10 minutes after the store accepted |
+| `not_picked_up` | Ready with a captain but not picked up after 15 minutes |
+| `delivery_late` | Out for delivery for more than 60 minutes |
+
+Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) and pushed to staff sockets. There is only one open alert per order and reason, and it is resolved automatically once the order moves on.
+
+**Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
+
+Not built yet: Wasel Plus billing, push notifications for when the app is closed, automatic captain dispatch, captain GPS tracking, an SMS provider and card payments.

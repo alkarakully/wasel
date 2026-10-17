@@ -5,11 +5,13 @@ Groups:
   user-<id>     a signed-in user's own orders (as customer or captain)
   vendor-<id>   orders for a store, joined by its owner
   captains      orders waiting for a captain
+  support       staff users: stuck-order alerts
 
 Messages sent to clients:
   {"type": "order.updated", "order": {...}}      the full order, as from the REST API
   {"type": "order.available", "order": {...}}    captains: a store accepted an order with no captain
   {"type": "order.unavailable", "order_id": 12}  captains: claimed or cancelled, drop it from the list
+  {"type": "order.stuck", "alert": {...}}        support: an order has sat in one step too long
 """
 
 import logging
@@ -24,6 +26,7 @@ from .serializers import OrderSerializer
 logger = logging.getLogger(__name__)
 
 CAPTAINS_GROUP = "captains"
+SUPPORT_GROUP = "support"
 
 
 def user_group(user_id):
@@ -75,3 +78,30 @@ def _safe_broadcast(order_id, was_available):
 def broadcast_order(order_id, was_available=False):
     """Send the order to everyone involved once the current transaction commits."""
     transaction.on_commit(lambda: _safe_broadcast(order_id, was_available))
+
+
+def send_stuck_alert(alert):
+    try:
+        _send(
+            SUPPORT_GROUP,
+            {
+                "type": "order.stuck",
+                "alert": {
+                    "id": alert.pk,
+                    "order_id": alert.order_id,
+                    "reason": alert.reason,
+                    "reason_label": alert.get_reason_display(),
+                    "created_at": alert.created_at.isoformat(),
+                },
+            },
+        )
+    except Exception:
+        logger.exception("Could not send stuck-order alert %s", alert.pk)
+
+
+def notify_user(user_id, payload):
+    """Send an app-level event (not an order update) to one user's sockets."""
+    try:
+        _send(user_group(user_id), payload)
+    except Exception:
+        logger.exception("Could not notify user %s", user_id)

@@ -4,7 +4,7 @@ from channels.generic.websocket import AsyncJsonWebsocketConsumer
 from accounts.models import User
 from vendors.models import Vendor
 
-from .realtime import CAPTAINS_GROUP, user_group, vendor_group
+from .realtime import CAPTAINS_GROUP, SUPPORT_GROUP, user_group, vendor_group
 
 # Close code for "not signed in" (4000-4999 are free for applications).
 UNAUTHORIZED = 4401
@@ -33,6 +33,8 @@ class OrderUpdatesConsumer(AsyncJsonWebsocketConsumer):
         self.groups_joined += [vendor_group(pk) for pk in await self._owned_vendor_ids(user)]
         if user.role == User.Role.CAPTAIN:
             self.groups_joined.append(CAPTAINS_GROUP)
+        if user.is_staff:
+            self.groups_joined.append(SUPPORT_GROUP)
 
         for group in self.groups_joined:
             await self.channel_layer.group_add(group, self.channel_name)

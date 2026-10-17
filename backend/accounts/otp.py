@@ -22,6 +22,8 @@ from django.db.models import F
 from django.utils import timezone
 from django.utils.module_loading import import_string
 
+from subscriptions.services import start_wasel_plus_trial
+
 from .models import PhoneOTP, User
 
 logger = logging.getLogger(__name__)
@@ -208,7 +210,9 @@ def verify_code(phone, code):
 
     user = User.objects.filter(phone=phone).first()
     if user is None:
-        return User.objects.create_user(phone=phone), True
+        user = User.objects.create_user(phone=phone)
+        start_wasel_plus_trial(user)
+        return user, True
     if not user.is_active:
         raise AccountDisabled("This account has been disabled.")
     return user, False
