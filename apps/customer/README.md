@@ -46,11 +46,10 @@ xcrun simctl location booted set 33.3045,44.4214
 
 | Path | What it holds |
 | :--- | :--- |
-| `lib/api/` | REST client and data models |
-| `lib/state/` | Session (token, language, location), cart, live socket |
-| `lib/screens/` | Login, home, store, product options, cart, tracking, order history |
-| `lib/l10n.dart` | All app text in Arabic, Kurdish and English |
-| `lib/theme.dart` | Brand colours (Babylon lapis and gold) |
+| `lib/state/` | Session with delivery location, and the cart |
+| `lib/screens/` | Home, store, product options, cart, tracking, order history |
+| `lib/strings.dart` | Customer text in Arabic, Kurdish and English |
+| `../wasel_core` | Shared API client, login screen, live socket, theme and shared text |
 
 ## Tests
 

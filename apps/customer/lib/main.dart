@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:wasel_core/wasel_core.dart';
 
-import 'api/api_client.dart';
 import 'screens/home_screen.dart';
-import 'screens/login_screen.dart';
 import 'state/cart.dart';
-import 'state/live_updates.dart';
 import 'state/session.dart';
-import 'theme.dart';
+import 'strings.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  S.addStrings(customerStrings);
   final api = ApiClient();
   final session = Session(api);
   final live = LiveUpdates(api);
@@ -24,6 +23,8 @@ void main() {
       providers: [
         Provider.value(value: api),
         Provider.value(value: live),
+        // Shared widgets (login, strings) read the session as BaseSession.
+        ChangeNotifierProvider<BaseSession>.value(value: session),
         ChangeNotifierProvider.value(value: session),
         ChangeNotifierProvider(create: (_) => Cart()),
       ],

@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:wasel_core/wasel_core.dart';
 
-import '../api/models.dart';
 
 class CartLine {
   CartLine({

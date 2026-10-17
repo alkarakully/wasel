@@ -1,11 +1,6 @@
-/// Build-time settings. Override with --dart-define, for example:
-///   flutter run --dart-define=API_URL=http://localhost:8010
+/// Build-time settings. Override with --dart-define. The API address
+/// (API_URL) is read by wasel_core.
 class Config {
-  static const apiUrl = String.fromEnvironment(
-    'API_URL',
-    defaultValue: 'http://localhost:8000',
-  );
-
   static const mapStyleLight = String.fromEnvironment(
     'MAP_STYLE_LIGHT',
     defaultValue: 'https://tiles.openfreemap.org/styles/positron',

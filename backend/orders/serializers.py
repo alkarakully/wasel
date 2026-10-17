@@ -38,6 +38,7 @@ class OrderSerializer(serializers.ModelSerializer):
     vendor_location = serializers.SerializerMethodField()
     delivery_location = serializers.SerializerMethodField()
     captain_location = serializers.SerializerMethodField()
+    customer_contact = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
@@ -61,6 +62,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "tip",
             "total_amount",
             "delivery_pin",
+            "customer_contact",
             "items",
             "created_at",
             "accepted_at",
@@ -89,6 +91,16 @@ class OrderSerializer(serializers.ModelSerializer):
             return location_payload(order.captain.location)
         except CaptainLocation.DoesNotExist:
             return None
+
+    def get_customer_contact(self, order):
+        # The captain and the store can call the customer until the order is
+        # finished; nobody else sees the number.
+        request = self.context.get("request")
+        if not request or order.status in (Order.Status.DELIVERED, Order.Status.CANCELLED):
+            return None
+        if request.user.pk not in (order.captain_id, order.vendor.owner_id):
+            return None
+        return {"name": order.customer.name, "phone": order.customer.phone}
 
     def get_delivery_pin(self, order):
         # Only the customer sees the PIN; they read it to the captain at the door.

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:wasel_core/wasel_core.dart';
 
-import '../api/models.dart';
-import '../l10n.dart';
 import '../state/cart.dart';
 
 /// Choose options and quantity, then add to the cart.

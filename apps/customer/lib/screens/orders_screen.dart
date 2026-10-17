@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wasel_core/wasel_core.dart';
 
-import '../api/api_client.dart';
-import '../api/models.dart';
-import '../l10n.dart';
 import 'tracking_screen.dart';
 
 class OrdersScreen extends StatefulWidget {

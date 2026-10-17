@@ -53,7 +53,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         return (
             Order.objects.filter(Q(customer=user) | Q(captain=user) | Q(vendor__owner=user))
             .distinct()
-            .select_related("vendor", "captain__location")
+            .select_related("vendor", "customer", "captain__location")
             .prefetch_related("items__modifiers")
         )
 
@@ -163,7 +163,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         orders = (
             Order.objects.filter(status__in=[Order.Status.PREPARING, Order.Status.READY], captain__isnull=True)
             .order_by("created_at")
-            .select_related("vendor", "captain__location")
+            .select_related("vendor", "customer", "captain__location")
             .prefetch_related("items__modifiers")
         )
         page = self.paginate_queryset(orders)

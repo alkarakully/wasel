@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wasel_core/wasel_core.dart';
 
-import '../api/api_client.dart';
-import '../api/models.dart';
-import '../l10n.dart';
 import '../state/session.dart';
 import '../widgets/cart_bar.dart';
-import '../widgets/language_switch.dart';
 import 'orders_screen.dart';
 import 'store_screen.dart';
 

@@ -295,6 +295,20 @@ class PlaceOrderTests(PricingTestBase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("delivery_address", response.json())
 
+    def test_customer_contact_for_captain_and_store_only_while_active(self):
+        order_id = self.place().json()["id"]
+        captain = User.objects.create_user(phone="+9647500000077", role=User.Role.CAPTAIN)
+        Order.objects.filter(pk=order_id).update(captain=captain, status=Order.Status.OUT_FOR_DELIVERY)
+
+        for user, expected in [(captain, self.customer.phone), (self.owner, self.customer.phone), (self.customer, None)]:
+            self.client.force_authenticate(user)
+            contact = self.client.get(f"/api/orders/{order_id}/").json()["customer_contact"]
+            self.assertEqual(contact and contact["phone"], expected)
+
+        Order.objects.filter(pk=order_id).update(status=Order.Status.DELIVERED)
+        self.client.force_authenticate(captain)
+        self.assertIsNone(self.client.get(f"/api/orders/{order_id}/").json()["customer_contact"])
+
     def test_pin_hidden_from_vendor_owner(self):
         order_id = self.place().json()["id"]
         self.client.force_authenticate(self.owner)
