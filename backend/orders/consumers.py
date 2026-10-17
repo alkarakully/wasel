@@ -5,6 +5,8 @@ from accounts.models import User
 from vendors.models import Vendor
 
 from .realtime import CAPTAINS_GROUP, SUPPORT_GROUP, user_group, vendor_group
+from .serializers import LocationSerializer
+from .tracking import update_captain_location
 
 # Close code for "not signed in" (4000-4999 are free for applications).
 UNAUTHORIZED = 4401
@@ -46,9 +48,24 @@ class OrderUpdatesConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(group, self.channel_name)
 
     async def receive_json(self, content, **kwargs):
-        # Clients only listen; a ping keeps mobile connections from idling out.
-        if content.get("type") == "ping":
+        kind = content.get("type")
+        # A ping keeps mobile connections from idling out.
+        if kind == "ping":
             await self.send_json({"type": "pong"})
+        elif kind == "location":
+            await self._captain_location(content)
+
+    async def _captain_location(self, content):
+        """Captains send {"type": "location", "lat": .., "lng": .., "heading"?: .., "speed"?: ..}."""
+        user = self.scope["user"]
+        if user.role != User.Role.CAPTAIN:
+            await self.send_json({"type": "error", "error": "not_allowed", "detail": "Only captains send locations."})
+            return
+        serializer = LocationSerializer(data=content)
+        if not serializer.is_valid():
+            await self.send_json({"type": "error", "error": "invalid_location", "detail": serializer.errors})
+            return
+        await database_sync_to_async(update_captain_location)(user, **serializer.validated_data)
 
     async def order_event(self, event):
         await self.send_json(event["payload"])

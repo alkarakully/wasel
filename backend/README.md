@@ -149,8 +149,22 @@ On connect the server sends `{"type": "connected", "user_id": 12}`. A missing or
 | `{"type": "order.unavailable", "order_id": 12}` | All captains | That order was claimed or cancelled; remove it from the list. |
 | `{"type": "order.stuck", "alert": {...}}` | Staff users | An order has sat in one step too long (see below). |
 | `{"type": "wasel_plus.trial_ended"}` | That customer | Their free Wasel Plus trial has ended; offer the paid plan. |
+| `{"type": "captain.location", "order_id": 12, "location": {...}}` | The customer and the store | The order's captain moved (see below). |
 
 Updates go through Redis (`REDIS_URL`), so they reach sockets on any server process. They are sent after the change is saved; if Redis is down the change still succeeds and the failure is logged. `runserver` serves both HTTP and WebSockets through Daphne.
+
+## Live captain tracking
+
+Captains send their GPS position every few seconds while working:
+
+* Over their socket: `{"type": "location", "lat": 33.3045, "lng": 44.4214, "heading": 125, "speed": 7.2}` (`heading` in degrees, `speed` in m/s, both optional).
+* Or by REST when the app is in the background: `POST /api/captain/location/` with the same fields (204).
+
+Only captains can send positions. Updates less than 2 seconds apart are dropped. The latest position is saved (`CaptainLocation`, one row per captain, useful later for dispatch) and pushed as `captain.location` to the customer and store of each order the captain is on, from claim until delivery. Once an order is delivered or cancelled, its customer stops receiving the captain's position.
+
+Order responses now include `vendor_name`, `vendor_location`, `delivery_location` and, while the order is active, `captain_location`, so a map can start from the last known spot before live updates arrive.
+
+**Tracking page.** `/track/<order_id>/` shows the order on a map for the signed-in customer (it reuses the token saved by `/login/`): store, home and a captain marker that glides between fixes, the status steps, the delivery PIN and when the captain was last seen. It works in Arabic, Kurdish and English, light and dark. Maps come from OpenFreeMap through MapLibre GL, which needs no API key; set `MAP_STYLE_LIGHT` and `MAP_STYLE_DARK` to a licensed provider's style URLs if traffic grows.
 
 ## Background jobs (Celery)
 
@@ -170,4 +184,4 @@ Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) 
 
 **Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
 
-Not built yet: Wasel Plus billing, push notifications for when the app is closed, automatic captain dispatch, captain GPS tracking, an SMS provider and card payments.
+Not built yet: Wasel Plus billing, push notifications for when the app is closed, automatic captain dispatch, an SMS provider and card payments.

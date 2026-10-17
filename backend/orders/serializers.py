@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Order, OrderItem, OrderItemModifier
+from .models import TRACKED_STATUSES, CaptainLocation, Order, OrderItem, OrderItemModifier
 from .pricing import round_dinars
 
 
@@ -18,21 +18,42 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ["id", "product", "quantity", "unit_price", "line_total", "modifiers"]
 
 
+def point_payload(point):
+    return {"lat": point.y, "lng": point.x} if point else None
+
+
+def location_payload(location):
+    return {
+        **point_payload(location.point),
+        "heading": location.heading,
+        "speed": location.speed,
+        "updated_at": location.updated_at.isoformat(),
+    }
+
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     delivery_pin = serializers.SerializerMethodField()
+    vendor_name = serializers.CharField(source="vendor.name", read_only=True)
+    vendor_location = serializers.SerializerMethodField()
+    delivery_location = serializers.SerializerMethodField()
+    captain_location = serializers.SerializerMethodField()
 
     class Meta:
         model = Order
         fields = [
             "id",
             "vendor",
+            "vendor_name",
+            "vendor_location",
             "captain",
+            "captain_location",
             "offer",
             "status",
             "payment_type",
             "payment_status",
             "delivery_address",
+            "delivery_location",
             "subtotal",
             "delivery_fee",
             "service_fee",
@@ -52,6 +73,22 @@ class OrderSerializer(serializers.ModelSerializer):
             "cancel_reason",
             "updated_at",
         ]
+
+    def get_vendor_location(self, order):
+        return point_payload(order.vendor.location)
+
+    def get_delivery_location(self, order):
+        return point_payload(order.delivery_location)
+
+    def get_captain_location(self, order):
+        # Shown only while the order is active, so the map can start from the
+        # captain's last known spot before live updates arrive.
+        if not order.captain_id or order.status not in TRACKED_STATUSES:
+            return None
+        try:
+            return location_payload(order.captain.location)
+        except CaptainLocation.DoesNotExist:
+            return None
 
     def get_delivery_pin(self, order):
         # Only the customer sees the PIN; they read it to the captain at the door.
@@ -98,6 +135,13 @@ class RejectSerializer(serializers.Serializer):
 
 class DeliverSerializer(serializers.Serializer):
     pin = serializers.RegexField(r"^\d{4}$", error_messages={"invalid": "The PIN is 4 digits."})
+
+
+class LocationSerializer(serializers.Serializer):
+    lat = serializers.FloatField(min_value=-90, max_value=90)
+    lng = serializers.FloatField(min_value=-180, max_value=180)
+    heading = serializers.FloatField(min_value=0, max_value=360, required=False, allow_null=True, default=None)
+    speed = serializers.FloatField(min_value=0, max_value=100, required=False, allow_null=True, default=None)
 
 
 def _money(amount):

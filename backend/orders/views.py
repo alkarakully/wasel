@@ -3,6 +3,7 @@ from django.db.models import Q
 from rest_framework import mixins, permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from accounts.models import User
 
@@ -13,6 +14,7 @@ from .serializers import (
     AcceptSerializer,
     CartSerializer,
     DeliverSerializer,
+    LocationSerializer,
     OrderSerializer,
     PlaceOrderSerializer,
     ReasonSerializer,
@@ -20,6 +22,7 @@ from .serializers import (
     quote_to_dict,
 )
 from .services import place_order
+from .tracking import update_captain_location
 
 
 def pricing_error_response(error):
@@ -50,6 +53,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         return (
             Order.objects.filter(Q(customer=user) | Q(captain=user) | Q(vendor__owner=user))
             .distinct()
+            .select_related("vendor", "captain__location")
             .prefetch_related("items__modifiers")
         )
 
@@ -159,7 +163,29 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         orders = (
             Order.objects.filter(status__in=[Order.Status.PREPARING, Order.Status.READY], captain__isnull=True)
             .order_by("created_at")
+            .select_related("vendor", "captain__location")
             .prefetch_related("items__modifiers")
         )
         page = self.paginate_queryset(orders)
         return self.get_paginated_response(self.get_serializer(page, many=True).data)
+
+
+class CaptainLocationView(APIView):
+    """
+    POST /api/captain/location/ {lat, lng, heading?, speed?}
+
+    For when the captain app is in the background and its socket is closed.
+    Updates closer than 2 seconds apart are ignored (still 204).
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != User.Role.CAPTAIN:
+            return Response(
+                {"error": "not_allowed", "detail": "Only captains send locations."}, status=status.HTTP_403_FORBIDDEN
+            )
+        serializer = LocationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        update_captain_location(request.user, **serializer.validated_data)
+        return Response(status=status.HTTP_204_NO_CONTENT)

@@ -1,0 +1,55 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>واصل | تتبع الطلب</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'orders/track.css' %}">
+</head>
+<body>
+  <div id="map" aria-label="Map"></div>
+
+  <section class="panel" aria-live="polite">
+    <!-- Loading: same shape as the loaded card. -->
+    <div id="state-loading" class="skeleton" aria-hidden="true">
+      <span class="bone short"></span>
+      <span class="bone title"></span>
+      <span class="bone bar"></span>
+      <span class="bone block"></span>
+    </div>
+
+    <div id="state-message" class="message" hidden>
+      <p id="message-text"></p>
+      <a id="message-link" class="button" href="/login/" hidden></a>
+    </div>
+
+    <div id="state-order" hidden>
+      <p class="meta"><span id="vendor-name"></span> <span class="dot">·</span> <span id="order-number"></span></p>
+      <h1 id="status-title"></h1>
+
+      <ol class="steps" id="steps"></ol>
+
+      <div class="pin" id="pin-box" hidden>
+        <div>
+          <p class="pin-label" id="pin-label"></p>
+          <p class="pin-help" id="pin-help"></p>
+        </div>
+        <p class="pin-code" dir="ltr" id="pin-code"></p>
+      </div>
+
+      <p class="captain-line" id="captain-line"><i class="ph ph-moped" aria-hidden="true"></i><span id="captain-text"></span></p>
+      <p class="offline" id="offline" hidden></p>
+    </div>
+  </section>
+
+  <script>window.WASEL_ORDER_ID = {{ order_id }};</script>
+  {{ map_styles|json_script:"map-styles" }}
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="{% static 'orders/track.js' %}"></script>
+</body>
+</html>

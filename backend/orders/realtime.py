@@ -12,6 +12,8 @@ Messages sent to clients:
   {"type": "order.available", "order": {...}}    captains: a store accepted an order with no captain
   {"type": "order.unavailable", "order_id": 12}  captains: claimed or cancelled, drop it from the list
   {"type": "order.stuck", "alert": {...}}        support: an order has sat in one step too long
+  {"type": "captain.location", "order_id": 12, "location": {...}}
+                                                 customer and store: where the order's captain is now
 """
 
 import logging
@@ -47,7 +49,7 @@ def _order_data(order):
 
 
 def _broadcast(order_id, was_available):
-    order = Order.objects.select_related("vendor").prefetch_related("items__modifiers").get(pk=order_id)
+    order = Order.objects.select_related("vendor", "captain__location").prefetch_related("items__modifiers").get(pk=order_id)
     data = _order_data(order)
 
     # Only the customer gets the PIN; they read it to the captain at the door.
@@ -105,3 +107,12 @@ def notify_user(user_id, payload):
         _send(user_group(user_id), payload)
     except Exception:
         logger.exception("Could not notify user %s", user_id)
+
+
+def send_captain_location(order_id, customer_id, vendor_id, location):
+    payload = {"type": "captain.location", "order_id": order_id, "location": location}
+    try:
+        _send(user_group(customer_id), payload)
+        _send(vendor_group(vendor_id), payload)
+    except Exception:
+        logger.exception("Could not send captain location for order %s", order_id)

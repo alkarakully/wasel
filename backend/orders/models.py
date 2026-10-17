@@ -145,3 +145,22 @@ class StuckOrderAlert(models.Model):
 
     def __str__(self):
         return f"Order #{self.order_id}: {self.get_reason_display()}"
+
+
+# While an order is in these states, its customer and store can see the captain.
+TRACKED_STATUSES = [Order.Status.PREPARING, Order.Status.READY, Order.Status.OUT_FOR_DELIVERY]
+
+
+class CaptainLocation(models.Model):
+    """A captain's latest GPS position; one row per captain, overwritten on each update."""
+
+    captain = models.OneToOneField(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True, related_name="location"
+    )
+    point = models.PointField(geography=True)
+    heading = models.FloatField(null=True, blank=True, help_text="Degrees clockwise from north.")
+    speed = models.FloatField(null=True, blank=True, help_text="Metres per second.")
+    updated_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"{self.captain} at {self.point.y:.5f}, {self.point.x:.5f}"

@@ -169,6 +169,13 @@ STUCK_ORDER_MINUTES = {
 
 WASEL_PLUS_TRIAL_DAYS = 14
 
+# Vector map styles for web pages. OpenFreeMap needs no API key; set a licensed
+# provider's style URLs (Mapbox, MapTiler) here if traffic outgrows it.
+MAP_STYLES = {
+    "light": os.environ.get("MAP_STYLE_LIGHT", "https://tiles.openfreemap.org/styles/positron"),
+    "dark": os.environ.get("MAP_STYLE_DARK", "https://tiles.openfreemap.org/styles/dark"),
+}
+
 WHATSAPP = {
     "TOKEN": os.environ.get("WHATSAPP_TOKEN", ""),
     "PHONE_NUMBER_ID": os.environ.get("WHATSAPP_PHONE_NUMBER_ID", ""),

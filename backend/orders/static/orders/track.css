@@ -1,0 +1,150 @@
+* { box-sizing: border-box; }
+
+[hidden] { display: none !important; }
+
+html, body { margin: 0; height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+#map { position: fixed; inset: 0; background: var(--bg); }
+
+.maplibregl-map { font-family: var(--font); }
+
+/* --- Markers ---------------------------------------------------------------- */
+
+.marker {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 22px;
+  background: var(--surface);
+  color: var(--text);
+  border: 2px solid var(--border);
+  box-shadow: 0 4px 14px rgb(20 26 46 / 0.22);
+}
+
+.marker.captain {
+  width: 46px;
+  height: 46px;
+  font-size: 26px;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--surface);
+}
+
+
+/* --- Panel ------------------------------------------------------------------ */
+
+.panel {
+  position: fixed;
+  z-index: 10; /* above the map canvas and its controls */
+  inset-inline-start: 24px;
+  top: 24px;
+  width: 380px;
+  max-width: calc(100% - 48px);
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 18px 50px rgb(20 26 46 / 0.18);
+}
+
+.meta { margin: 0; color: var(--muted); font-size: 0.9375rem; }
+.dot { margin-inline: 4px; }
+
+h1 { margin: 4px 0 20px; font-size: 1.625rem; line-height: 1.3; }
+
+.steps {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.steps li { display: flex; flex-direction: column; gap: 6px; font-size: 0.75rem; color: var(--muted); }
+
+.steps li::before {
+  content: "";
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+}
+
+.steps li.done::before { background: var(--accent); }
+.steps li.current { color: var(--text); font-weight: 600; }
+.steps li.current::before { background: var(--accent); }
+
+.cancelled .steps li::before { background: var(--border); }
+
+.pin {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  background: var(--accent-soft);
+  border-radius: 12px;
+}
+
+.pin-label { margin: 0; font-weight: 600; }
+.pin-help { margin: 0; font-size: 0.875rem; color: var(--muted); }
+.pin-code { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: 0.15em; font-variant-numeric: tabular-nums; color: var(--accent); }
+
+.captain-line { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--muted); font-size: 0.9375rem; }
+.captain-line i { font-size: 1.25rem; color: var(--accent); }
+
+.offline { margin: 12px 0 0; font-size: 0.875rem; color: var(--error); }
+
+.message p { margin: 0 0 16px; font-size: 1.0625rem; }
+
+.button {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Loading skeleton in the shape of the card. */
+.skeleton { display: flex; flex-direction: column; gap: 14px; }
+.bone { display: block; height: 14px; border-radius: 7px; background: var(--border); }
+.bone.short { width: 45%; }
+.bone.title { width: 80%; height: 28px; }
+.bone.bar { height: 6px; }
+.bone.block { height: 64px; border-radius: 12px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .bone { animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.5; } }
+}
+
+/* Phones: the card becomes a bottom sheet. */
+@media (max-width: 767px) {
+  .panel {
+    inset-inline: 0;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    border-bottom: 0;
+  }
+  h1 { font-size: 1.375rem; margin-bottom: 16px; }
+  .steps li { font-size: 0.6875rem; }
+}
