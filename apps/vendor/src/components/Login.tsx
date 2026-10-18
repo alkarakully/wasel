@@ -3,7 +3,7 @@ import { useState, type FormEvent } from 'react'
 
 import { Api, ApiError, type Lang, type User } from '../lib/api'
 import { useI18n } from '../lib/i18n'
-import { isRtl } from '../lib/strings'
+import { codeDigits, isRtl } from '../lib/strings'
 import { LanguageSwitch } from './LanguageSwitch'
 
 interface Props {
@@ -43,7 +43,8 @@ export function Login({ api, onSignedIn, setLang }: Props) {
   }
 
   const verify = async (value: string) => {
-    if (value.length !== 6 || !sentTo) return
+    // Typing the 6th digit verifies, so a quick Enter must not send it twice.
+    if (value.length !== 6 || !sentTo || busy) return
     setBusy(true)
     setError(null)
     try {
@@ -133,12 +134,11 @@ export function Login({ api, onSignedIn, setLang }: Props) {
                   dir="ltr"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  maxLength={6}
                   autoFocus
                   value={code}
                   aria-invalid={Boolean(error)}
                   onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '').slice(0, 6)
+                    const digits = codeDigits(e.target.value)
                     setCode(digits)
                     setError(null)
                     if (digits.length === 6) verify(digits)

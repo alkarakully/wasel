@@ -9,7 +9,7 @@ import { MenuView } from '../components/MenuView'
 import { OrderCard } from '../components/OrderCard'
 import { Api, type Lang } from '../lib/api'
 import { LangContext } from '../lib/i18n'
-import { errorText, money, pickName } from '../lib/strings'
+import { codeDigits, errorText, money, pickName } from '../lib/strings'
 import { fakeApi, order, store } from './fixtures'
 
 const inLang = (ui: ReactNode, lang: Lang = 'en') => render(<LangContext.Provider value={lang}>{ui}</LangContext.Provider>)
@@ -20,6 +20,13 @@ describe('strings', () => {
     expect(money('ar', 1250)).toBe('1,250 د.ع')
     expect(pickName('ku', { ar: 'لبن', ku: '', en: 'Laban' })).toBe('لبن')
     expect(pickName('en', { ar: 'لبن', ku: '', en: 'Laban' })).toBe('Laban')
+  })
+
+  it('reads the login code from pasted messages and Arabic digits', () => {
+    expect(codeDigits('482913')).toBe('482913')
+    expect(codeDigits('Wasel login code for +9647701234567: 482913')).toBe('482913')
+    expect(codeDigits('٤٨٢٩١٣')).toBe('482913')
+    expect(codeDigits('48 29')).toBe('4829')
   })
 
   it('maps unknown error codes to a generic message', () => {

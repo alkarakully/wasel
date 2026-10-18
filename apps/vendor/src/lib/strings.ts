@@ -220,3 +220,16 @@ export const LANGUAGES: { code: Lang; label: string }[] = [
 ]
 
 export const isRtl = (lang: Lang) => lang !== 'en'
+
+/**
+ * The code from whatever was typed or pasted: Arabic-Indic digits become
+ * 0-9, and the last 6 digits are kept, so pasting a whole message
+ * ("Your Wasel code for +964...: 482913") gives the code, not the phone number.
+ */
+export function codeDigits(text: string): string {
+  return text
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/\D/g, '')
+    .slice(-6)
+}

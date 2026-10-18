@@ -291,8 +291,10 @@
       setError("code", t("errCodeFormat"));
       return;
     }
-    setError("code", "");
+    // Typing the 6th digit submits, so a quick Enter must not send it twice.
     var button = steps.code.querySelector("button[type=submit]");
+    if (button.disabled) return;
+    setError("code", "");
     var done = busy(button, "checking");
     api("otp/verify/", { method: "POST", body: { phone: state.phone, code: code } })
       .then(function (result) {
@@ -308,14 +310,16 @@
       .finally(done);
   });
 
-  // Submit as soon as 6 digits are typed or pasted (also converts Arabic-Indic digits).
+  // Submit as soon as 6 digits are typed or pasted. Converts Arabic-Indic
+  // digits, and keeps the last 6 so pasting a whole message ("Your Wasel
+  // code for +964...: 482913") still gives the code, not the phone number.
   $("code").addEventListener("input", function (event) {
     var input = event.target;
     var digits = input.value
       .replace(/[٠-٩]/g, function (d) { return String(d.charCodeAt(0) - 0x0660); })
       .replace(/[۰-۹]/g, function (d) { return String(d.charCodeAt(0) - 0x06f0); })
       .replace(/\D/g, "")
-      .slice(0, 6);
+      .slice(-6);
     input.value = digits;
     if (digits.length === 6) steps.code.requestSubmit();
   });

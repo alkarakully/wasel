@@ -100,6 +100,28 @@ void main() {
     await tester.pumpWidget(const SizedBox()); // stop the resend countdown
   });
 
+  testWidgets('a pasted message or Arabic digits still give the code', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
+    await tester.tap(find.byKey(const Key('send-code')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('code')),
+      'Wasel login code for +9647701234567: ٤٨٢٩١٣',
+    );
+    await tester.pumpAndSettle();
+
+    expect(session.signedIn, isTrue);
+    expect(log.last, contains('"code":"482913"'));
+    await tester.pumpWidget(const SizedBox()); // stop the resend countdown
+  });
+
   testWidgets('an app can refuse accounts it is not for', (tester) async {
     usePhoneScreen(tester);
     final log = <String>[];

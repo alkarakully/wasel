@@ -332,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
         textAlign: TextAlign.center,
         textDirection: TextDirection.ltr,
         maxLength: 6,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        inputFormatters: [_CodeFormatter()],
         style: TextStyle(
           fontSize: 30,
           letterSpacing: 14,
@@ -431,6 +431,33 @@ class _ChannelTile extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Keeps the code from whatever was typed or pasted: Arabic-Indic digits
+/// become 0-9, and the last 6 digits are kept, so pasting a whole message
+/// ("Your Wasel code for +964...: 482913") gives the code, not the phone
+/// number.
+class _CodeFormatter extends TextInputFormatter {
+  static final _nonDigit = RegExp(r'[^0-9]');
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final ascii = newValue.text.runes.map((rune) {
+      if (rune >= 0x0660 && rune <= 0x0669) return rune - 0x0660 + 0x30;
+      if (rune >= 0x06F0 && rune <= 0x06F9) return rune - 0x06F0 + 0x30;
+      return rune;
+    });
+    var digits = String.fromCharCodes(ascii).replaceAll(_nonDigit, '');
+    if (digits.length > 6) digits = digits.substring(digits.length - 6);
+    if (digits == newValue.text) return newValue;
+    return TextEditingValue(
+      text: digits,
+      selection: TextSelection.collapsed(offset: digits.length),
     );
   }
 }
