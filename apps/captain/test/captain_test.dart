@@ -151,9 +151,7 @@ void main() {
 
       expect(find.text('Your current delivery'), findsOneWidget);
       expect(find.text('Take order'), findsNothing);
-      final toggle = tester.widget<SwitchListTile>(
-        find.byKey(const Key('online')),
-      );
+      final toggle = tester.widget<Switch>(find.byKey(const Key('online')));
       expect(toggle.onChanged, isNull);
     },
   );

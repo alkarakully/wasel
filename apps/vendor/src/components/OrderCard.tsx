@@ -1,4 +1,4 @@
-import { Check, X } from '@phosphor-icons/react'
+import { Check, Clock, CreditCard, Hourglass, Money, Moped, Warning, X } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { Api, type Order } from '../lib/api'
@@ -44,7 +44,10 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
       <header>
         <strong className="order-id">#{order.id}</strong>
         {showStore && <span className="muted">{order.vendor_name}</span>}
-        <span className="muted time">{age < 1 ? t('justNow') : t('minutesAgo', { n: age })}</span>
+        <span className="muted time">
+          <Clock size={16} weight="light" aria-hidden="true" />
+          {age < 1 ? t('justNow') : t('minutesAgo', { n: age })}
+        </span>
       </header>
 
       <ul className="items">
@@ -64,7 +67,15 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
       </ul>
 
       <p className="total">
-        {order.payment_type === 'cod' ? t('cash') : t('paid')} · {money(order.total_amount)}
+        <span className={`pay ${order.payment_type === 'cod' ? 'pay-cash' : ''}`}>
+          {order.payment_type === 'cod' ? (
+            <Money size={16} weight="light" aria-hidden="true" />
+          ) : (
+            <CreditCard size={16} weight="light" aria-hidden="true" />
+          )}
+          {order.payment_type === 'cod' ? t('cash') : t('paid')}
+        </span>
+        <span className="amount">{money(order.total_amount)}</span>
       </p>
 
       {order.status === 'received' && (
@@ -78,12 +89,17 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
             ))}
           </fieldset>
           <div className="actions">
-            <button type="button" className="primary" disabled={busy} onClick={() => run(() => api.accept(order.id, prep))}>
-              <Check size={20} weight="bold" aria-hidden="true" />
+            <button
+              type="button"
+              className="primary"
+              disabled={busy}
+              onClick={() => run(() => api.accept(order.id, prep))}
+            >
+              <Check size={20} weight="light" aria-hidden="true" />
               {t('accept')}
             </button>
             <button type="button" className="secondary" disabled={busy} onClick={() => setRejecting(true)}>
-              <X size={20} weight="bold" aria-hidden="true" />
+              <X size={20} weight="light" aria-hidden="true" />
               {t('reject')}
             </button>
           </div>
@@ -93,20 +109,30 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
       {order.status === 'preparing' && (
         <>
           {readyIn !== null && (
-            <p className={readyIn < 0 ? 'late' : 'muted'}>
+            <p className={readyIn < 0 ? 'late' : 'eta'}>
+              {readyIn < 0 ? (
+                <Warning size={18} weight="light" aria-hidden="true" />
+              ) : (
+                <Hourglass size={18} weight="light" aria-hidden="true" />
+              )}
               {readyIn < 0 ? t('late', { n: -readyIn }) : t('readyIn', { n: readyIn })}
             </p>
           )}
           <div className="actions">
             <button type="button" className="primary" disabled={busy} onClick={() => run(() => api.ready(order.id))}>
-              <Check size={20} weight="bold" aria-hidden="true" />
+              <Check size={20} weight="light" aria-hidden="true" />
               {t('markReady')}
             </button>
           </div>
         </>
       )}
 
-      {order.status === 'ready' && <p className="muted">{order.captain ? t('captainComing') : t('waitingCaptain')}</p>}
+      {order.status === 'ready' && (
+        <p className="waiting">
+          <Moped size={20} weight="light" aria-hidden="true" />
+          {order.captain ? t('captainComing') : t('waitingCaptain')}
+        </p>
+      )}
 
       {rejecting && (
         <RejectDialog

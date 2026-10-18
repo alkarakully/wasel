@@ -4,6 +4,7 @@ import type { Lang, Names } from './api'
 const strings = {
   ar: {
     brandLine: 'لوحة متاجر واصل. استقبل الطلبات وجهّزها.',
+    portalTag: 'بوابة المتاجر',
     loginTitle: 'دخول المتجر',
     loginLead: 'أدخل رقم هاتف صاحب المتجر وسنرسل لك رمز الدخول.',
     phone: 'رقم الهاتف',
@@ -65,6 +66,7 @@ const strings = {
   },
   ku: {
     brandLine: 'پانێڵی دووکانەکانی واصل. داواکارییەکان وەربگرە و ئامادەیان بکە.',
+    portalTag: 'پانێڵی دووکان',
     loginTitle: 'چوونەژوورەوەی دووکان',
     loginLead: 'ژمارەی مۆبایلی خاوەن دووکان بنووسە و کۆدی چوونەژوورەوەت بۆ دەنێرین.',
     phone: 'ژمارەی مۆبایل',
@@ -126,6 +128,7 @@ const strings = {
   },
   en: {
     brandLine: 'Wasel for stores. Take orders and get them ready.',
+    portalTag: 'Store portal',
     loginTitle: 'Store login',
     loginLead: "Enter the store owner's phone number and we'll send a login code.",
     phone: 'Phone number',

@@ -17,24 +17,26 @@ body {
 .shell {
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(320px, 5fr) 7fr;
+  grid-template-columns: minmax(340px, 5fr) 7fr;
+  gap: 12px;
+  padding: 12px;
 }
 
-/* Brand side: lapis block with the gold wordmark. */
+/* Brand side: a glazed lapis panel with the gold wordmark. */
 .brand {
-  background: var(--brand-bg);
-  color: var(--brand-text);
+  border-radius: var(--radius-xl);
   padding: 48px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   gap: 16px;
+  overflow: hidden;
 }
 
 .brand-mark {
   margin: 0;
   font-size: clamp(4rem, 9vw, 7.5rem);
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
   color: var(--brand-gold);
 }
@@ -42,8 +44,8 @@ body {
 .brand-line {
   margin: 0;
   max-width: 28ch;
-  font-size: 1.125rem;
-  opacity: 0.92;
+  font-size: 1.1875rem;
+  color: var(--lapis-100);
 }
 
 .panel {
@@ -52,19 +54,19 @@ body {
   justify-content: center;
   padding: 32px 24px;
   width: 100%;
-  max-width: 440px;
+  max-width: 460px;
   margin-inline: auto;
 }
 
 .lang {
   display: inline-flex;
-  align-self: flex-start;
-  gap: 4px;
-  padding: 4px;
-  margin-bottom: 48px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  align-self: flex-end;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 32px;
+  background: var(--sunk);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
 }
 
 .lang button {
@@ -73,23 +75,44 @@ body {
   color: var(--muted);
   font: inherit;
   font-size: 0.875rem;
-  padding: 6px 12px;
-  border-radius: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
   cursor: pointer;
+  transition: background-color 0.25s var(--out), color 0.25s var(--out);
 }
 
 .lang button[aria-pressed="true"] {
-  background: var(--accent-soft);
-  color: var(--text);
-  font-weight: 600;
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 700;
+  box-shadow: var(--shadow-raised);
+}
+
+/* Double bezel: a tinted tray holding the form plate. */
+.bezel {
+  padding: 6px;
+  border-radius: var(--radius-xl);
+  background: var(--sunk);
+  border: 1px solid var(--hairline);
+}
+
+.plate {
+  padding: 32px 28px;
+  border-radius: calc(var(--radius-xl) - 6px);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised), inset 0 1px 0 rgb(255 255 255 / 0.6);
+}
+
+@media (prefers-color-scheme: dark) {
+  .plate { box-shadow: var(--shadow-raised), inset 0 1px 0 rgb(255 255 255 / 0.04); }
 }
 
 .step { display: flex; flex-direction: column; gap: 24px; }
 
-.step:not([hidden]) { animation: enter 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.step:not([hidden]) { animation: enter 0.5s var(--out); }
 
 @keyframes enter {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: none; }
 }
 
@@ -98,6 +121,7 @@ h1 {
   font-size: 2rem;
   line-height: 1.25;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .lead { margin: -16px 0 0; color: var(--muted); }
@@ -117,16 +141,19 @@ label, legend { font-weight: 600; font-size: 0.9375rem; padding: 0; }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+  transition: border-color 0.2s var(--out), box-shadow 0.2s var(--out);
 }
 
-.phone-input:focus-within { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 25%, transparent); }
+.phone-input:focus-within { border-color: var(--focus); box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent); }
 
 .prefix {
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  color: var(--muted);
-  border-inline-end: 1px solid var(--border);
+  padding: 0 16px;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 1.125rem;
+  border-inline-end: 1px solid var(--hairline);
   font-variant-numeric: tabular-nums;
 }
 
@@ -137,7 +164,7 @@ input[type="tel"], .code-input {
   color: var(--text);
   font: inherit;
   font-size: 1.125rem;
-  padding: 14px;
+  padding: 15px 16px;
   outline: none;
   font-variant-numeric: tabular-nums;
 }
@@ -148,55 +175,94 @@ input::placeholder { color: color-mix(in srgb, var(--muted) 75%, transparent); }
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 1.75rem;
+  font-size: 1.875rem;
+  font-weight: 600;
+  color: var(--accent);
   letter-spacing: 0.5em;
   text-align: center;
-  padding-inline-start: calc(14px + 0.5em);
+  padding-inline-start: calc(16px + 0.5em);
+  transition: border-color 0.2s var(--out), box-shadow 0.2s var(--out);
 }
 
-.code-input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 25%, transparent); }
+.code-input:focus { border-color: var(--focus); box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 18%, transparent); }
 
 [aria-invalid="true"], .phone-input:has([aria-invalid="true"]) { border-color: var(--error); }
 
-.channels { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+.channels { flex-direction: row; flex-wrap: wrap; gap: 10px; }
 .channels legend { margin-bottom: 8px; width: 100%; }
 
 .channel {
   flex: 1 1 140px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: 54px;
   padding: 12px 14px;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--sunk);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
   font-weight: 500;
   cursor: pointer;
+  transition: background-color 0.25s var(--out), border-color 0.25s var(--out), transform 0.35s var(--spring);
 }
 
+.channel:active { transform: scale(0.97); }
 .channel input { position: absolute; opacity: 0; pointer-events: none; }
-.channel i { font-size: 1.375rem; color: var(--muted); }
-.channel:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.channel i { font-size: 1.5rem; color: var(--muted); }
+.channel:has(input:checked) { border: 1.5px solid var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 .channel:has(input:checked) i { color: var(--accent); }
 .channel:has(input:focus-visible) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 35%, transparent); }
 
 button.primary, button.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.0625rem;
-  padding: 14px 20px;
-  border-radius: var(--radius);
+  min-height: 52px;
+  padding: 12px 22px;
+  border-radius: 999px;
   cursor: pointer;
-  transition: background-color 0.2s, transform 0.1s;
+  transition: background-color 0.25s var(--out), transform 0.35s var(--spring);
   white-space: nowrap;
 }
 
-button.primary { border: 0; background: var(--accent); color: var(--on-accent); }
+button.primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--accent) 60%, transparent);
+}
 button.primary:hover { background: var(--accent-hover); }
 button.secondary { border: 1px solid var(--border); background: var(--surface); color: var(--text); }
-button.primary:active, button.secondary:active { transform: scale(0.98); }
+button.primary:active, button.secondary:active { transform: scale(0.97); }
 button:disabled { opacity: 0.6; cursor: progress; }
 button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* Call to action with its arrow in its own circle. */
+button.cta {
+  justify-content: space-between;
+  min-height: 58px;
+  padding-block: 7px;
+  padding-inline: 26px 7px;
+}
+
+.cta-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  background: color-mix(in srgb, var(--on-accent) 14%, transparent);
+  transition: transform 0.45s var(--spring);
+}
+
+button.cta:hover .cta-icon { transform: translateX(-3px) scale(1.05); }
+[dir="ltr"] button.cta:hover .cta-icon { transform: translateX(3px) scale(1.05); }
 
 .back, .link {
   align-self: flex-start;
@@ -214,25 +280,25 @@ button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 
 .back:hover, .link:hover { text-decoration: underline; }
 
-/* The "back" arrow points right in RTL and left in LTR. */
+/* Arrows point the reading direction: flip them in LTR. */
 [dir="ltr"] .flip { transform: scaleX(-1); }
 
-.resend { margin: -8px 0 0; color: var(--muted); font-size: 0.9375rem; }
+.resend { margin: -8px 0 0; color: var(--muted); font-size: 0.9375rem; text-align: center; }
 
 .done-icon { font-size: 3.5rem; color: var(--accent); }
 
 @media (max-width: 767px) {
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
-  .brand { padding: 24px 16px; gap: 4px; }
+  .shell { grid-template-columns: 1fr; grid-template-rows: auto 1fr; padding: 8px; gap: 8px; }
+  .brand { padding: 24px 20px; gap: 8px; border-radius: var(--radius-lg); }
   .brand-mark { font-size: 2.75rem; }
   .brand-line { font-size: 1rem; }
-  .panel { justify-content: flex-start; padding: 24px 16px 40px; }
-  .lang { margin-bottom: 32px; }
+  .panel { justify-content: flex-start; padding: 16px 8px 40px; }
+  .lang { margin-bottom: 20px; }
+  .plate { padding: 24px 18px; }
   h1 { font-size: 1.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .step:not([hidden]) { animation: none; }
-  button.primary, button.secondary { transition: none; }
-  button.primary:active, button.secondary:active { transform: none; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  button.primary:active, button.secondary:active, .channel:active { transform: none; }
 }

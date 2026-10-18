@@ -36,6 +36,7 @@ class _ProductSheetState extends State<ProductSheet> {
     final s = S.of(context);
     final product = widget.product;
     final scheme = Theme.of(context).colorScheme;
+    final t = WaselTheme.of(context);
     final step = product.soldByKg ? 0.5 : 1.0;
     final quantityLabel = product.soldByKg
         ? '${_quantity.toStringAsFixed(1)} kg'
@@ -43,19 +44,37 @@ class _ProductSheetState extends State<ProductSheet> {
 
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(22, 0, 22, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               product.name(s.lang),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.2,
+              ),
             ),
-            Text(
-              '${s.money(product.price)}${product.soldByKg ? ' ${s.t('perKg')}' : ''}',
-              style: TextStyle(color: scheme.onSurfaceVariant),
+            const SizedBox(height: 4),
+            Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: s.money(product.price),
+                    style: TextStyle(
+                      color: scheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (product.soldByKg) TextSpan(text: ' ${s.t('perKg')}'),
+                ],
+              ),
+              style: TextStyle(color: t.muted, fontSize: 16),
             ),
+            const SizedBox(height: 14),
+            const GoldRule(width: 48),
             Flexible(
               child: ListView(
                 shrinkWrap: true,
@@ -74,11 +93,35 @@ class _ProductSheetState extends State<ProductSheet> {
                           ),
                           if (_required(entry.key)) ...[
                             const SizedBox(width: 8),
-                            Text(
-                              s.t('required'),
-                              style: TextStyle(
-                                color: scheme.primary,
-                                fontSize: 13,
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: ShapeDecoration(
+                                color: _single.containsKey(entry.key)
+                                    ? t.sunk
+                                    : scheme.secondaryContainer,
+                                shape: const StadiumBorder(),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_single.containsKey(entry.key)) ...[
+                                    Icon(Ph.check, size: 12, color: t.success),
+                                    const SizedBox(width: 4),
+                                  ],
+                                  Text(
+                                    s.t('required'),
+                                    style: TextStyle(
+                                      color: _single.containsKey(entry.key)
+                                          ? t.muted
+                                          : scheme.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -128,28 +171,40 @@ class _ProductSheetState extends State<ProductSheet> {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
-                IconButton.outlined(
-                  onPressed: _quantity > step
-                      ? () => setState(() => _quantity -= step)
-                      : null,
-                  icon: const Icon(Icons.remove),
-                ),
-                SizedBox(
-                  width: 72,
-                  child: Text(
-                    quantityLabel,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: ShapeDecoration(
+                    color: t.sunk,
+                    shape: StadiumBorder(side: BorderSide(color: t.hairline)),
                   ),
-                ),
-                IconButton.outlined(
-                  onPressed: _quantity < 50
-                      ? () => setState(() => _quantity += step)
-                      : null,
-                  icon: const Icon(Icons.add),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _StepButton(
+                        icon: Ph.minus,
+                        onPressed: _quantity > step
+                            ? () => setState(() => _quantity -= step)
+                            : null,
+                      ),
+                      SizedBox(
+                        width: 64,
+                        child: Text(
+                          quantityLabel,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      _StepButton(
+                        icon: Ph.plus,
+                        onPressed: _quantity < 50
+                            ? () => setState(() => _quantity += step)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -173,4 +228,38 @@ class _ProductSheetState extends State<ProductSheet> {
           '+${s.money(modifier.priceDelta)}',
           style: const TextStyle(fontSize: 14),
         );
+}
+
+/// A round + or - inside the quantity pill.
+class _StepButton extends StatelessWidget {
+  const _StepButton({required this.icon, required this.onPressed});
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = WaselTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      child: Pressable(
+        onTap: onPressed,
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: t.surface,
+            boxShadow: onPressed == null ? null : t.raised,
+          ),
+          child: Icon(
+            icon,
+            size: 18,
+            color: onPressed == null ? t.muted : scheme.primary,
+          ),
+        ),
+      ),
+    );
+  }
 }

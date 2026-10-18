@@ -20,6 +20,7 @@ const captainStrings = <String, Map<String, String>>{
     'online': 'متصل',
     'offline': 'غير متصل',
     'goOnlineHint': 'اتصل لتظهر لك الطلبات ويبدأ مشاركة موقعك.',
+    'onlineHint': 'أنت متاح للطلبات وموقعك يُشارك الآن.',
     'available': 'طلبات بانتظار كابتن',
     'noAvailable': 'لا توجد طلبات الآن. ستظهر هنا فور قبولها من المتجر.',
     'takeOrder': 'استلم الطلب',
@@ -68,6 +69,7 @@ const captainStrings = <String, Map<String, String>>{
     'offline': 'دەرهێڵ',
     'goOnlineHint':
         'سەرهێڵ بە بۆ ئەوەی داواکارییەکان ببینیت و شوێنەکەت هاوبەش بکرێت.',
+    'onlineHint': 'داواکاری وەردەگریت و شوێنەکەت هاوبەش دەکرێت.',
     'available': 'داواکاری چاوەڕێی کاپتن',
     'noAvailable':
         'ئێستا هیچ داواکارییەک نییە. کاتێک دووکان قبوڵی بکات لێرە دەردەکەوێت.',
@@ -114,6 +116,7 @@ const captainStrings = <String, Map<String, String>>{
     'online': 'Online',
     'offline': 'Offline',
     'goOnlineHint': 'Go online to see orders and start sharing your location.',
+    'onlineHint': "You're receiving orders and sharing your location.",
     'available': 'Orders waiting for a captain',
     'noAvailable':
         'No orders right now. They appear here as soon as a store accepts one.',

@@ -6,14 +6,15 @@
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="data:,">
   <title>واصل | تسجيل الدخول</title>
-  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
   <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'accounts/login.css' %}">
 </head>
 <body>
   <main class="shell">
-    <aside class="brand" aria-hidden="true">
+    <aside class="brand glaze" aria-hidden="true">
       <p class="brand-mark">واصل</p>
+      <span class="gold-rule"></span>
       <p class="brand-line" data-i18n="brandLine">اطلب من مطاعمك وأسواقك المفضلة، ويوصلك الطلب لباب البيت.</p>
     </aside>
 
@@ -24,6 +25,7 @@
         <button type="button" data-lang="en" aria-pressed="false">English</button>
       </div>
 
+      <div class="bezel"><div class="plate">
       <!-- Step 1: phone number -->
       <form class="step" id="step-phone" novalidate>
         <h1 data-i18n="phoneTitle">سجّل دخولك</h1>
@@ -44,23 +46,26 @@
           <legend data-i18n="channelLabel">أرسل الرمز عبر</legend>
           <label class="channel">
             <input type="radio" name="channel" value="whatsapp" checked>
-            <i class="ph ph-whatsapp-logo" aria-hidden="true"></i>
+            <i class="ph-light ph-whatsapp-logo" aria-hidden="true"></i>
             <span data-i18n="whatsapp">واتساب</span>
           </label>
           <label class="channel">
             <input type="radio" name="channel" value="sms">
-            <i class="ph ph-chat-text" aria-hidden="true"></i>
+            <i class="ph-light ph-chat-text" aria-hidden="true"></i>
             <span data-i18n="sms">رسالة نصية</span>
           </label>
         </fieldset>
 
-        <button class="primary" type="submit" data-i18n="sendCode">أرسل الرمز</button>
+        <button class="primary cta" type="submit">
+          <span data-i18n="sendCode">أرسل الرمز</span>
+          <span class="cta-icon" aria-hidden="true"><i class="ph-light ph-arrow-left flip"></i></span>
+        </button>
       </form>
 
       <!-- Step 2: code -->
       <form class="step" id="step-code" novalidate hidden>
         <button type="button" class="back" id="change-number">
-          <i class="ph ph-arrow-right flip" aria-hidden="true"></i>
+          <i class="ph-light ph-arrow-right flip" aria-hidden="true"></i>
           <span data-i18n="changeNumber">تغيير الرقم</span>
         </button>
         <h1 data-i18n="codeTitle">أدخل الرمز</h1>
@@ -74,7 +79,10 @@
           <p class="error" id="code-error" role="alert" hidden></p>
         </div>
 
-        <button class="primary" type="submit" data-i18n="confirm">تأكيد</button>
+        <button class="primary cta" type="submit">
+          <span data-i18n="confirm">تأكيد</span>
+          <span class="cta-icon" aria-hidden="true"><i class="ph-light ph-arrow-left flip"></i></span>
+        </button>
         <p class="resend">
           <span id="resend-wait"></span>
           <button type="button" class="link" id="resend" hidden data-i18n="resend">إعادة إرسال الرمز</button>
@@ -83,11 +91,12 @@
 
       <!-- Step 3: signed in -->
       <div class="step" id="step-done" hidden>
-        <i class="ph ph-check-circle done-icon" aria-hidden="true"></i>
+        <i class="ph-light ph-check-circle done-icon" aria-hidden="true"></i>
         <h1 id="done-title"></h1>
         <p class="lead"><bdi dir="ltr" id="done-phone"></bdi></p>
         <button class="secondary" type="button" id="logout" data-i18n="logout">تسجيل الخروج</button>
       </div>
+      </div></div>
     </section>
   </main>
 

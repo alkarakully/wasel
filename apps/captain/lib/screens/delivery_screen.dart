@@ -196,9 +196,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         CircleOptions(
           geometry: here,
           circleRadius: 12,
-          circleColor: '#22379B',
-          circleStrokeColor: '#F4F6FF',
-          circleStrokeWidth: 4,
+          circleColor: '#F2C75C',
+          circleStrokeColor: '#22379B',
+          circleStrokeWidth: 5,
         ),
       );
     } else {
@@ -221,9 +221,21 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             : SystemUiOverlayStyle.dark,
         leading: Padding(
           padding: const EdgeInsets.all(6),
-          child: IconButton.filledTonal(
-            onPressed: () => Navigator.pop(context),
-            icon: const BackButtonIcon(),
+          child: Pressable(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: BoxDecoration(
+                color: WaselTheme.of(context).surface,
+                shape: BoxShape.circle,
+                boxShadow: WaselTheme.of(context).floating,
+              ),
+              child: Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Ph.arrowRight
+                    : Ph.arrowLeft,
+                size: 20,
+              ),
+            ),
           ),
         ),
       ),
@@ -255,8 +267,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   Widget _panel(S s) {
     final scheme = Theme.of(context).colorScheme;
+    final t = WaselTheme.of(context);
     final order = _order;
-    final muted = TextStyle(color: scheme.onSurfaceVariant);
+    final muted = TextStyle(color: t.muted, fontSize: 13);
 
     final children = <Widget>[];
     if (order == null) {
@@ -276,7 +289,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
           _title(s, order),
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
+        const GoldRule(width: 48),
+        const SizedBox(height: 14),
       ]);
 
       if (order.status == 'preparing' || order.status == 'ready') {
@@ -289,12 +304,14 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 : () => _directions(order.vendorLocation!),
           ),
           const SizedBox(height: 16),
-          FilledButton(
+          PillButton(
             key: const Key('picked-up'),
-            onPressed: order.status == 'ready' && !_busy
+            icon: Ph.shoppingBag,
+            busy: _busy,
+            onPressed: order.status == 'ready'
                 ? () => _run((api) => api.pickup(order.id))
                 : null,
-            child: Text(s.t('pickedUp')),
+            label: s.t('pickedUp'),
           ),
         ]);
       } else if (order.status == 'out_for_delivery') {
@@ -312,12 +329,37 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                 ? null
                 : () => _call(order.customerPhone!),
           ),
-          const SizedBox(height: 10),
-          Text(
-            order.cashToCollect > 0
-                ? s.t('collectCash', {'amount': s.money(order.cashToCollect)})
-                : s.t('paidInApp'),
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: order.cashToCollect > 0 ? goldWash(context) : t.sunk,
+              borderRadius: BorderRadius.circular(Radii.md),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  order.cashToCollect > 0 ? Ph.money : Ph.checkCircle,
+                  size: 22,
+                  color: order.cashToCollect > 0 ? t.goldText : t.success,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    order.cashToCollect > 0
+                        ? s.t('collectCash', {
+                            'amount': s.money(order.cashToCollect),
+                          })
+                        : s.t('paidInApp'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: order.cashToCollect > 0 ? t.goldText : t.ink,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -345,13 +387,16 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
               ),
               const SizedBox(width: 12),
               SizedBox(
-                width: 140,
-                child: FilledButton(
+                width: 150,
+                child: PillButton(
                   key: const Key('deliver'),
-                  onPressed: _pin.text.length == 4 && !_busy
+                  tone: PillTone.gold,
+                  icon: Ph.check,
+                  busy: _busy,
+                  onPressed: _pin.text.length == 4
                       ? () => _run((api) => api.deliver(order.id, _pin.text))
                       : null,
-                  child: Text(s.t('deliver')),
+                  label: s.t('deliver'),
                 ),
               ),
             ],
@@ -376,28 +421,34 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
       }
     }
 
-    return Container(
-      width: double.infinity,
+    return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.paddingOf(context).bottom,
+        12,
+        0,
+        12,
+        12 + MediaQuery.paddingOf(context).bottom / 2,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Brand.lapisDark.withValues(alpha: 0.18),
-            blurRadius: 30,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: t.sunk,
+          borderRadius: BorderRadius.circular(Radii.xl + 4),
+          border: Border.all(color: t.hairline),
+          boxShadow: t.floating,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: BorderRadius.circular(Radii.xl),
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
       ),
     );
   }
@@ -418,17 +469,43 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     VoidCallback? onCall,
   }) {
     final s = S.of(context);
+    final t = WaselTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
+    Widget round(IconData icon, String tip, VoidCallback onTap, bool filled) =>
+        Padding(
+          padding: const EdgeInsetsDirectional.only(start: 8),
+          child: Tooltip(
+            message: tip,
+            child: Semantics(
+              button: true,
+              label: tip,
+              child: Pressable(
+                onTap: onTap,
+                child: Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: filled ? scheme.primary : scheme.secondaryContainer,
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: filled ? scheme.onPrimary : scheme.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
-              ),
+              Text(label, style: TextStyle(fontSize: 13, color: t.muted)),
+              const SizedBox(height: 2),
               Text(
                 text,
                 style: const TextStyle(
@@ -439,18 +516,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             ],
           ),
         ),
-        if (onCall != null)
-          IconButton.filledTonal(
-            tooltip: s.t('callCustomer'),
-            onPressed: onCall,
-            icon: const Icon(Icons.call),
-          ),
+        if (onCall != null) round(Ph.phone, s.t('callCustomer'), onCall, false),
         if (onDirections != null)
-          IconButton.filledTonal(
-            tooltip: s.t('navigate'),
-            onPressed: onDirections,
-            icon: const Icon(Icons.directions),
-          ),
+          round(Ph.navigationArrow, s.t('navigate'), onDirections, true),
       ],
     );
   }

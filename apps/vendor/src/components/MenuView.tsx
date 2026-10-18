@@ -41,7 +41,7 @@ export function MenuView({ api, store, onChanged, onError }: Props) {
               return (
                 <li key={product.id} className={product.is_available ? '' : 'unavailable'}>
                   <span className="product-name">{label}</span>
-                  <span className="muted">{money(product.price)}</span>
+                  <span className="price">{money(product.price)}</span>
                   <label className="switch">
                     <input
                       type="checkbox"

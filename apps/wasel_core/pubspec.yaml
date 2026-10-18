@@ -27,7 +27,25 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-
+  # IBM Plex Sans Arabic (SIL Open Font License, see assets/fonts/OFL.txt):
+  # Arabic, Kurdish and Latin in one family.
+  fonts:
+    # Phosphor icons, Light weight (MIT).
+    - family: PhosphorLight
+      fonts:
+        - asset: assets/fonts/Phosphor-Light.ttf
+    - family: IBMPlexSansArabic
+      fonts:
+        - asset: assets/fonts/IBMPlexSansArabic-Light.ttf
+          weight: 300
+        - asset: assets/fonts/IBMPlexSansArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/IBMPlexSansArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/IBMPlexSansArabic-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/IBMPlexSansArabic-Bold.ttf
+          weight: 700
   # To add assets to your package, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

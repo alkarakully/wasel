@@ -115,7 +115,7 @@
     var el = document.createElement("span");
     el.className = "marker" + (isCaptain ? " captain" : "");
     var i = document.createElement("i");
-    i.className = "ph ph-" + iconName;
+    i.className = "ph-light ph-" + iconName;
     el.appendChild(i);
     return el;
   }

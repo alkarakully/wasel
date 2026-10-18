@@ -9,6 +9,8 @@ import 'api/models.dart';
 import 'strings.dart';
 import 'session.dart';
 import 'theme.dart';
+import 'widgets/brand.dart';
+import 'widgets/icons.dart';
 import 'widgets/language_switch.dart';
 
 /// Phone login: number and channel, then the 6-digit code.
@@ -124,203 +126,311 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final s = S.of(context);
     final theme = Theme.of(context);
+    final t = WaselTheme.of(context);
+    final top = MediaQuery.paddingOf(context).top;
     return Scaffold(
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            Container(
-              color: Brand.lapis,
-              padding: EdgeInsets.fromLTRB(
-                24,
-                MediaQuery.paddingOf(context).top + 24,
-                24,
-                28,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'واصل',
-                    style: TextStyle(
-                      color: Brand.gold,
-                      fontSize: 56,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
+      backgroundColor: t.canvas,
+      body: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          GlazePanel(
+            padding: EdgeInsets.fromLTRB(28, top + 20, 28, 72),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: LanguageSwitch(onDark: true),
+                ),
+                const SizedBox(height: 28),
+                const Wordmark(size: 64),
+                const SizedBox(height: 10),
+                const GoldRule(),
+                const SizedBox(height: 14),
+                Text(
+                  s.t('brandLine'),
+                  style: const TextStyle(
+                    color: Lapis.c100,
+                    fontSize: 17,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // The form card overlaps the hero, like a plate resting on glaze.
+          Transform.translate(
+            offset: const Offset(0, -44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: BezelCard(
+                radius: Radii.xl,
+                padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+                child: AnimatedSwitcher(
+                  duration: Motion.medium,
+                  switchInCurve: Motion.out,
+                  switchOutCurve: Motion.out,
+                  transitionBuilder: (child, animation) => FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween(
+                        begin: const Offset(0, 0.04),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    s.t('brandLine'),
-                    style: const TextStyle(
-                      color: Brand.onLapis,
-                      fontSize: 16,
-                      height: 1.5,
-                    ),
+                  child: Column(
+                    key: ValueKey(_sentTo == null),
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: _sentTo == null
+                        ? _phoneStep(s, theme)
+                        : _codeStep(s, theme),
                   ),
-                ],
+                ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Align(
-                    alignment: AlignmentDirectional.centerStart,
-                    child: LanguageSwitch(),
-                  ),
-                  const SizedBox(height: 28),
-                  if (_sentTo == null)
-                    ..._phoneStep(s, theme)
-                  else
-                    ..._codeStep(s, theme),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> _phoneStep(S s, ThemeData theme) => [
-    Text(
-      s.t('loginTitle'),
-      style: theme.textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      text,
+      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
     ),
-    const SizedBox(height: 6),
-    Text(
-      s.t('loginLead'),
-      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-    ),
-    const SizedBox(height: 24),
-    Text(s.t('phone'), style: const TextStyle(fontWeight: FontWeight.w600)),
-    const SizedBox(height: 8),
-    Directionality(
-      textDirection: TextDirection.ltr,
-      child: TextField(
-        key: const Key('phone'),
-        controller: _phone,
-        keyboardType: TextInputType.phone,
-        autofillHints: const [AutofillHints.telephoneNumberNational],
-        style: const TextStyle(fontSize: 18),
-        decoration: InputDecoration(
-          prefixText: '+964  ',
-          hintText: '0770 123 4567',
-          errorText: _error == null ? null : s.t(_error!),
-          errorMaxLines: 2,
-        ),
-        onChanged: (_) {
-          if (_error != null) setState(() => _error = null);
-        },
-        onSubmitted: (_) => _sendCode(),
-      ),
-    ),
-    const SizedBox(height: 6),
-    Text(
-      s.t('phoneHelp'),
-      style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurfaceVariant),
-    ),
-    const SizedBox(height: 20),
-    Text(s.t('sendBy'), style: const TextStyle(fontWeight: FontWeight.w600)),
-    const SizedBox(height: 8),
-    SegmentedButton<String>(
-      segments: [
-        ButtonSegment(
-          value: 'whatsapp',
-          label: Text(s.t('whatsapp')),
-          icon: const Icon(Icons.chat_outlined),
-        ),
-        ButtonSegment(
-          value: 'sms',
-          label: Text(s.t('sms')),
-          icon: const Icon(Icons.sms_outlined),
-        ),
-      ],
-      selected: {_channel},
-      onSelectionChanged: (value) => setState(() => _channel = value.first),
-    ),
-    const SizedBox(height: 28),
-    FilledButton(
-      key: const Key('send-code'),
-      onPressed: _busy ? null : () => _sendCode(),
-      child: Text(s.t('sendCode')),
-    ),
-  ];
+  );
 
-  List<Widget> _codeStep(S s, ThemeData theme) => [
-    Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: TextButton.icon(
-        onPressed: () => setState(() {
-          _sentTo = null;
-          _error = null;
-        }),
-        icon: const Icon(Icons.arrow_back),
-        label: Text(s.t('changeNumber')),
+  List<Widget> _phoneStep(S s, ThemeData theme) {
+    final t = WaselTheme.of(context);
+    return [
+      Text(
+        s.t('loginTitle'),
+        style: theme.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+        ),
       ),
-    ),
-    const SizedBox(height: 8),
-    Text(
-      s.t('codeTitle'),
-      style: theme.textTheme.headlineMedium?.copyWith(
-        fontWeight: FontWeight.w700,
-      ),
-    ),
-    const SizedBox(height: 6),
-    Text(
-      s.t('codeLead', {
-        'phone': '\u2066${_formatPhone(_sentTo!)}\u2069',
-        'channel': s.t(_sentBy),
-      }),
-      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-    ),
-    const SizedBox(height: 24),
-    Text(s.t('code'), style: const TextStyle(fontWeight: FontWeight.w600)),
-    const SizedBox(height: 8),
-    TextField(
-      key: const Key('code'),
-      controller: _code,
-      autofocus: true,
-      keyboardType: TextInputType.number,
-      autofillHints: const [AutofillHints.oneTimeCode],
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-      maxLength: 6,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      style: const TextStyle(
-        fontSize: 28,
-        letterSpacing: 12,
-        fontWeight: FontWeight.w600,
-      ),
-      decoration: InputDecoration(
-        counterText: '',
-        errorText: _error == null ? null : s.t(_error!),
-      ),
-      onChanged: (value) {
-        if (value.length == 6) _verify();
-      },
-    ),
-    const SizedBox(height: 24),
-    FilledButton(
-      onPressed: _busy ? null : _verify,
-      child: Text(s.t('confirm')),
-    ),
-    const SizedBox(height: 12),
-    Center(
-      child: _resendIn > 0
-          ? Text(
-              s.t('resendIn', {'s': _resendIn}),
-              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-            )
-          : TextButton(
-              onPressed: _busy ? null : () => _sendCode(phone: _sentTo),
-              child: Text(s.t('resend')),
+      const SizedBox(height: 6),
+      Text(s.t('loginLead'), style: TextStyle(color: t.muted, height: 1.5)),
+      const SizedBox(height: 24),
+      _label(s.t('phone')),
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: TextField(
+          key: const Key('phone'),
+          controller: _phone,
+          keyboardType: TextInputType.phone,
+          autofillHints: const [AutofillHints.telephoneNumberNational],
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          decoration: InputDecoration(
+            prefixIcon: Padding(
+              padding: const EdgeInsetsDirectional.only(start: 16, end: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '+964',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(width: 1, height: 22, color: t.hairline),
+                ],
+              ),
             ),
-    ),
-  ];
+            hintText: '0770 123 4567',
+            errorText: _error == null ? null : s.t(_error!),
+            errorMaxLines: 2,
+          ),
+          onChanged: (_) {
+            if (_error != null) setState(() => _error = null);
+          },
+          onSubmitted: (_) => _sendCode(),
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(s.t('phoneHelp'), style: TextStyle(fontSize: 13, color: t.muted)),
+      const SizedBox(height: 22),
+      _label(s.t('sendBy')),
+      Row(
+        children: [
+          Expanded(
+            child: _ChannelTile(
+              icon: Ph.whatsappLogo,
+              label: s.t('whatsapp'),
+              selected: _channel == 'whatsapp',
+              onTap: () => setState(() => _channel = 'whatsapp'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _ChannelTile(
+              icon: Ph.chatText,
+              label: s.t('sms'),
+              selected: _channel == 'sms',
+              onTap: () => setState(() => _channel = 'sms'),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 28),
+      PillButton(
+        key: const Key('send-code'),
+        label: s.t('sendCode'),
+        busy: _busy,
+        onPressed: () => _sendCode(),
+      ),
+    ];
+  }
+
+  List<Widget> _codeStep(S s, ThemeData theme) {
+    final t = WaselTheme.of(context);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return [
+      Align(
+        alignment: AlignmentDirectional.centerStart,
+        child: TextButton.icon(
+          onPressed: () => setState(() {
+            _sentTo = null;
+            _error = null;
+          }),
+          icon: Icon(rtl ? Ph.arrowRight : Ph.arrowLeft, size: 18),
+          label: Text(s.t('changeNumber')),
+        ),
+      ),
+      const SizedBox(height: 8),
+      Text(
+        s.t('codeTitle'),
+        style: theme.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+        ),
+      ),
+      const SizedBox(height: 6),
+      Text(
+        s.t('codeLead', {
+          'phone': '\u2066${_formatPhone(_sentTo!)}\u2069',
+          'channel': s.t(_sentBy),
+        }),
+        style: TextStyle(color: t.muted, height: 1.5),
+      ),
+      const SizedBox(height: 24),
+      _label(s.t('code')),
+      TextField(
+        key: const Key('code'),
+        controller: _code,
+        autofocus: true,
+        keyboardType: TextInputType.number,
+        autofillHints: const [AutofillHints.oneTimeCode],
+        textAlign: TextAlign.center,
+        textDirection: TextDirection.ltr,
+        maxLength: 6,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        style: TextStyle(
+          fontSize: 30,
+          letterSpacing: 14,
+          fontWeight: FontWeight.w600,
+          color: theme.colorScheme.primary,
+        ),
+        decoration: InputDecoration(
+          counterText: '',
+          hintText: '······',
+          hintStyle: TextStyle(color: t.muted.withValues(alpha: 0.4)),
+          errorText: _error == null ? null : s.t(_error!),
+        ),
+        onChanged: (value) {
+          if (value.length == 6) _verify();
+        },
+      ),
+      const SizedBox(height: 24),
+      PillButton(label: s.t('confirm'), busy: _busy, onPressed: _verify),
+      const SizedBox(height: 14),
+      Center(
+        child: _resendIn > 0
+            ? Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Ph.clock, size: 16, color: t.muted),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      s.t('resendIn', {'s': _resendIn}),
+                      style: TextStyle(color: t.muted),
+                    ),
+                  ),
+                ],
+              )
+            : TextButton(
+                onPressed: _busy ? null : () => _sendCode(phone: _sentTo),
+                child: Text(s.t('resend')),
+              ),
+      ),
+    ];
+  }
+}
+
+/// One choice of delivery channel for the code.
+class _ChannelTile extends StatelessWidget {
+  const _ChannelTile({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = WaselTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: Pressable(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Motion.fast,
+          curve: Motion.out,
+          height: 54,
+          decoration: BoxDecoration(
+            color: selected ? scheme.secondaryContainer : t.sunk,
+            borderRadius: BorderRadius.circular(Radii.md),
+            border: Border.all(
+              color: selected ? scheme.primary : t.hairline,
+              width: selected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: selected ? scheme.primary : t.muted),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? scheme.primary : t.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

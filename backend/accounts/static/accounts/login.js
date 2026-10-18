@@ -178,12 +178,14 @@
   }
 
   function busy(button, labelKey) {
+    // The label is a child span when the button also holds an icon.
+    var label = button.querySelector("[data-i18n]") || button;
+    var idle = label.dataset.i18n;
     button.disabled = true;
-    button.dataset.idleLabel = button.dataset.i18n;
-    button.textContent = t(labelKey);
+    label.textContent = t(labelKey);
     return function () {
       button.disabled = false;
-      button.textContent = t(button.dataset.idleLabel);
+      label.textContent = t(idle);
     };
   }
 

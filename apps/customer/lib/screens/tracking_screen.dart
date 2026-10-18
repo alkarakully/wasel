@@ -153,9 +153,9 @@ class _TrackingScreenState extends State<TrackingScreen>
         CircleOptions(
           geometry: target,
           circleRadius: 12,
-          circleColor: '#22379B',
-          circleStrokeColor: '#F4F6FF',
-          circleStrokeWidth: 4,
+          circleColor: '#F2C75C',
+          circleStrokeColor: '#22379B',
+          circleStrokeWidth: 5,
         ),
       );
       await _fit();
@@ -236,9 +236,21 @@ class _TrackingScreenState extends State<TrackingScreen>
             : SystemUiOverlayStyle.dark,
         leading: Padding(
           padding: const EdgeInsets.all(6),
-          child: IconButton.filledTonal(
-            onPressed: () => Navigator.pop(context),
-            icon: const BackButtonIcon(),
+          child: Pressable(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: BoxDecoration(
+                color: WaselTheme.of(context).surface,
+                shape: BoxShape.circle,
+                boxShadow: WaselTheme.of(context).floating,
+              ),
+              child: Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Ph.arrowRight
+                    : Ph.arrowLeft,
+                size: 20,
+              ),
+            ),
           ),
         ),
       ),
@@ -292,9 +304,19 @@ class _Panel extends StatelessWidget {
   final VoidCallback onRetry;
   final S strings;
 
+  static const _stepIcons = {
+    'received': Ph.receipt,
+    'preparing': Ph.cookingPot,
+    'ready': Ph.shoppingBag,
+    'out_for_delivery': Ph.moped,
+    'delivered': Ph.checkCircle,
+    'cancelled': Ph.receiptX,
+  };
+
   @override
   Widget build(BuildContext context) {
     final s = strings;
+    final t = WaselTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final order = this.order;
 
@@ -303,6 +325,8 @@ class _Panel extends StatelessWidget {
       content = Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Icon(Ph.warningCircle, size: 30, color: t.muted),
+          const SizedBox(height: 8),
           Text(s.t('err_network')),
           const SizedBox(height: 12),
           OutlinedButton(onPressed: onRetry, child: Text(s.t('retry'))),
@@ -315,65 +339,110 @@ class _Panel extends StatelessWidget {
       );
     } else {
       final current = Order.steps.indexOf(order.status);
+      final cancelled = order.status == 'cancelled';
       content = Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${order.vendorName} · ${s.t('orderNumber', {'id': order.id})}',
-            style: TextStyle(color: scheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            s.t('status_${order.status}'),
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 16),
           Row(
             children: [
-              for (var i = 0; i < Order.steps.length; i++)
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(end: 6),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: order.status != 'cancelled' && i <= current
-                                ? scheme.primary
-                                : scheme.outline,
-                            borderRadius: BorderRadius.circular(3),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          s.t('step_${Order.steps[i]}'),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: i == current ? FontWeight.w700 : null,
-                            color: i == current
-                                ? scheme.onSurface
-                                : scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: cancelled ? null : GlazePanel.gradient,
+                  color: cancelled ? t.sunk : null,
+                ),
+                child: Icon(
+                  _stepIcons[order.status] ?? Ph.receipt,
+                  size: 26,
+                  color: cancelled ? t.muted : Gold.c400,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${order.vendorName} · ${s.t('orderNumber', {'id': order.id})}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: t.muted, fontSize: 13),
                     ),
+                    const SizedBox(height: 2),
+                    AnimatedSwitcher(
+                      duration: Motion.medium,
+                      switchInCurve: Motion.out,
+                      child: Text(
+                        s.t('status_${order.status}'),
+                        key: ValueKey(order.status),
+                        style: const TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              for (var i = 0; i < Order.steps.length; i++) ...[
+                Expanded(
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: Motion.medium,
+                        curve: Motion.spring,
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: !cancelled && i <= current
+                              ? scheme.primary
+                              : t.sunk,
+                          border: i == current && !cancelled
+                              ? Border.all(color: Gold.c400, width: 2)
+                              : null,
+                        ),
+                        child: Icon(
+                          !cancelled && i < current
+                              ? Ph.check
+                              : _stepIcons[Order.steps[i]],
+                          size: 16,
+                          color: !cancelled && i <= current
+                              ? scheme.onPrimary
+                              : t.muted,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        s.t('step_${Order.steps[i]}'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: i == current ? FontWeight.w700 : null,
+                          color: i == current ? t.ink : t.muted,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ],
             ],
           ),
           if (order.deliveryPin != null && !order.isFinished) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: scheme.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
+            const SizedBox(height: 18),
+            GlazePanel(
+              radius: Radii.lg,
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
               child: Row(
                 children: [
                   Expanded(
@@ -382,26 +451,33 @@ class _Panel extends StatelessWidget {
                       children: [
                         Text(
                           s.t('pin'),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           s.t('pinHelp'),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
-                            color: scheme.onSurfaceVariant,
+                            height: 1.4,
+                            color: Lapis.c200,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  const SizedBox(width: 12),
                   Text(
                     order.deliveryPin!,
                     textDirection: TextDirection.ltr,
-                    style: TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 4,
-                      color: scheme.primary,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 6,
+                      color: Gold.c400,
+                      fontFeatures: [FontFeature.tabularFigures()],
                     ),
                   ),
                 ],
@@ -412,12 +488,12 @@ class _Panel extends StatelessWidget {
             const SizedBox(height: 14),
             Row(
               children: [
-                Icon(Icons.two_wheeler, color: scheme.primary, size: 20),
+                Icon(Ph.moped, color: scheme.primary, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     _captainText(s, order),
-                    style: TextStyle(color: scheme.onSurfaceVariant),
+                    style: TextStyle(color: t.muted, fontSize: 14),
                   ),
                 ),
               ],
@@ -427,25 +503,31 @@ class _Panel extends StatelessWidget {
       );
     }
 
-    return Container(
-      width: double.infinity,
+    return Padding(
       padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        20 + MediaQuery.paddingOf(context).bottom,
+        12,
+        0,
+        12,
+        12 + MediaQuery.paddingOf(context).bottom / 2,
       ),
-      decoration: BoxDecoration(
-        color: scheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Brand.lapisDark.withValues(alpha: 0.18),
-            blurRadius: 30,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: t.sunk,
+          borderRadius: BorderRadius.circular(Radii.xl + 4),
+          border: Border.all(color: t.hairline),
+          boxShadow: t.floating,
+        ),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 18, 18, 18),
+          decoration: BoxDecoration(
+            color: t.surface,
+            borderRadius: BorderRadius.circular(Radii.xl),
           ),
-        ],
+          child: content,
+        ),
       ),
-      child: content,
     );
   }
 

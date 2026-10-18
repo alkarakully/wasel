@@ -67,31 +67,10 @@ class WaselApp extends StatelessWidget {
       theme: waselTheme(Brightness.light),
       darkTheme: waselTheme(Brightness.dark),
       home: !session.loaded
-          ? const _Splash()
+          ? const BrandSplash()
           : session.signedIn
           ? const HomeScreen()
           : const LoginScreen(),
-    );
-  }
-}
-
-class _Splash extends StatelessWidget {
-  const _Splash();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Brand.lapis,
-      body: Center(
-        child: Text(
-          'واصل',
-          style: TextStyle(
-            color: Brand.gold,
-            fontSize: 64,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
     );
   }
 }

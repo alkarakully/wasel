@@ -111,109 +111,270 @@ class _CartScreenState extends State<CartScreen> {
     final s = S.of(context);
     final cart = context.watch<Cart>();
     final scheme = Theme.of(context).colorScheme;
+    final t = WaselTheme.of(context);
 
     if (cart.isEmpty) {
       return Scaffold(
+        backgroundColor: t.canvas,
         appBar: AppBar(title: Text(s.t('cart'))),
-        body: Center(child: Text(s.t('emptyCart'))),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: t.sunk,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Ph.shoppingBag, size: 32, color: t.muted),
+              ),
+              const SizedBox(height: 16),
+              Text(s.t('emptyCart'), style: TextStyle(color: t.muted)),
+            ],
+          ),
+        ),
       );
     }
 
     final quote = _quote;
     return Scaffold(
-      appBar: AppBar(title: Text(cart.vendorName)),
+      backgroundColor: t.canvas,
+      appBar: AppBar(
+        backgroundColor: t.canvas,
+        title: Text(
+          cart.vendorName,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: FilledButton(
+        child: PillButton(
           key: const Key('place-order'),
-          onPressed: quote == null || _placing ? null : _place,
-          child: Text(
-            quote == null
-                ? s.t('placeOrder', {'total': '...'})
-                : s.t('placeOrder', {'total': s.money(quote.total)}),
-          ),
+          busy: _placing,
+          onPressed: quote == null ? null : _place,
+          label: quote == null
+              ? s.t('placeOrder', {'total': '...'})
+              : s.t('placeOrder', {'total': s.money(quote.total)}),
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
         children: [
-          for (final line in cart.lines)
-            _LineRow(line: line, onChange: _requote),
-          const Divider(height: 32),
-          if (quote != null) _Breakdown(quote: quote),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                s.t(_error!),
-                style: TextStyle(
-                  color: scheme.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          const SizedBox(height: 24),
-          Text(
-            s.t('address'),
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            key: const Key('address'),
-            controller: _address,
-            autocorrect: false,
-            enableSuggestions: false,
-            decoration: InputDecoration(hintText: s.t('addressHint')),
-            textInputAction: TextInputAction.done,
-          ),
-          const SizedBox(height: 24),
-          Text(s.t('tip'), style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              for (final amount in [0, 500, 1000, 2000])
-                ChoiceChip(
-                  label: Text(amount == 0 ? s.t('noTip') : s.money(amount)),
-                  selected: _tip == amount,
-                  showCheckmark: false,
-                  onSelected: (_) {
-                    setState(() => _tip = amount);
-                    _requote();
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Text(
-            s.t('payment'),
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          RadioGroup<String>(
-            groupValue: _payment,
-            onChanged: (value) => setState(() => _payment = value!),
+          _Section(
             child: Column(
               children: [
-                RadioListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: 'cod',
-                  title: Text(s.t('cash')),
-                ),
-                RadioListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: 'wallet',
-                  title: Text(s.t('wallet')),
-                ),
-                RadioListTile(
-                  contentPadding: EdgeInsets.zero,
-                  value: 'card',
-                  enabled: false,
-                  title: Text(s.t('card')),
-                ),
+                for (final (i, line) in cart.lines.indexed) ...[
+                  if (i > 0) Divider(height: 1, color: t.hairline),
+                  _LineRow(line: line, onChange: _requote),
+                ],
               ],
             ),
           ),
+          _Section(
+            title: s.t('address'),
+            icon: Ph.mapPin,
+            child: TextField(
+              key: const Key('address'),
+              controller: _address,
+              autocorrect: false,
+              enableSuggestions: false,
+              decoration: InputDecoration(hintText: s.t('addressHint')),
+              textInputAction: TextInputAction.done,
+            ),
+          ),
+          _Section(
+            title: s.t('tip'),
+            icon: Ph.moped,
+            child: Row(
+              children: [
+                for (final (i, amount) in [0, 500, 1000, 2000].indexed) ...[
+                  if (i > 0) const SizedBox(width: 8),
+                  Expanded(
+                    child: _Choice(
+                      selected: _tip == amount,
+                      onTap: () {
+                        setState(() => _tip = amount);
+                        _requote();
+                      },
+                      compact: true,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          amount == 0 ? s.t('noTip') : s.money(amount),
+                          maxLines: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          _Section(
+            title: s.t('payment'),
+            icon: Ph.wallet,
+            child: Column(
+              children: [
+                for (final (value, icon) in [
+                  ('cod', Ph.money),
+                  ('wallet', Ph.wallet),
+                  ('card', Ph.creditCard),
+                ]) ...[
+                  _Choice(
+                    selected: _payment == value,
+                    onTap: value == 'card'
+                        ? null
+                        : () => setState(() => _payment = value),
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 22),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(s.t(value == 'cod' ? 'cash' : value)),
+                        ),
+                        if (_payment == value)
+                          Icon(Ph.checkCircle, color: scheme.primary),
+                      ],
+                    ),
+                  ),
+                  if (value != 'card') const SizedBox(height: 8),
+                ],
+              ],
+            ),
+          ),
+          if (quote != null) BezelCard(child: _Breakdown(quote: quote)),
+          if (_error != null)
+            Container(
+              margin: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(Radii.md),
+              ),
+              child: Row(
+                children: [
+                  Icon(Ph.warningCircle, color: scheme.error),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      s.t(_error!),
+                      style: TextStyle(
+                        color: scheme.onErrorContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
+      ),
+    );
+  }
+}
+
+/// A titled white card on the canvas.
+class _Section extends StatelessWidget {
+  const _Section({required this.child, this.title, this.icon});
+  final Widget child;
+  final String? title;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = WaselTheme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: title == null
+          ? const EdgeInsets.symmetric(horizontal: 16, vertical: 4)
+          : const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: t.surface,
+        borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: t.hairline),
+        boxShadow: t.raised,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (title != null) ...[
+            Row(
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20, color: t.muted),
+                  const SizedBox(width: 8),
+                ],
+                Text(
+                  title!,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// A selectable tile: tinted with a lapis edge when chosen.
+class _Choice extends StatelessWidget {
+  const _Choice({
+    required this.selected,
+    required this.child,
+    this.onTap,
+    this.compact = false,
+  });
+  final bool selected;
+  final bool compact;
+  final Widget child;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = WaselTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: onTap != null,
+      child: Pressable(
+        onTap: onTap,
+        child: Opacity(
+          opacity: onTap == null ? 0.5 : 1,
+          child: AnimatedContainer(
+            duration: Motion.fast,
+            curve: Motion.out,
+            constraints: const BoxConstraints(minHeight: 48),
+            padding: EdgeInsets.symmetric(
+              horizontal: compact ? 6 : 14,
+              vertical: 12,
+            ),
+            alignment: AlignmentDirectional.center,
+            decoration: BoxDecoration(
+              color: selected ? scheme.secondaryContainer : t.sunk,
+              borderRadius: BorderRadius.circular(Radii.md),
+              border: Border.all(
+                color: selected ? scheme.primary : t.hairline,
+                width: selected ? 1.5 : 1,
+              ),
+            ),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? scheme.primary : t.ink,
+              ),
+              child: IconTheme.merge(
+                data: IconThemeData(color: selected ? scheme.primary : t.muted),
+                child: child,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -227,13 +388,34 @@ class _LineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final t = WaselTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final cart = context.read<Cart>();
     final step = line.product.soldByKg ? 0.5 : 1.0;
     final quantity = line.product.soldByKg
         ? '${line.quantity.toStringAsFixed(1)} kg'
         : '${line.quantity.round()}';
+    Widget stepButton(IconData icon, double delta) => Semantics(
+      button: true,
+      child: Pressable(
+        onTap: () {
+          cart.changeQuantity(line, delta);
+          onChange();
+        },
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: t.surface,
+            shape: BoxShape.circle,
+            boxShadow: t.raised,
+          ),
+          child: Icon(icon, size: 16, color: scheme.primary),
+        ),
+      ),
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           Expanded(
@@ -247,29 +429,40 @@ class _LineRow extends StatelessWidget {
                 if (line.modifiers.isNotEmpty)
                   Text(
                     line.modifiers.map((m) => m.name(s.lang)).join('، '),
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 13, color: t.muted),
                   ),
-                Text(s.money(line.lineTotal)),
+                const SizedBox(height: 2),
+                Text(
+                  s.money(line.lineTotal),
+                  style: TextStyle(
+                    color: scheme.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              cart.changeQuantity(line, -step);
-              onChange();
-            },
-            icon: const Icon(Icons.remove_circle_outline),
-          ),
-          Text(quantity, style: const TextStyle(fontWeight: FontWeight.w600)),
-          IconButton(
-            onPressed: () {
-              cart.changeQuantity(line, step);
-              onChange();
-            },
-            icon: const Icon(Icons.add_circle_outline),
+          Container(
+            padding: const EdgeInsets.all(3),
+            decoration: ShapeDecoration(
+              color: t.sunk,
+              shape: StadiumBorder(side: BorderSide(color: t.hairline)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                stepButton(Ph.minus, -step),
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                    quantity,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+                stepButton(Ph.plus, step),
+              ],
+            ),
           ),
         ],
       ),
@@ -318,7 +511,9 @@ class _Breakdown extends StatelessWidget {
         row(s.t('serviceFee'), s.money(quote.serviceFee)),
         if (quote.discount > 0) row(s.t('discount'), s.money(-quote.discount)),
         if (quote.tip > 0) row(s.t('tip'), s.money(quote.tip)),
-        const Divider(),
+        const SizedBox(height: 8),
+        const Divider(height: 1),
+        const SizedBox(height: 8),
         row(s.t('total'), s.money(quote.total), bold: true),
       ],
     );

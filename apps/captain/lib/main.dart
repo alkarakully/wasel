@@ -60,7 +60,7 @@ class CaptainApp extends StatelessWidget {
       theme: waselTheme(Brightness.light),
       darkTheme: waselTheme(Brightness.dark),
       home: !session.loaded
-          ? const Scaffold(backgroundColor: Brand.lapis)
+          ? const BrandSplash(caption: 'كابتن')
           : session.signedIn
           ? const HomeScreen()
           : LoginScreen(

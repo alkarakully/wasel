@@ -1,3 +1,4 @@
+import { BellRinging, CookingPot, Package, Tray } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 import { Api, BOARD_STATUSES, type Order } from '../lib/api'
@@ -11,6 +12,12 @@ interface Props {
   onChanged: (order: Order) => void
   onError: (error: unknown) => void
 }
+
+const ICONS = {
+  received: BellRinging,
+  preparing: CookingPot,
+  ready: Package,
+} as const
 
 /** Three columns: new, preparing, ready. Oldest first so nothing waits too long. */
 export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
@@ -31,11 +38,15 @@ export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
         return (
           <section key={status} className={`column column-${status}`} aria-labelledby={`col-${status}`}>
             <h2 id={`col-${status}`}>
+              <ColumnIcon status={status} />
               {t(`col_${status}` as 'col_received')}
               <span className="count">{column.length}</span>
             </h2>
             {column.length === 0 ? (
-              <p className="empty">{t('emptyColumn')}</p>
+              <p className="empty">
+                <Tray size={28} weight="light" aria-hidden="true" />
+                {t('emptyColumn')}
+              </p>
             ) : (
               column.map((order) => (
                 <OrderCard
@@ -52,5 +63,14 @@ export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
         )
       })}
     </div>
+  )
+}
+
+function ColumnIcon({ status }: { status: string }) {
+  const Icon = ICONS[status as keyof typeof ICONS] ?? Package
+  return (
+    <span className="column-icon" aria-hidden="true">
+      <Icon size={18} weight="light" />
+    </span>
   )
 }

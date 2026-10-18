@@ -87,8 +87,8 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
     <div className="portal">
       <header className="topbar">
         <div className="topbar-start">
-          <span className="wordmark small" aria-hidden="true">
-            واصل
+          <span className="brand-mark glaze" aria-hidden="true">
+            و
           </span>
           {stores && stores.length > 1 ? (
             <select aria-label="Store" value={storeId ?? ''} onChange={(e) => setStoreId(Number(e.target.value))}>
@@ -108,7 +108,11 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
               aria-pressed={store.is_open}
               onClick={toggleOpen}
             >
-              <Storefront size={18} weight="bold" aria-hidden="true" />
+              {store.is_open ? (
+                <span className="dot" aria-hidden="true" />
+              ) : (
+                <Storefront size={18} weight="light" aria-hidden="true" />
+              )}
               {store.is_open ? t('storeOpen') : t('storeClosed')}
             </button>
           )}
@@ -125,50 +129,58 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
         <div className="topbar-end">
           {soundReady ? (
             <span className="sound-state" title={t('soundOn')}>
-              <BellRinging size={20} aria-hidden="true" />
+              <BellRinging size={22} weight="light" aria-hidden="true" />
               <span className="sr-only">{t('soundOn')}</span>
             </span>
           ) : (
             <button type="button" className="pill pill-warn" onClick={enableSound}>
-              <BellSlash size={18} aria-hidden="true" />
+              <BellSlash size={18} weight="light" aria-hidden="true" />
               {t('soundOff')}
             </button>
           )}
           <LanguageSwitch setLang={setLang} />
           <button type="button" className="icon-button" onClick={onLogout} title={`${t('logout')} (${user.phone})`}>
-            <SignOut size={20} aria-hidden="true" />
+            <SignOut size={20} weight="light" aria-hidden="true" />
             <span className="sr-only">{t('logout')}</span>
           </button>
         </div>
       </header>
 
-      {!soundReady && newOrders.length > 0 && (
-        <button type="button" className="banner banner-warn" onClick={enableSound}>
-          {t('soundBlocked')}
-        </button>
-      )}
-      {ringing && soundReady && (
-        <button
-          type="button"
-          className="banner banner-alert"
-          onClick={() => setSilenced(new Set(newOrders.map((o) => o.id)))}
-        >
-          <BellSlash size={20} aria-hidden="true" />
-          {t('mute')}
-        </button>
-      )}
-      {!connected && <p className="banner banner-warn">{t('offline')}</p>}
-      {notice && (
-        <p className="banner banner-error" role="alert" onClick={() => setNotice(null)}>
-          {notice}
-        </p>
-      )}
+      <div className="banners">
+        {!soundReady && newOrders.length > 0 && (
+          <button type="button" className="banner banner-warn" onClick={enableSound}>
+            {t('soundBlocked')}
+          </button>
+        )}
+        {ringing && soundReady && (
+          <button
+            type="button"
+            className="banner banner-alert glaze"
+            onClick={() => setSilenced(new Set(newOrders.map((o) => o.id)))}
+          >
+            <BellSlash size={22} weight="light" aria-hidden="true" />
+            {t('mute')}
+          </button>
+        )}
+        {!connected && <p className="banner banner-warn">{t('offline')}</p>}
+        {notice && (
+          <p className="banner banner-error" role="alert" onClick={() => setNotice(null)}>
+            {notice}
+          </p>
+        )}
+      </div>
 
       <main className="portal-body">
         {stores && stores.length === 0 ? (
           <p className="empty">{t('noStores')}</p>
         ) : tab === 'orders' ? (
-          <Board api={api} orders={orders} multiStore={(stores?.length ?? 0) > 1} onChanged={upsert} onError={showError} />
+          <Board
+            api={api}
+            orders={orders}
+            multiStore={(stores?.length ?? 0) > 1}
+            onChanged={upsert}
+            onError={showError}
+          />
         ) : (
           store && (
             <MenuView
@@ -179,7 +191,10 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
                   (list) =>
                     list?.map((s) =>
                       s.id === store.id
-                        ? { ...s, products: s.products.map((p) => (p.id === product.id ? { ...p, ...product } : p)) }
+                        ? {
+                            ...s,
+                            products: s.products.map((p) => (p.id === product.id ? { ...p, ...product } : p)),
+                          }
                         : s,
                     ) ?? null,
                 )
