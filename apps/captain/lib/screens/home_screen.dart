@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../state/captain_session.dart';
 import '../state/location_sharer.dart';
 import 'delivery_screen.dart';
+import 'offer_sheet.dart';
 
 /// Online switch, the captain's current delivery, and orders to take.
 class HomeScreen extends StatefulWidget {
@@ -23,6 +25,8 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _error;
   int? _taking;
   StreamSubscription? _live;
+  final _closedOffers = StreamController<int>.broadcast();
+  bool _offerShowing = false;
 
   @override
   void initState() {
@@ -34,6 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _live?.cancel();
+    _closedOffers.close();
     super.dispose();
   }
 
@@ -54,8 +59,16 @@ class _HomeScreenState extends State<HomeScreen> {
               .where((o) => o.id != event['order_id'])
               .toList(),
         );
+      case 'order.updated':
+        // One of my orders changed (delivered, cancelled, picked up elsewhere).
+        _refresh();
+      case 'dispatch.offer':
+        _showOffer(DispatchOffer.fromJson(event['offer']));
+      case 'dispatch.offer_closed':
+        _closedOffers.add(event['offer_id'] as int);
       case 'connected':
         _refresh(); // catch up after reconnecting
+        _checkOffer();
     }
   }
 
@@ -79,6 +92,43 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     }
+  }
+
+  /// An offer may have arrived while the app was reconnecting or offline.
+  Future<void> _checkOffer() async {
+    if (!context.read<CaptainSession>().online) return;
+    try {
+      final offer = await context.read<ApiClient>().currentOffer();
+      if (offer != null) _showOffer(offer);
+    } on ApiException {
+      // The live socket will deliver the next one.
+    }
+  }
+
+  Future<void> _showOffer(DispatchOffer offer) async {
+    if (_offerShowing || !mounted || offer.timeLeft == Duration.zero) return;
+    _offerShowing = true;
+    HapticFeedback.heavyImpact();
+    SystemSound.play(SystemSoundType.alert);
+    final order = await showModalBottomSheet<Order>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      showDragHandle: true,
+      builder: (_) => OfferSheet(offer: offer, closed: _closedOffers.stream),
+    );
+    _offerShowing = false;
+    if (!mounted) return;
+    if (order != null) {
+      await _open(order);
+    } else {
+      _refresh();
+    }
+  }
+
+  Future<void> _goOnline(bool value) async {
+    await context.read<CaptainSession>().setOnline(value);
+    if (value) _checkOffer();
   }
 
   Future<void> _take(Order order) async {
@@ -156,7 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 // Stay online while carrying an order so the customer keeps seeing you.
                 onChanged: _current != null && session.online
                     ? null
-                    : session.setOnline,
+                    : _goOnline,
                 title: Text(
                   s.t(session.online ? 'online' : 'offline'),
                   style: TextStyle(

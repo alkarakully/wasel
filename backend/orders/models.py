@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib.gis.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.utils import timezone
 
 from accounts.models import money_field
 
@@ -79,6 +80,18 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.pk} ({self.status})"
 
+    @property
+    def waiting_for_captain(self):
+        return self.captain_id is None and self.status in (self.Status.PREPARING, self.Status.READY)
+
+    def pending_offer(self):
+        """The live offer to one captain, if dispatch is still choosing."""
+        return self.dispatch_offers.filter(status="pending", expires_at__gt=timezone.now()).first()
+
+    def in_open_pool(self):
+        """Visible to every captain: no captain yet and no exclusive offer running."""
+        return self.waiting_for_captain and self.pending_offer() is None
+
     def calculate_total(self):
         return self.subtotal + self.delivery_fee + self.service_fee + self.tip - self.discount
 
@@ -152,15 +165,53 @@ TRACKED_STATUSES = [Order.Status.PREPARING, Order.Status.READY, Order.Status.OUT
 
 
 class CaptainLocation(models.Model):
-    """A captain's latest GPS position; one row per captain, overwritten on each update."""
+    """
+    A captain's latest GPS position and whether they're taking orders; one row
+    per captain, overwritten on each update.
+    """
 
     captain = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, primary_key=True, related_name="location"
     )
-    point = models.PointField(geography=True)
+    # Empty until the first GPS fix arrives.
+    point = models.PointField(geography=True, null=True, blank=True)
+    is_online = models.BooleanField(default=False)
     heading = models.FloatField(null=True, blank=True, help_text="Degrees clockwise from north.")
     speed = models.FloatField(null=True, blank=True, help_text="Metres per second.")
     updated_at = models.DateTimeField()
 
     def __str__(self):
-        return f"{self.captain} at {self.point.y:.5f}, {self.point.x:.5f}"
+        where = f"{self.point.y:.5f}, {self.point.x:.5f}" if self.point else "no fix yet"
+        return f"{self.captain} ({'online' if self.is_online else 'offline'}) at {where}"
+
+
+class DispatchOffer(models.Model):
+    """An accepted order offered to one captain at a time, nearest first."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        EXPIRED = "expired", "Expired"
+        CANCELLED = "cancelled", "Cancelled"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="dispatch_offers")
+    captain = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="dispatch_offers")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    distance_m = models.FloatField(help_text="Captain to store when offered.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order"],
+                condition=models.Q(status="pending"),
+                name="one_pending_offer_per_order",
+            )
+        ]
+
+    def __str__(self):
+        return f"Order #{self.order_id} to {self.captain} ({self.status})"

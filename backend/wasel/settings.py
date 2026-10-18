@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 import dj_database_url
@@ -72,10 +73,13 @@ CHANNEL_LAYERS = {
 # Background jobs. Beat runs the periodic checks below.
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
 CELERY_TASK_IGNORE_RESULT = True
+# Tests run tasks inline instead of needing a broker.
+CELERY_TASK_ALWAYS_EAGER = "test" in sys.argv
 CELERY_TIMEZONE = "Asia/Baghdad"
 CELERY_BEAT_SCHEDULE = {
     "flag-stuck-orders": {"task": "orders.tasks.flag_stuck_orders", "schedule": 60.0},
     "expire-wasel-plus-trials": {"task": "subscriptions.tasks.expire_wasel_plus_trials", "schedule": 15 * 60.0},
+    "sweep-dispatch-offers": {"task": "orders.tasks.sweep_dispatch_offers", "schedule": 15.0},
 }
 
 DATABASES = {
@@ -168,6 +172,13 @@ STUCK_ORDER_MINUTES = {
 }
 
 WASEL_PLUS_TRIAL_DAYS = 14
+
+# Automatic dispatch: each accepted order is offered to the nearest free captain.
+DISPATCH = {
+    "OFFER_SECONDS": 30,  # how long one captain has to accept
+    "RADIUS_KM": 5,  # captain to store
+    "STALE_MINUTES": 10,  # ignore captains whose last GPS fix is older
+}
 
 # Vector map styles for web pages. OpenFreeMap needs no API key; set a licensed
 # provider's style URLs (Mapbox, MapTiler) here if traffic outgrows it.

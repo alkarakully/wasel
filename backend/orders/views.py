@@ -1,6 +1,7 @@
 from django.contrib.gis.geos import Point
-from django.db.models import Q
-from rest_framework import mixins, permissions, status, viewsets
+from django.db.models import Exists, OuterRef, Q
+from django.utils import timezone
+from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
@@ -8,8 +9,8 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 
-from . import realtime, workflow
-from .models import Order
+from . import dispatch, realtime, workflow
+from .models import CaptainLocation, DispatchOffer, Order
 from .pricing import PricingError, build_quote
 from .serializers import (
     AcceptSerializer,
@@ -112,7 +113,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
 
     # --- Status steps ------------------------------------------------------------
 
-    def _step(self, request, pk, run, input_serializer=None):
+    def _step(self, request, pk, run, input_serializer=None, then=None):
         # get_object() limits steps to orders the user is part of (404 otherwise).
         order = self.get_object()
         data = {}
@@ -125,16 +126,24 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
             order = run(order.pk, request.user, **data)
         except workflow.WorkflowError as error:
             return Response({"error": error.code, "detail": error.detail}, status=error.status)
+        # Runs before the broadcast so captains see the order's final state
+        # (e.g. offered to one captain rather than open to all).
+        if then is not None:
+            then(order)
         realtime.broadcast_order(order.pk, was_available)
         return Response(self.get_serializer(self.get_queryset().get(pk=order.pk)).data)
 
     @action(detail=True, methods=["post"])
     def accept(self, request, pk=None):
-        return self._step(request, pk, workflow.accept, AcceptSerializer)
+        # Offer it to the nearest free captain; the broadcast announces it to
+        # everyone if nobody is available.
+        return self._step(
+            request, pk, workflow.accept, AcceptSerializer, then=lambda o: dispatch.offer_next(o.pk, announce_if_none=False)
+        )
 
     @action(detail=True, methods=["post"])
     def reject(self, request, pk=None):
-        return self._step(request, pk, workflow.reject, RejectSerializer)
+        return self._step(request, pk, workflow.reject, RejectSerializer, then=lambda o: dispatch.withdraw(o.pk, "cancelled"))
 
     @action(detail=True, methods=["post"])
     def ready(self, request, pk=None):
@@ -142,7 +151,7 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
 
     @action(detail=True, methods=["post"])
     def cancel(self, request, pk=None):
-        return self._step(request, pk, workflow.cancel, ReasonSerializer)
+        return self._step(request, pk, workflow.cancel, ReasonSerializer, then=lambda o: dispatch.withdraw(o.pk, "cancelled"))
 
     @action(detail=True, methods=["post"])
     def pickup(self, request, pk=None):
@@ -173,8 +182,13 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
                 {"error": "not_allowed", "detail": "Only captains can see available orders."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        offered = DispatchOffer.objects.filter(
+            order=OuterRef("pk"), status=DispatchOffer.Status.PENDING, expires_at__gt=timezone.now()
+        )
         orders = (
             Order.objects.filter(status__in=[Order.Status.PREPARING, Order.Status.READY], captain__isnull=True)
+            # Orders being offered to one captain stay hidden until the offer ends.
+            .exclude(Exists(offered))
             .order_by("created_at")
             .select_related("vendor", "customer", "captain__location")
             .prefetch_related("items__product", "items__modifiers__modifier")
@@ -202,3 +216,89 @@ class CaptainLocationView(APIView):
         serializer.is_valid(raise_exception=True)
         update_captain_location(request.user, **serializer.validated_data)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _captains_only(request):
+    if request.user.role != User.Role.CAPTAIN:
+        return Response({"error": "not_allowed", "detail": "Only captains can do this."}, status=status.HTTP_403_FORBIDDEN)
+    return None
+
+
+class CaptainStatusView(APIView):
+    """
+    POST /api/captain/status/ {online}: start or stop taking orders.
+    Going offline turns down any offer the captain hasn't answered.
+    """
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if denied := _captains_only(request):
+            return denied
+        online = serializers.BooleanField().to_internal_value(request.data.get("online"))
+        CaptainLocation.objects.update_or_create(
+            captain=request.user, defaults={"is_online": online}, create_defaults={"is_online": online, "updated_at": timezone.now()}
+        )
+        if not online:
+            for offer_id in DispatchOffer.objects.filter(
+                captain=request.user, status=DispatchOffer.Status.PENDING
+            ).values_list("pk", flat=True):
+                try:
+                    dispatch.decline(offer_id, request.user)
+                except dispatch.OfferGone:
+                    pass
+        return Response({"online": online})
+
+
+def _offer_data(offer):
+    return {
+        "id": offer.pk,
+        "order": OrderSerializer(offer.order).data,
+        "distance_km": round(offer.distance_m / 1000, 2),
+        "expires_at": offer.expires_at.isoformat(),
+    }
+
+
+class CurrentOfferView(APIView):
+    """GET /api/dispatch/offers/current/: the captain's open offer, if any (204 otherwise)."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if denied := _captains_only(request):
+            return denied
+        offer = (
+            DispatchOffer.objects.filter(
+                captain=request.user, status=DispatchOffer.Status.PENDING, expires_at__gt=timezone.now()
+            )
+            .select_related("order__vendor")
+            .first()
+        )
+        if offer is None:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(_offer_data(offer))
+
+
+class OfferAnswerView(APIView):
+    """POST /api/dispatch/offers/{id}/accept/ or .../decline/."""
+
+    permission_classes = [permissions.IsAuthenticated]
+    answer = None  # "accept" or "decline"
+
+    def post(self, request, pk):
+        if denied := _captains_only(request):
+            return denied
+        try:
+            if self.answer == "accept":
+                order = dispatch.accept(pk, request.user)
+            else:
+                dispatch.decline(pk, request.user)
+        except dispatch.OfferGone as error:
+            return Response({"error": "offer_gone", "detail": str(error)}, status=status.HTTP_409_CONFLICT)
+        except workflow.WorkflowError as error:
+            return Response({"error": error.code, "detail": error.detail}, status=error.status)
+        if self.answer == "decline":
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        realtime.broadcast_order(order.pk, was_available=False)
+        order = Order.objects.select_related("vendor", "customer").get(pk=order.pk)
+        return Response(OrderSerializer(order, context={"request": request}).data)

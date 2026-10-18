@@ -2,6 +2,12 @@
 /// Kurdish strings should be reviewed by a native speaker before launch.
 const captainStrings = <String, Map<String, String>>{
   'ar': {
+    'offerTitle': 'طلب جديد لك',
+    'offerSeconds': '{s} ث',
+    'offerDistance': 'المتجر على بعد {km} كم',
+    'offerSkip': 'تخطي',
+    'err_offer_gone': 'انتهى هذا العرض.',
+    'err_offered_to_another': 'هذا الطلب معروض على كابتن آخر الآن.',
     // Order statuses in the captain's words, not the customer's.
     'status_received': 'بانتظار قبول المتجر',
     'status_preparing': 'المتجر يحضّر الطلب',
@@ -41,6 +47,13 @@ const captainStrings = <String, Map<String, String>>{
     'err_not_allowed': 'لا يمكنك القيام بهذا.',
   },
   'ku': {
+    'offerTitle': 'داواکارییەکی نوێ بۆ تۆ',
+    'offerSeconds': '{s} چ',
+    'offerDistance': 'دووکان {km} کم دوورە',
+    'offerSkip': 'تێپەڕاندن',
+    'err_offer_gone': 'ئەم پێشنیارە کۆتایی هات.',
+    'err_offered_to_another':
+        'ئەم داواکارییە ئێستا بۆ کاپتنێکی تر پێشنیار کراوە.',
     // Order statuses in the captain's words, not the customer's.
     'status_received': 'چاوەڕێی قبوڵکردنی دووکان',
     'status_preparing': 'دووکان داواکارییەکە ئامادە دەکات',
@@ -83,6 +96,12 @@ const captainStrings = <String, Map<String, String>>{
     'err_not_allowed': 'ناتوانیت ئەمە بکەیت.',
   },
   'en': {
+    'offerTitle': 'New order for you',
+    'offerSeconds': '{s}s',
+    'offerDistance': 'Store is {km} km away',
+    'offerSkip': 'Skip',
+    'err_offer_gone': 'This offer has ended.',
+    'err_offered_to_another': 'This order is being offered to another captain.',
     // Order statuses in the captain's words, not the customer's.
     'status_received': 'Waiting for the store',
     'status_preparing': 'Store is preparing it',

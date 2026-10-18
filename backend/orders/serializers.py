@@ -104,9 +104,10 @@ class OrderSerializer(serializers.ModelSerializer):
         if not order.captain_id or order.status not in TRACKED_STATUSES:
             return None
         try:
-            return location_payload(order.captain.location)
+            location = order.captain.location
         except CaptainLocation.DoesNotExist:
             return None
+        return location_payload(location) if location.point else None
 
     def get_customer_contact(self, order):
         # The captain and the store can call the customer until the order is

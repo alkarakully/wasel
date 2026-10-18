@@ -14,6 +14,9 @@ Messages sent to clients:
   {"type": "order.stuck", "alert": {...}}        support: an order has sat in one step too long
   {"type": "captain.location", "order_id": 12, "location": {...}}
                                                  customer and store: where the order's captain is now
+  {"type": "dispatch.offer", "offer": {...}}     one captain: take this order? (expires_at)
+  {"type": "dispatch.offer_closed", "offer_id": 3, "reason": "expired"}
+                                                 that captain: the offer is no longer open
 """
 
 import logging
@@ -58,7 +61,8 @@ def _broadcast(order_id, was_available):
     if order.captain_id:
         _send(user_group(order.captain_id), {"type": "order.updated", "order": data})
 
-    available = order.captain_id is None and order.status in (Order.Status.PREPARING, Order.Status.READY)
+    # While dispatch is offering the order to one captain, the others don't see it.
+    available = order.in_open_pool()
     if available and not was_available:
         _send(CAPTAINS_GROUP, {"type": "order.available", "order": data})
     elif was_available and not available:
@@ -66,7 +70,7 @@ def _broadcast(order_id, was_available):
 
 
 def was_available(order):
-    return order.captain_id is None and order.status in (Order.Status.PREPARING, Order.Status.READY)
+    return order.in_open_pool()
 
 
 def _safe_broadcast(order_id, was_available):
@@ -116,3 +120,51 @@ def send_captain_location(order_id, customer_id, vendor_id, location):
         _send(vendor_group(vendor_id), payload)
     except Exception:
         logger.exception("Could not send captain location for order %s", order_id)
+
+
+def announce_open(order_id):
+    """Dispatch found nobody: show the order to every captain."""
+
+    def send():
+        order = Order.objects.select_related("vendor").prefetch_related("items__product", "items__modifiers__modifier").get(pk=order_id)
+        if order.in_open_pool():
+            _send(CAPTAINS_GROUP, {"type": "order.available", "order": _order_data(order)})
+
+    transaction.on_commit(lambda: _guard(send, "announce order %s" % order_id))
+
+
+def send_offer(offer):
+    order = (
+        Order.objects.select_related("vendor")
+        .prefetch_related("items__product", "items__modifiers__modifier")
+        .get(pk=offer.order_id)
+    )
+    _guard(
+        lambda: _send(
+            user_group(offer.captain_id),
+            {
+                "type": "dispatch.offer",
+                "offer": {
+                    "id": offer.pk,
+                    "order": _order_data(order),
+                    "distance_km": round(offer.distance_m / 1000, 2),
+                    "expires_at": offer.expires_at.isoformat(),
+                },
+            },
+        ),
+        "send dispatch offer %s" % offer.pk,
+    )
+
+
+def send_offer_closed(offer, reason):
+    _guard(
+        lambda: _send(user_group(offer.captain_id), {"type": "dispatch.offer_closed", "offer_id": offer.pk, "reason": reason}),
+        "close dispatch offer %s" % offer.pk,
+    )
+
+
+def _guard(action, what):
+    try:
+        action()
+    except Exception:
+        logger.exception("Could not %s", what)

@@ -175,6 +175,22 @@ class ApiClient {
     await _send('POST', '/api/orders/$id/deliver/', body: {'pin': pin}),
   );
 
+  /// Tells dispatch whether to offer this captain orders.
+  Future<void> setOnline(bool online) =>
+      _send('POST', '/api/captain/status/', body: {'online': online});
+
+  /// The offer waiting for this captain, if any.
+  Future<DispatchOffer?> currentOffer() async {
+    final data = await _send('GET', '/api/dispatch/offers/current/');
+    return data == null ? null : DispatchOffer.fromJson(data);
+  }
+
+  Future<Order> acceptOffer(int id) async =>
+      Order.fromJson(await _send('POST', '/api/dispatch/offers/$id/accept/'));
+
+  Future<void> declineOffer(int id) =>
+      _send('POST', '/api/dispatch/offers/$id/decline/');
+
   /// REST fallback for when the live socket is closed.
   Future<void> sendLocation(
     double lat,

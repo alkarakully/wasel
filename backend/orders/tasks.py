@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from .models import Order, StuckOrderAlert
+from .models import DispatchOffer, Order, StuckOrderAlert
 from .realtime import send_stuck_alert
 
 logger = logging.getLogger(__name__)
@@ -62,3 +62,24 @@ def flag_stuck_orders():
     if created or resolved:
         logger.warning("Stuck orders: %d new alerts, %d resolved", created, len(resolved))
     return {"created": created, "resolved": len(resolved)}
+
+
+# These load dispatch inside the task body because dispatch imports this module
+# to schedule expiries.
+
+
+@shared_task
+def expire_dispatch_offer(offer_id):
+    """Runs when a captain's offer window closes."""
+    from . import dispatch
+
+    return dispatch.expire(offer_id)
+
+
+@shared_task
+def sweep_dispatch_offers():
+    """Backup for expiries the scheduled task missed (worker restart, broker hiccup)."""
+    from . import dispatch
+
+    expired = DispatchOffer.objects.filter(status=DispatchOffer.Status.PENDING, expires_at__lte=timezone.now())
+    return sum(dispatch.expire(pk) for pk in expired.values_list("pk", flat=True))

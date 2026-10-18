@@ -305,3 +305,30 @@ class Order {
     customerPhone: json['customer_contact']?['phone'],
   );
 }
+
+/// An order offered to this captain alone, until [expiresAt].
+class DispatchOffer {
+  DispatchOffer({
+    required this.id,
+    required this.order,
+    required this.distanceKm,
+    required this.expiresAt,
+  });
+
+  final int id;
+  final Order order;
+  final double distanceKm;
+  final DateTime expiresAt;
+
+  Duration get timeLeft {
+    final left = expiresAt.difference(DateTime.now());
+    return left.isNegative ? Duration.zero : left;
+  }
+
+  factory DispatchOffer.fromJson(Map<String, dynamic> json) => DispatchOffer(
+    id: json['id'],
+    order: Order.fromJson(json['order']),
+    distanceKm: (json['distance_km'] as num).toDouble(),
+    expiresAt: DateTime.parse(json['expires_at']),
+  );
+}

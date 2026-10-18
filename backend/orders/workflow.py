@@ -18,7 +18,7 @@ from django.utils import timezone
 
 from accounts.models import User, WalletTransaction
 
-from .models import Order
+from .models import DispatchOffer, Order
 
 MAX_PIN_ATTEMPTS = 5
 
@@ -49,6 +49,11 @@ class AlreadyClaimed(WorkflowError):
 
 class WrongPin(WorkflowError):
     code = "wrong_pin"
+
+
+class OfferedToAnother(WorkflowError):
+    code = "offered_to_another"
+    status = 409
 
 
 class PinLocked(WorkflowError):
@@ -156,6 +161,13 @@ def claim(order_id, user):
         if order.captain_id == user.pk:
             return order
         raise AlreadyClaimed("Another captain has taken this order.")
+    offer = order.pending_offer()
+    if offer is not None:
+        if offer.captain_id != user.pk:
+            raise OfferedToAnother("This order is being offered to another captain.")
+        offer.status = DispatchOffer.Status.ACCEPTED
+        offer.responded_at = timezone.now()
+        offer.save(update_fields=["status", "responded_at"])
     order.captain = user
     order.save()
     return order

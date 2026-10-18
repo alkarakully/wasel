@@ -38,10 +38,11 @@ xcrun simctl location booted start --speed=15 33.3045,44.4214 33.3005,44.4265 33
 
 | Screen | What the captain does |
 | :--- | :--- |
-| Home | Goes online or offline. Online starts GPS sharing and shows orders waiting for a captain, updated live. |
+| Home | Goes online or offline. Online tells dispatch to send offers, starts GPS sharing, and shows orders open to every captain, updated live. |
+| Offer | A new order offered to this captain alone pops up with a sound, vibration and a 30-second countdown: **Take order** or **Skip**. Skipping or letting it run out passes it to the next nearest captain. |
 | Delivery | Sees the store, customer and themselves on a map. Taps **Picked up** once the store marks the order ready, then calls the customer, opens directions, collects cash if needed, and enters the PIN to finish. |
 
-GPS goes over the live socket at most every 3 seconds, falling back to REST when the socket is down. Captains start offline each time the app opens, and can't go offline while carrying an order.
+GPS goes over the live socket at most every 3 seconds, falling back to REST when the socket is down, and is resent every minute while standing still so dispatch knows the captain is still there. Captains start offline each time the app opens, and can't go offline while carrying an order.
 
 ## Tests
 
@@ -49,4 +50,4 @@ GPS goes over the live socket at most every 3 seconds, falling back to REST when
 flutter test
 ```
 
-Not built yet: background location (sharing pauses when the app is closed), automatic dispatch offers, earnings and cash ledger screens, and Kurdish text reviewed by a native speaker.
+Not built yet: background location (sharing pauses when the app is closed, so offers stop after about 10 minutes), push notifications for offers, earnings and cash ledger screens, and Kurdish text reviewed by a native speaker.

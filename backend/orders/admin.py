@@ -1,7 +1,7 @@
 from django.contrib.admin import EmptyFieldListFilter
 from django.contrib.gis import admin
 
-from .models import Order, OrderItem, Rating, StuckOrderAlert
+from .models import DispatchOffer, Order, OrderItem, Rating, StuckOrderAlert
 
 
 class OrderItemInline(admin.TabularInline):
@@ -27,3 +27,10 @@ class StuckOrderAlertAdmin(admin.ModelAdmin):
     list_display = ["order", "reason", "created_at", "resolved_at"]
     list_filter = ["reason", ("resolved_at", EmptyFieldListFilter)]
     raw_id_fields = ["order"]
+
+
+@admin.register(DispatchOffer)
+class DispatchOfferAdmin(admin.ModelAdmin):
+    list_display = ["order", "captain", "status", "distance_m", "created_at", "expires_at", "responded_at"]
+    list_filter = ["status"]
+    raw_id_fields = ["order", "captain"]

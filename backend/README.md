@@ -150,6 +150,8 @@ On connect the server sends `{"type": "connected", "user_id": 12}`. A missing or
 | `{"type": "order.stuck", "alert": {...}}` | Staff users | An order has sat in one step too long (see below). |
 | `{"type": "wasel_plus.trial_ended"}` | That customer | Their free Wasel Plus trial has ended; offer the paid plan. |
 | `{"type": "captain.location", "order_id": 12, "location": {...}}` | The customer and the store | The order's captain moved (see below). |
+| `{"type": "dispatch.offer", "offer": {...}}` | One captain | An order offered to them alone, until `expires_at` (see below). |
+| `{"type": "dispatch.offer_closed", "offer_id": 3, "reason": "expired"}` | That captain | The offer ended; close it. |
 
 Updates go through Redis (`REDIS_URL`), so they reach sockets on any server process. They are sent after the change is saved; if Redis is down the change still succeeds and the failure is logged. `runserver` serves both HTTP and WebSockets through Daphne.
 
@@ -165,6 +167,24 @@ Only captains can send positions. Updates less than 2 seconds apart are dropped.
 Order responses now include `vendor_name`, `vendor_location`, `delivery_location` and, while the order is active, `captain_location`, so a map can start from the last known spot before live updates arrive.
 
 **Tracking page.** `/track/<order_id>/` shows the order on a map for the signed-in customer (it reuses the token saved by `/login/`): store, home and a captain marker that glides between fixes, the status steps, the delivery PIN and when the captain was last seen. It works in Arabic, Kurdish and English, light and dark. Maps come from OpenFreeMap through MapLibre GL, which needs no API key; set `MAP_STYLE_LIGHT` and `MAP_STYLE_DARK` to a licensed provider's style URLs if traffic grows.
+
+## Automatic captain dispatch
+
+When a store accepts an order, dispatch offers it to the **nearest free captain** first (`orders/dispatch.py`, values in `DISPATCH`):
+
+1. Candidates are captains who are online, have a GPS fix from the last 10 minutes within 5 km of the store, aren't carrying another order, and haven't been offered this one yet.
+2. The nearest gets `{"type": "dispatch.offer", ...}` on their socket and has **30 seconds**. While the offer runs, nobody else sees the order or can claim it (`offered_to_another`).
+3. **Accept** assigns the order to them. **Decline**, a timeout, or going offline moves the offer to the next nearest captain.
+4. When no candidate is left, the order joins the open list every captain sees (`order.available`), as before.
+
+| Endpoint | Who | What |
+| :--- | :--- | :--- |
+| `POST /api/captain/status/` `{"online": true}` | Captain | Start or stop receiving offers. Going offline passes any open offer on. |
+| `GET /api/dispatch/offers/current/` | Captain | The offer waiting for them (204 if none), for when the app reconnects. |
+| `POST /api/dispatch/offers/{id}/accept/` | That captain | Takes the order; returns it. `offer_gone` (409) if it already ended. |
+| `POST /api/dispatch/offers/{id}/decline/` | That captain | Passes it on (204). |
+
+Offers expire on time through a scheduled Celery task, with a sweep every 15 seconds as backup. Every offer is kept as a `DispatchOffer` (admin: Orders) with its distance and outcome.
 
 ## Background jobs (Celery)
 
@@ -184,4 +204,4 @@ Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) 
 
 **Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
 
-Not built yet: Wasel Plus billing, push notifications for when the app is closed, automatic captain dispatch, an SMS provider and card payments.
+Not built yet: Wasel Plus billing, push notifications for when the app is closed, an SMS provider and card payments.

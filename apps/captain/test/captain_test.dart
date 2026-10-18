@@ -57,6 +57,8 @@ class Harness {
         requests.add('${request.method} ${request.url.path}');
         return switch (request.url.path) {
           '/api/orders/' => http.Response(jsonEncode({'results': mine}), 200),
+          '/api/dispatch/offers/current/' => http.Response('', 204),
+          '/api/captain/status/' => http.Response('{"online": true}', 200),
           '/api/orders/available/' => http.Response(
             jsonEncode({'results': available}),
             200,

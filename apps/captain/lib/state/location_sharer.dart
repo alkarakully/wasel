@@ -15,11 +15,16 @@ class LocationSharer extends ChangeNotifier {
   final LiveUpdates live;
 
   StreamSubscription<Position>? _positions;
+  Timer? _heartbeat;
   DateTime _lastSent = DateTime.fromMillisecondsSinceEpoch(0);
   Position? last;
   bool permissionDenied = false;
 
   static const minInterval = Duration(seconds: 3);
+
+  /// A captain waiting at a store doesn't move, so the GPS stream goes quiet;
+  /// resending keeps them "recently seen" for dispatch.
+  static const heartbeat = Duration(seconds: 60);
 
   bool get sharing => _positions != null;
 
@@ -42,22 +47,29 @@ class LocationSharer extends ChangeNotifier {
         distanceFilter: 10,
       ),
     ).listen(_onPosition, onError: (_) {});
+    _heartbeat = Timer.periodic(heartbeat, (_) {
+      if (last != null) _send(last!);
+    });
     notifyListeners();
   }
 
   void stop() {
     _positions?.cancel();
     _positions = null;
+    _heartbeat?.cancel();
+    _heartbeat = null;
     notifyListeners();
   }
 
   Future<void> _onPosition(Position position) async {
     last = position;
     notifyListeners();
-    final now = DateTime.now();
-    if (now.difference(_lastSent) < minInterval) return;
-    _lastSent = now;
+    if (DateTime.now().difference(_lastSent) < minInterval) return;
+    await _send(position);
+  }
 
+  Future<void> _send(Position position) async {
+    _lastSent = DateTime.now();
     final heading = position.heading >= 0 ? position.heading : null;
     final speed = position.speed >= 0 ? position.speed : null;
     final sent = live.send({
