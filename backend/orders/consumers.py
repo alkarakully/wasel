@@ -10,6 +10,8 @@ from .tracking import update_captain_location
 
 # Close code for "not signed in" (4000-4999 are free for applications).
 UNAUTHORIZED = 4401
+# Access changed while connected: reconnect to get the current groups.
+ACCESS_CHANGED = 4409
 
 
 class OrderUpdatesConsumer(AsyncJsonWebsocketConsumer):
@@ -69,6 +71,9 @@ class OrderUpdatesConsumer(AsyncJsonWebsocketConsumer):
 
     async def order_event(self, event):
         await self.send_json(event["payload"])
+
+    async def access_revoked(self, event):
+        await self.close(code=ACCESS_CHANGED)
 
     @database_sync_to_async
     def _owned_vendor_ids(self, user):

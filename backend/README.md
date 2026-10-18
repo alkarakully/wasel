@@ -60,6 +60,21 @@ Everyone on the team gets the store's live order updates and new-order pushes.
 
 **Billing.** Wasel collects every payment (cash through captains, card and wallet in the app) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in `/ops/` › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
 
+## Tenant isolation
+
+Every store is a tenant. Nobody at one store can see or change another store's orders, customers, menu, hours, team, reports or billing:
+
+- **Every store endpoint checks the store and the role on each request** (`vendors/access.py`). Lookups go through the store in the URL, so an ID from another store returns 404 (a statement, team member or product of store B can't be reached through store A).
+- **Order lists and order steps** are limited to the order's customer, its captain and the store's team. The customer's name and phone go only to the order's captain and store team while the order is in progress; the delivery PIN goes only to the customer.
+- **Live sockets** join only the channels of the stores the user works at, chosen when the socket connects. Any change to someone's access (removed from a team, added to one, blocked, signed out, store given to another owner) closes their open sockets at once (close code 4409); apps reconnect and get exactly what they're allowed now, or are refused (4401).
+- **Pushes** go to the store's current team only.
+- **Staff pages** (`/ops/` and its `/api/ops/` endpoints) need a signed-in staff session; app tokens don't work there.
+- **Blocked accounts** lose API and socket access immediately.
+
+`vendors/test_isolation.py` tries every store endpoint from the owner, a manager and a cashier of store A against store B, and checks the sockets; add new store endpoints to it.
+
+In production nginx also keeps the socket's sign-in token out of its access log, and serves the store portal with a strict Content-Security-Policy (only its own scripts, only this server), `X-Frame-Options: DENY` and `nosniff`.
+
 ## Test
 
 ```bash

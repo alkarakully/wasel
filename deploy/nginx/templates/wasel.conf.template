@@ -1,5 +1,10 @@
 # ${SERVER_NAME} is filled in from the environment when the container starts.
 
+# Like the standard log, but the path without the query string: the live
+# socket signs in with ?token=..., which must never reach a log file.
+log_format wasel_no_query '$remote_addr - $remote_user [$time_local] "$request_method $uri $server_protocol" '
+                          '$status $body_bytes_sent "$http_referer" "$http_user_agent"';
+
 upstream django {
     server web:8000;
 }
@@ -33,6 +38,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_session_cache shared:SSL:10m;
 
+    server_tokens off;
     client_max_body_size 5m;
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
@@ -55,6 +61,7 @@ server {
 
     # Live order socket: keep connections open for an hour between pings.
     location /ws/ {
+        access_log /var/log/nginx/access.log wasel_no_query;
         proxy_pass http://django;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
@@ -72,11 +79,19 @@ server {
     location /assets/ {
         expires 1y;
         add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options nosniff;
         try_files $uri =404;
     }
 
+    # The portal keeps its sign-in token in the browser, so it only runs its
+    # own scripts, talks only to this server, and can't be framed by others.
     location / {
         add_header Cache-Control "no-cache";
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' wss://$host; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'" always;
+        add_header X-Frame-Options DENY always;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Referrer-Policy same-origin always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
         try_files $uri /index.html;
     }
 }

@@ -3,7 +3,7 @@ Pushes order changes to everyone involved over WebSockets.
 
 Groups:
   user-<id>     a signed-in user's own orders (as customer or captain)
-  vendor-<id>   orders for a store, joined by its owner
+  vendor-<id>   orders for a store, joined by its owner and team
   captains      orders waiting for a captain
   support       staff users: stuck-order alerts
 
@@ -103,6 +103,20 @@ def send_stuck_alert(alert):
         )
     except Exception:
         logger.exception("Could not send stuck-order alert %s", alert.pk)
+
+
+def revoke_sockets(user_id):
+    """
+    Someone's access changed (removed from a store, blocked, signed out, lost a
+    store): close their open sockets once the change commits. Apps reconnect
+    and get exactly the groups they're allowed now; blocked or signed-out
+    users are refused.
+    """
+
+    def send():
+        async_to_sync(get_channel_layer().group_send)(user_group(user_id), {"type": "access.revoked"})
+
+    transaction.on_commit(lambda: _guard(send, "revoke sockets of user %s" % user_id))
 
 
 def notify_user(user_id, payload):
