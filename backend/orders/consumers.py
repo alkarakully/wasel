@@ -2,7 +2,7 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 from accounts.models import User
-from vendors.models import Vendor
+from vendors import access
 
 from .realtime import CAPTAINS_GROUP, SUPPORT_GROUP, user_group, vendor_group
 from .serializers import LocationSerializer
@@ -72,4 +72,5 @@ class OrderUpdatesConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def _owned_vendor_ids(self, user):
-        return list(Vendor.objects.filter(owner=user).values_list("pk", flat=True))
+        # Owners and their team all follow the store's orders.
+        return access.store_ids_for(user)

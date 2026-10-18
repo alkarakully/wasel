@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.contrib import admin
+from django.contrib.admin.views.decorators import staff_member_required
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
@@ -8,7 +9,15 @@ from rest_framework.routers import DefaultRouter
 
 from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferView, OfferAnswerView, OrderViewSet
 from notifications.views import DeviceView
+from billing.api import BillingView, CloseWeeksView, MarkPaidView, StatementView
+from billing.api import PayoutsView as BillingPayouts
+from vendors.manage import HoursView, MemberView, ProductsView, ProductView, TeamView
+from vendors.reports import ReportView
 from vendors.views import OfferViewSet, ProductAvailabilityView, VendorViewSet
+
+admin.site.site_header = "Wasel admin"
+admin.site.site_title = "Wasel admin"
+admin.site.index_title = "Platform administration"
 
 router = DefaultRouter()
 router.register("vendors", VendorViewSet, basename="vendor")
@@ -35,7 +44,22 @@ urlpatterns = [
     path("api/dispatch/offers/<int:pk>/accept/", OfferAnswerView.as_view(answer="accept"), name="dispatch-accept"),
     path("api/dispatch/offers/<int:pk>/decline/", OfferAnswerView.as_view(answer="decline"), name="dispatch-decline"),
     path("api/products/<int:pk>/availability/", ProductAvailabilityView.as_view(), name="product-availability"),
+    path("api/ops/payouts/", BillingPayouts.as_view(), name="ops-payouts"),
+    path("api/ops/payouts/close/", CloseWeeksView.as_view(), name="ops-payouts-close"),
+    path("api/ops/payouts/<int:pk>/paid/", MarkPaidView.as_view(), name="ops-payout-paid"),
+    path("api/ops/", include("ops.urls")),
+    # Store self-service (team, menu, hours, reports, billing).
+    path("api/vendors/<int:pk>/team/", TeamView.as_view(), name="store-team"),
+    path("api/vendors/<int:pk>/team/<int:member_id>/", MemberView.as_view(), name="store-member"),
+    path("api/vendors/<int:pk>/products/", ProductsView.as_view(), name="store-products"),
+    path("api/vendors/<int:pk>/hours/", HoursView.as_view(), name="store-hours"),
+    path("api/vendors/<int:pk>/report/", ReportView.as_view(), name="store-report"),
+    path("api/vendors/<int:pk>/billing/", BillingView.as_view(), name="store-billing"),
+    path("api/vendors/<int:pk>/statements/<int:statement_id>/", StatementView.as_view(), name="store-statement"),
+    path("api/products/<int:pk>/", ProductView.as_view(), name="product"),
     path("api/", include(router.urls)),
+    # Staff operations page; signs in through the admin.
+    path("ops/", staff_member_required(TemplateView.as_view(template_name="ops/ops.html", extra_context={"map_styles": settings.MAP_STYLES})), name="ops"),
     path("login/", TemplateView.as_view(template_name="accounts/login.html"), name="login"),
     path("track/<int:order_id>/", TemplateView.as_view(template_name="orders/track.html", extra_context={"map_styles": settings.MAP_STYLES}), name="track-order"),
     path("api-auth/", include("rest_framework.urls")),

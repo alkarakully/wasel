@@ -5,14 +5,22 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm
 
 from .models import PhoneOTP, User, WalletTransaction
-from .phone import InvalidPhone, normalize_iraqi_phone
+from .phone import InvalidPhone, normalize_iraqi_phone, other_phone
 
 
-def clean_phone_field(form):
-    """Store numbers the way login looks them up (+9647XXXXXXXXX), whatever was typed."""
+def clean_phone_field(form, staff=False):
+    """
+    Store numbers the way login looks them up (+9647XXXXXXXXX), whatever was
+    typed. App accounts sign in with a code sent to an Iraqi number, so they
+    need one; staff sign in to the admin with a password and may use any number.
+    """
+    raw = form.cleaned_data.get("phone")
     try:
-        return normalize_iraqi_phone(form.cleaned_data.get("phone"))
+        return normalize_iraqi_phone(raw)
     except InvalidPhone as error:
+        other = other_phone(raw)
+        if staff and other:
+            return other
         raise forms.ValidationError(str(error)) from error
 
 
@@ -45,7 +53,8 @@ class UserCreationForm(forms.ModelForm):
         help_texts = {"phone": "Any form works: 0770 123 4567, +964 770 123 4567, or Arabic digits."}
 
     def clean_phone(self):
-        return clean_phone_field(self)
+        # A password means a staff login, which may use a non-Iraqi number.
+        return clean_phone_field(self, staff=bool(self.data.get("password1")))
 
     def clean(self):
         cleaned = super().clean()
@@ -71,7 +80,8 @@ class UserCreationForm(forms.ModelForm):
 
 class UserEditForm(UserChangeForm):
     def clean_phone(self):
-        return clean_phone_field(self)
+        staff = self.instance.is_staff or bool(self.data.get("is_staff"))
+        return clean_phone_field(self, staff=staff)
 
 
 @admin.register(User)

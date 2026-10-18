@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
@@ -85,11 +87,22 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     _SectionTitle(s.t('nearbyStores')),
                     if (data == null)
-                      for (var i = 0; i < 4; i++) const _StoreSkeleton()
+                      Shimmer(
+                        child: Column(
+                          children: [
+                            for (var i = 0; i < 4; i++) const _StoreSkeleton(),
+                          ],
+                        ),
+                      )
                     else if (data.$1.isEmpty)
                       _Message(text: s.t('noStores'))
                     else
-                      for (final store in data.$1) _StoreCard(store: store),
+                      for (final (i, store) in data.$1.indexed)
+                        Reveal(
+                          key: ValueKey('store-${store.id}-$_cuisine'),
+                          index: i,
+                          child: _StoreCard(store: store),
+                        ),
                   ],
                 ],
               );
@@ -235,9 +248,56 @@ class _SectionTitle extends StatelessWidget {
 }
 
 /// Offers on glazed lapis; without offers, the brand line takes the spot.
-class _OfferBanners extends StatelessWidget {
+/// Offers on glazed lapis, turning every few seconds; gold dots show where
+/// you are. Turning pauses while a finger is on it.
+class _OfferBanners extends StatefulWidget {
   const _OfferBanners({required this.offers});
   final List<Offer> offers;
+
+  @override
+  State<_OfferBanners> createState() => _OfferBannersState();
+}
+
+class _OfferBannersState extends State<_OfferBanners> {
+  PageController? _pages;
+  Timer? _turn;
+  int _page = 0;
+
+  List<Offer> get offers => widget.offers;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _pages ??= PageController(viewportFraction: offers.length <= 1 ? 1 : 0.86);
+    _schedule();
+  }
+
+  @override
+  void didUpdateWidget(_OfferBanners old) {
+    super.didUpdateWidget(old);
+    _schedule();
+  }
+
+  void _schedule() {
+    _turn?.cancel();
+    if (offers.length < 2 || MediaQuery.of(context).disableAnimations) return;
+    _turn = Timer.periodic(const Duration(seconds: 5), (_) {
+      final pages = _pages;
+      if (pages == null || !pages.hasClients) return;
+      pages.animateToPage(
+        (_page + 1) % offers.length,
+        duration: Motion.slow,
+        curve: Motion.spring,
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _turn?.cancel();
+    _pages?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -253,23 +313,56 @@ class _OfferBanners extends StatelessWidget {
                 icon: const [Ph.sparkle, Ph.moped, Ph.star][i % 3],
               ),
           ];
-    return SizedBox(
+    final pageView = SizedBox(
       height: 168,
-      child: PageView(
-        controller: PageController(viewportFraction: single ? 1 : 0.86),
-        padEnds: false,
-        children: [
-          for (final (i, item) in items.indexed)
-            Padding(
-              padding: EdgeInsetsDirectional.only(
-                start: i == 0 ? 16 : 6,
-                end: single || i == items.length - 1 ? 16 : 6,
-                top: 8,
+      child: Listener(
+        // A finger on the banner stops it turning until it's let go.
+        onPointerDown: (_) => _turn?.cancel(),
+        onPointerUp: (_) => _schedule(),
+        onPointerCancel: (_) => _schedule(),
+        child: PageView(
+          controller: _pages,
+          padEnds: false,
+          onPageChanged: (page) => setState(() => _page = page),
+          children: [
+            for (final (i, item) in items.indexed)
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: i == 0 ? 16 : 6,
+                  end: single || i == items.length - 1 ? 16 : 6,
+                  top: 8,
+                ),
+                child: item,
               ),
-              child: item,
-            ),
-        ],
+          ],
+        ),
       ),
+    );
+    if (items.length < 2) return pageView;
+    return Column(
+      children: [
+        pageView,
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < items.length; i++)
+              AnimatedContainer(
+                duration: Motion.medium,
+                curve: Motion.spring,
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == _page ? 22 : 7,
+                height: 7,
+                decoration: ShapeDecoration(
+                  color: i == _page
+                      ? Gold.c400
+                      : WaselTheme.of(context).hairline,
+                  shape: const StadiumBorder(),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }

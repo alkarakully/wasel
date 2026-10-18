@@ -8,6 +8,7 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import access
 from .models import Offer, Product, Vendor
 from .serializers import OfferSerializer, VendorDetailSerializer, VendorSerializer
 
@@ -49,7 +50,7 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
 
         if self.action == "retrieve":
             queryset = queryset.prefetch_related(
-                Prefetch("products", queryset=Product.objects.prefetch_related("modifiers"))
+                Prefetch("products", queryset=Product.objects.filter(is_archived=False).prefetch_related("modifiers"))
             )
         return queryset
 
@@ -57,20 +58,28 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, permission_classes=[permissions.IsAuthenticated])
     def mine(self, request):
-        """The signed-in owner's stores, with full menus."""
+        """
+        Stores the signed-in user owns or works at, with full menus and their
+        role there ("owner", "manager" or "cashier"), which decides what they see.
+        """
         stores = (
-            Vendor.objects.filter(owner=request.user)
+            access.stores_for(request.user)
             .order_by("name")
-            .prefetch_related(Prefetch("products", queryset=Product.objects.prefetch_related("modifiers")))
+            .prefetch_related(
+                Prefetch("products", queryset=Product.objects.filter(is_archived=False).prefetch_related("modifiers"))
+            )
         )
-        return Response(VendorDetailSerializer(stores, many=True).data)
+        data = VendorDetailSerializer(stores, many=True).data
+        for store, row in zip(stores, data):
+            row["my_role"] = access.role_for(store, request.user)
+        return Response(data)
 
     @action(detail=True, methods=["post"], url_path="open", permission_classes=[permissions.IsAuthenticated])
     def set_open(self, request, pk=None):
         """POST {is_open} opens or closes the store for new orders."""
         store = self.get_object()
-        if store.owner_id != request.user.pk:
-            return Response({"error": "not_allowed", "detail": "Only the store owner can do this."}, status=403)
+        if not access.can(store, request.user, "orders"):
+            return Response({"error": "not_allowed", "detail": "Only the store's team can do this."}, status=403)
         store.is_open = serializers.BooleanField().to_internal_value(request.data.get("is_open"))
         store.save(update_fields=["is_open"])
         return Response({"id": store.pk, "is_open": store.is_open})
@@ -85,8 +94,8 @@ class ProductAvailabilityView(APIView):
         product = Product.objects.select_related("vendor").filter(pk=pk).first()
         if product is None:
             return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
-        if product.vendor.owner_id != request.user.pk:
-            return Response({"error": "not_allowed", "detail": "Only the store owner can do this."}, status=403)
+        if not access.can(product.vendor, request.user, "orders"):
+            return Response({"error": "not_allowed", "detail": "Only the store's team can do this."}, status=403)
         product.is_available = serializers.BooleanField().to_internal_value(request.data.get("is_available"))
         product.save(update_fields=["is_available"])
         return Response({"id": product.pk, "is_available": product.is_available})

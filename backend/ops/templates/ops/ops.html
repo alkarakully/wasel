@@ -1,0 +1,202 @@
+{% load static %}<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" href="data:,">
+  <title>واصل | العمليات</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
+  <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'ops/ops.css' %}">
+</head>
+<body>
+  <header class="bar glaze">
+    <a class="brand" href="{% url 'ops' %}">
+      <span class="mark" aria-hidden="true">و</span>
+      <span class="word">واصل</span>
+      <span class="tag" data-i18n="tag">العمليات</span>
+    </a>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" data-view="overview" aria-pressed="true"><i class="ph-light ph-chart-line-up" aria-hidden="true"></i><span data-i18n="overview">نظرة عامة</span></button>
+      <button type="button" data-view="orders" aria-pressed="false"><i class="ph-light ph-receipt" aria-hidden="true"></i><span data-i18n="orders">الطلبات</span><span class="count" id="count-orders" hidden></span></button>
+      <button type="button" data-view="captains" aria-pressed="false"><i class="ph-light ph-moped" aria-hidden="true"></i><span data-i18n="captains">الكباتن</span></button>
+      <button type="button" data-view="stores" aria-pressed="false"><i class="ph-light ph-storefront" aria-hidden="true"></i><span data-i18n="stores">المتاجر</span></button>
+      <button type="button" data-view="payouts" aria-pressed="false"><i class="ph-light ph-bank" aria-hidden="true"></i><span data-i18n="payouts">المدفوعات</span></button>
+      <button type="button" data-view="users" aria-pressed="false"><i class="ph-light ph-users" aria-hidden="true"></i><span data-i18n="users">الحسابات</span></button>
+    </nav>
+    <div class="tools">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="ar" aria-pressed="true">العربية</button>
+        <button type="button" data-lang="ku" aria-pressed="false">کوردی</button>
+        <button type="button" data-lang="en" aria-pressed="false">English</button>
+      </div>
+      <a class="tool" href="{% url 'admin:index' %}"><i class="ph-light ph-gear-six" aria-hidden="true"></i><span data-i18n="admin">الإدارة</span></a>
+      <form method="post" action="{% url 'admin:logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="tool icon" title="Sign out"><i class="ph-light ph-sign-out" aria-hidden="true"></i><span class="sr-only" data-i18n="signOut">خروج</span></button>
+      </form>
+    </div>
+  </header>
+
+  <p class="offline" id="offline" role="status" hidden></p>
+
+  <main>
+    <!-- Overview -->
+    <section class="view" id="view-overview">
+      <div class="bento">
+        <article class="tile hero glaze">
+          <p class="eyebrow" data-i18n="todaySales">مبيعات اليوم</p>
+          <p class="big" id="k-sales">…</p>
+          <span class="gold-rule"></span>
+          <p class="sub"><span id="k-orders">…</span> · <span id="k-delivered">…</span></p>
+        </article>
+        <article class="tile">
+          <p class="label"><i class="ph-light ph-coins" aria-hidden="true"></i><span data-i18n="commission">عمولة واصل</span></p>
+          <p class="num" id="k-commission">…</p>
+          <p class="hint" id="k-fees"></p>
+        </article>
+        <article class="tile">
+          <p class="label"><i class="ph-light ph-timer" aria-hidden="true"></i><span data-i18n="avgDelivery">متوسط التوصيل</span></p>
+          <p class="num" id="k-avg">…</p>
+          <p class="hint" id="k-cancelled"></p>
+        </article>
+        <article class="tile live">
+          <p class="label"><span class="pulse" aria-hidden="true"></span><span data-i18n="activeOrders">طلبات جارية</span></p>
+          <p class="num" id="k-active">…</p>
+          <div class="pipeline" id="pipeline"></div>
+        </article>
+        <article class="tile" id="tile-alerts">
+          <p class="label"><i class="ph-light ph-warning-circle" aria-hidden="true"></i><span data-i18n="openAlerts">تنبيهات مفتوحة</span></p>
+          <p class="num" id="k-alerts">…</p>
+        </article>
+        <article class="tile">
+          <p class="label"><i class="ph-light ph-moped" aria-hidden="true"></i><span data-i18n="onlineCaptains">كباتن متصلون</span></p>
+          <p class="num" id="k-captains">…</p>
+        </article>
+        <article class="tile">
+          <p class="label"><i class="ph-light ph-storefront" aria-hidden="true"></i><span data-i18n="openStores">متاجر مفتوحة</span></p>
+          <p class="num" id="k-stores">…</p>
+        </article>
+        <article class="tile month">
+          <p class="label"><i class="ph-light ph-calendar-blank" aria-hidden="true"></i><span data-i18n="thisMonth">هذا الشهر</span></p>
+          <dl class="pairs" id="k-month"></dl>
+        </article>
+      </div>
+
+      <div class="split">
+        <article class="panel">
+          <h2><i class="ph-light ph-warning-circle" aria-hidden="true"></i><span data-i18n="stuckOrders">طلبات متأخرة</span></h2>
+          <ul class="alerts" id="alerts"></ul>
+        </article>
+        <article class="panel">
+          <h2><i class="ph-light ph-trophy" aria-hidden="true"></i><span data-i18n="topStores">الأكثر طلباً اليوم</span></h2>
+          <ol class="ranking" id="top-stores"></ol>
+        </article>
+      </div>
+    </section>
+
+    <!-- Live orders -->
+    <section class="view" id="view-orders" hidden>
+      <article class="panel">
+        <h2><span class="pulse" aria-hidden="true"></span><span data-i18n="liveOrders">الطلبات الجارية</span></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>#</th><th data-i18n="status">الحالة</th><th data-i18n="store">المتجر</th><th data-i18n="customer">الزبون</th><th data-i18n="captain">الكابتن</th><th data-i18n="total">المجموع</th><th data-i18n="age">المدة</th><th></th>
+            </tr></thead>
+            <tbody id="orders"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- Captains -->
+    <section class="view" id="view-captains" hidden>
+      <div class="split map-split">
+        <article class="panel map-panel"><div id="map" aria-label="Map"></div></article>
+        <article class="panel">
+          <h2><i class="ph-light ph-moped" aria-hidden="true"></i><span data-i18n="captains">الكباتن</span></h2>
+          <ul class="people" id="captains"></ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- Stores -->
+    <section class="view" id="view-stores" hidden>
+      <article class="panel">
+        <h2><i class="ph-light ph-storefront" aria-hidden="true"></i><span data-i18n="stores">المتاجر</span></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="store">المتجر</th><th data-i18n="owner">المالك</th><th data-i18n="commissionRate">العمولة</th><th data-i18n="ordersToday">طلبات اليوم</th><th data-i18n="salesToday">مبيعات اليوم</th><th data-i18n="open">مفتوح</th><th></th>
+            </tr></thead>
+            <tbody id="stores"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- Payouts -->
+    <section class="view" id="view-payouts" hidden>
+      <div class="payout-head">
+        <article class="tile hero glaze payout-due">
+          <p class="eyebrow" data-i18n="dueToStores">مستحق للمتاجر</p>
+          <p class="big" id="p-due">…</p>
+          <span class="gold-rule"></span>
+          <p class="sub" data-i18n="weeklyNote">كشف أسبوعي من السبت إلى الجمعة لكل متجر.</p>
+        </article>
+        <article class="panel payout-actions">
+          <div class="chips" id="payout-filter" role="group" aria-label="Status">
+            <button type="button" data-status="due" aria-pressed="true" data-i18n="due">مستحق</button>
+            <button type="button" data-status="paid" aria-pressed="false" data-i18n="paid">مدفوع</button>
+            <button type="button" data-status="" aria-pressed="false" data-i18n="all">الكل</button>
+          </div>
+          <button type="button" class="small" id="close-weeks"><i class="ph-light ph-arrows-clockwise" aria-hidden="true"></i> <span data-i18n="closeWeeks">إنشاء الكشوفات المتأخرة</span></button>
+        </article>
+      </div>
+      <article class="panel">
+        <h2><i class="ph-light ph-bank" aria-hidden="true"></i><span data-i18n="statements">الكشوفات</span></h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="store">المتجر</th><th data-i18n="week">الأسبوع</th><th data-i18n="orders">الطلبات</th><th data-i18n="foodSales">مبيعات الطعام</th><th data-i18n="commission">عمولة واصل</th><th data-i18n="payout">المستحق</th><th data-i18n="status">الحالة</th><th></th>
+            </tr></thead>
+            <tbody id="payouts"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <!-- Accounts -->
+    <section class="view" id="view-users" hidden>
+      <article class="panel">
+        <div class="panel-head">
+          <h2><i class="ph-light ph-users" aria-hidden="true"></i><span data-i18n="users">الحسابات</span></h2>
+          <div class="filters">
+            <div class="chips" id="roles" role="group" aria-label="Role"></div>
+            <label class="search">
+              <i class="ph-light ph-magnifying-glass" aria-hidden="true"></i>
+              <input id="search" type="search" autocomplete="off" data-i18n-placeholder="searchUsers" placeholder="ابحث بالرقم أو الاسم">
+            </label>
+            <a class="button" href="{% url 'admin:accounts_user_add' %}"><i class="ph-light ph-plus" aria-hidden="true"></i><span data-i18n="addAccount">حساب جديد</span></a>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="phone">الهاتف</th><th data-i18n="name">الاسم</th><th data-i18n="role">الدور</th><th data-i18n="orders">الطلبات</th><th data-i18n="joined">الانضمام</th><th data-i18n="active">نشط</th><th></th>
+            </tr></thead>
+            <tbody id="users"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  {{ map_styles|json_script:"map-styles" }}
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script src="{% static 'ops/ops.js' %}"></script>
+</body>
+</html>

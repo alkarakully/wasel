@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from accounts.models import User, WalletTransaction
 from notifications.push import notify
+from vendors import access
 
 from .models import DispatchOffer, Order
 
@@ -72,7 +73,8 @@ def _require_status(order, *allowed):
 
 
 def _require_vendor_owner(order, user):
-    if order.vendor.owner_id != user.pk:
+    # Anyone working at the store (owner, manager, cashier) handles its orders.
+    if not access.can(order.vendor, user, "orders"):
         raise NotAllowed("Only the store can do this.")
 
 
@@ -144,7 +146,8 @@ def cancel(order_id, user, reason=""):
     if order.status != Order.Status.RECEIVED:
         raise InvalidTransition("The store has already started this order, so it can't be cancelled in the app.")
     _cancel(order, Order.CancelledBy.CUSTOMER, reason)
-    notify(order.vendor.owner_id, "store", "store_order_cancelled", order_id=order.pk, store=order.vendor.name)
+    for user_id in access.staff_ids(order.vendor):
+        notify(user_id, "store", "store_order_cancelled", order_id=order.pk, store=order.vendor.name)
     return order
 
 

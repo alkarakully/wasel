@@ -48,11 +48,20 @@ class _BoardViewState extends State<BoardView> {
     if (!board.loaded) {
       return const Center(child: CircularProgressIndicator());
     }
+    return Column(
+      children: [
+        _PrintToolbar(board: board),
+        Expanded(child: _columns(board)),
+      ],
+    );
+  }
+
+  Widget _columns(StoreBoard board) {
     return LayoutBuilder(
       builder: (context, box) {
         if (box.maxWidth >= 900) {
           return Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -303,6 +312,69 @@ class _ColumnTabs extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// "Print when accepting": on, every accepted order prints both slips.
+class _PrintToolbar extends StatelessWidget {
+  const _PrintToolbar({required this.board});
+  final StoreBoard board;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final t = WaselTheme.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final on = board.autoPrint;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: Align(
+        alignment: AlignmentDirectional.centerEnd,
+        child: Semantics(
+          button: true,
+          toggled: on,
+          child: Pressable(
+            key: const Key('auto-print'),
+            onTap: () => board.setAutoPrint(!on),
+            child: AnimatedContainer(
+              duration: Motion.fast,
+              curve: Motion.out,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: ShapeDecoration(
+                color: on ? scheme.secondaryContainer : t.surface,
+                shape: StadiumBorder(
+                  side: BorderSide(color: on ? scheme.primary : t.hairline),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Ph.printer,
+                    size: 18,
+                    color: on ? scheme.primary : t.muted,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    s.t('printOnAccept'),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: on ? scheme.primary : t.muted,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    on ? Ph.checkCircle : Ph.x,
+                    size: 16,
+                    color: on ? scheme.primary : t.muted,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

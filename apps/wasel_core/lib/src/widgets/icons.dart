@@ -283,6 +283,12 @@ class Ph {
     fontPackage: _package,
     matchTextDirection: false,
   );
+  static const printer = IconData(
+    0xe3dc,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
   static const receiptX = IconData(
     0xed40,
     fontFamily: _font,

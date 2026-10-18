@@ -22,6 +22,44 @@ Create an admin user:
 docker compose run --rm web python manage.py createsuperuser
 ```
 
+## Admin and operations
+
+Staff sign in at `/admin/` with the account from `createsuperuser` (any phone number works for staff; app accounts need an Iraqi number because they sign in by code). The admin is themed in the Wasel lapis and gold and has an **Operations** link to `/ops/`, the platform page for day-to-day running:
+
+| Section | What staff see and do |
+| :--- | :--- |
+| Overview | Sales, Wasel commission, service and delivery fees, orders, average delivery time and cancellations for today and this month; orders in progress by status; open alerts, online captains and open stores; top stores today; stuck orders, each with a link to the order and a **Done** button. |
+| Orders | Every order in progress, oldest first, with its stuck-order reasons. |
+| Captains | Captains active in the last day on a map and in a list: online or not, last seen, and the order they're carrying. |
+| Stores | Every store with today's orders and sales, commission rate and an open/closed switch. |
+| Payouts | Weekly statements due to stores, with **Mark paid** (and a transfer reference), and a button to make any missing statements now. |
+| Accounts | Customers, captains and store owners by role, searchable by phone or name, with an active switch (blocked accounts can't sign in). Staff accounts are managed in the admin. |
+
+The page refreshes every 10 seconds and works in Arabic, Kurdish and English. Its data comes from `/api/ops/`, which only accepts a signed-in staff session (not an app token).
+
+## Stores: team, menu, reports and billing
+
+Each store has an owner (`Vendor.owner`) and can have a team (`StoreMember`, role manager or cashier). Owners add people by phone from the store portal; those accounts have the Vendor role and sign in with a code. The rules live in `vendors/access.py`:
+
+| | Orders, stock, open/closed | Menu, hours | Reports | Billing | Team |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Owner | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manager | ✓ | ✓ | ✓ | | |
+| Cashier | ✓ | | | | |
+
+Everyone on the team gets the store's live order updates and new-order pushes.
+
+| Endpoint | What it does |
+| :--- | :--- |
+| `GET/POST /api/vendors/{id}/team/`, `PATCH/DELETE .../team/{member}/` | List, add (by phone), change role, remove |
+| `POST /api/vendors/{id}/products/`, `PATCH/DELETE /api/products/{id}/` | Add, edit, remove menu items (ordered items are archived) |
+| `PUT /api/vendors/{id}/hours/` | Opening hours: `{"sat": ["10:00", "23:30"], "fri": null, ...}` |
+| `GET /api/vendors/{id}/report/?from=&to=` | Sales, earnings, orders, prep time, cancellations, by day and hour, best sellers |
+| `GET /api/vendors/{id}/billing/` | This week so far, totals due and paid, statements |
+| `GET /api/vendors/{id}/statements/{sid}/` | One week with every order; `?download=csv` for a spreadsheet |
+
+**Billing.** Wasel collects every payment (cash through captains, card and wallet in the app) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in `/ops/` › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
+
 ## Test
 
 ```bash
@@ -34,8 +72,10 @@ docker compose run --rm web python manage.py test
 | :--- | :--- |
 | `accounts` | `User` (phone login, role: customer/captain/vendor), `PhoneOTP`, `WalletTransaction` |
 | `subscriptions` | `WaselPlusSubscription` |
-| `vendors` | `Vendor`, `Product`, `ProductModifier`, `Offer` |
+| `vendors` | `Vendor`, `StoreMember`, `Product`, `ProductModifier`, `Offer` |
 | `orders` | `Order`, `OrderItem`, `OrderItemModifier`, `Rating` |
+| `ops` | No models: the staff operations page and its API |
+| `billing` | `Statement` (weekly store payouts) |
 
 Money fields are whole Iraqi dinars. `Vendor.commission_for(subtotal)` applies the vendor's commission rate, or 0 during its commission-free period.
 

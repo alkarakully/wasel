@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 /// The owner's stores and their open orders, kept current over the live
@@ -47,6 +48,7 @@ class StoreBoard extends ChangeNotifier {
 
   void start() {
     _events ??= live.events.listen(_onEvent);
+    loadSettings();
     loadStores();
     reload();
   }
@@ -120,7 +122,8 @@ class StoreBoard extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> accept(Order order, int prepMinutes) =>
+  /// Returns the accepted order, or null if it couldn't be accepted.
+  Future<Order?> accept(Order order, int prepMinutes) =>
       _step(() => api.acceptOrder(order.id, prepMinutes));
 
   Future<void> reject(Order order, String reason) =>
@@ -128,13 +131,36 @@ class StoreBoard extends ChangeNotifier {
 
   Future<void> markReady(Order order) => _step(() => api.markReady(order.id));
 
-  Future<void> _step(Future<Order> Function() call) async {
+  Future<Order?> _step(Future<Order> Function() call) async {
     try {
-      upsert(await call());
+      final order = await call();
+      upsert(order);
+      return order;
     } on ApiException catch (error) {
       _fail(error);
       if (error.code == 'invalid_transition') reload();
+      return null;
     }
+  }
+
+  // --- Printing --------------------------------------------------------------
+
+  static const _autoPrintKey = 'store_print_on_accept';
+
+  /// Print the kitchen ticket and package slip as soon as an order is accepted.
+  bool autoPrint = false;
+
+  Future<void> loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    autoPrint = prefs.getBool(_autoPrintKey) ?? false;
+    notifyListeners();
+  }
+
+  Future<void> setAutoPrint(bool on) async {
+    autoPrint = on;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoPrintKey, on);
   }
 
   Future<void> setOpen(VendorDetail s, bool open) async {

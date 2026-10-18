@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
 
+import 'print/printer.dart';
 import 'screens/home_screen.dart';
 import 'state/alarm.dart';
 import 'state/board.dart';
@@ -33,7 +34,15 @@ void main() {
   board.addListener(() => board.ringing ? alarm.start() : alarm.stop());
   session.load();
 
-  runApp(StoreApp(api: api, live: live, session: session, board: board));
+  runApp(
+    StoreApp(
+      api: api,
+      live: live,
+      session: session,
+      board: board,
+      printer: OrderPrinter(),
+    ),
+  );
 }
 
 class StoreApp extends StatelessWidget {
@@ -43,12 +52,14 @@ class StoreApp extends StatelessWidget {
     required this.live,
     required this.session,
     required this.board,
+    required this.printer,
   });
 
   final ApiClient api;
   final LiveUpdates live;
   final StoreSession session;
   final StoreBoard board;
+  final OrderPrinter printer;
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +71,7 @@ class StoreApp extends StatelessWidget {
         ChangeNotifierProvider<BaseSession>.value(value: session),
         ChangeNotifierProvider.value(value: session),
         ChangeNotifierProvider.value(value: board),
+        Provider.value(value: printer),
       ],
       child: Consumer<StoreSession>(
         builder: (context, session, _) => MaterialApp(

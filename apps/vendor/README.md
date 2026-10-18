@@ -1,6 +1,6 @@
 # Wasel vendor portal (React)
 
-For store owners on a computer or a kitchen tablet: a live order board with a loud new-order alarm, accept (with prep time), reject (with a reason), mark ready, and switches for item stock and the store's open/closed state. Arabic, Kurdish (Sorani) and English, right-to-left where needed, light and dark.
+Each store's own admin, on a computer or a kitchen tablet: a live order board with a loud new-order alarm, the menu and opening hours, reports, weekly billing statements and the store team. Owners, managers and cashiers each see what their role allows. Arabic, Kurdish (Sorani) and English, right-to-left where needed, light and dark.
 
 Built with Vite, React 19 and TypeScript. Icons from Phosphor.
 
@@ -46,6 +46,22 @@ Only store-owner accounts (role `vendor`) can log in.
 | Reject | Pick a common reason or type one; the customer sees it and wallet payments are refunded. |
 | Menu | Switch items in or out of stock instantly; out-of-stock items can't be ordered. |
 | Open / closed | Closed stores can't receive orders. |
+| Menu editing | Owners and managers add items (names in Arabic, Kurdish and English, section, price, per item or per kg), edit them and remove them. Items that were ever ordered are archived rather than deleted, so old orders keep them. |
+| Opening hours | One opening per weekday or closed; a closing time before the opening means after midnight. |
+| Reports | For the last 7 or 30 days, this month, or any dates: earnings after commission, food sales, orders, average order, average prep time, cancellations, sales by day, busiest hours and best sellers. |
+| Billing | Wasel collects every payment and pays the store weekly (Saturday to Friday). The owner sees this week so far, what's due and what's been paid, and each week's statement with every order, downloadable as a spreadsheet. |
+| Team | The owner adds managers and cashiers by phone; they sign in with a code. |
+| Printing | Every order card has a print button, and **Print when accepting** prints automatically on accept. It prints two 80 mm slips, for kitchen receipt printers (any printer works): a kitchen ticket with the order number, times and items in large type, and a package slip to clip to the bag with a tick box per item, the customer's name and cash to collect. The delivery PIN and the customer's phone are never printed. For printing without the dialog, run Chrome in kiosk printing mode (`--kiosk-printing`). |
+
+Who sees what:
+
+| | Orders, stock, open/closed | Menu, hours | Reports | Billing | Team |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Owner | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manager | ✓ | ✓ | ✓ | | |
+| Cashier | ✓ | | | | |
+
+The server enforces the same rules, so hiding a tab is never the only protection.
 
 ## Production
 

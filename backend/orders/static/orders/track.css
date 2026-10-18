@@ -183,6 +183,41 @@ h1 { margin: 4px 0 10px; font-size: 1.625rem; line-height: 1.3; }
   @keyframes pulse { 50% { opacity: 0.45; } }
 }
 
+/* --- Motion --------------------------------------------------------------- */
+
+.panel { animation: rise 0.7s var(--out) backwards; }
+#state-order:not([hidden]) { animation: rise 0.5s var(--out) backwards; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+}
+
+/* The step in progress breathes a gold ring. */
+.steps li.current::before { animation: breathe 1.8s var(--out) infinite; }
+.cancelled .steps li.current::before { animation: none; }
+
+@keyframes breathe {
+  0% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--gold-400); }
+  70% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 11px rgb(242 199 92 / 0); }
+  100% { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--gold-400); }
+}
+
+/* The captain's marker sends out a ring, so it reads as live. */
+/* MapLibre positions markers absolutely, which also anchors the ring. */
+.marker.captain::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid var(--gold-400);
+  animation: ping 2s var(--out) infinite;
+}
+
+@keyframes ping {
+  from { opacity: 0.9; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.9); }
+}
+
 /* Phones: the card floats at the bottom. */
 @media (max-width: 767px) {
   .panel {

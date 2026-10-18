@@ -108,7 +108,9 @@ def _price_lines(vendor, items):
     product_ids = {item["product"] for item in items}
     products = {
         product.pk: product
-        for product in Product.objects.filter(vendor=vendor, pk__in=product_ids).prefetch_related("modifiers")
+        for product in Product.objects.filter(vendor=vendor, pk__in=product_ids, is_archived=False).prefetch_related(
+            "modifiers"
+        )
     }
 
     lines = []

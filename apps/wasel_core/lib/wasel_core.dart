@@ -1,4 +1,4 @@
-/// Code shared by the Wasel customer and captain apps.
+/// Code shared by the Wasel customer, captain and store apps.
 library;
 
 export 'src/api/api_client.dart';
@@ -12,3 +12,4 @@ export 'src/theme.dart';
 export 'src/widgets/brand.dart';
 export 'src/widgets/icons.dart';
 export 'src/widgets/language_switch.dart';
+export 'src/widgets/motion.dart';

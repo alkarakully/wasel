@@ -301,13 +301,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else
-                  for (final order in _available)
-                    _OrderCard(
-                      order: order,
-                      action: PillButton(
-                        label: s.t('takeOrder'),
-                        busy: _taking == order.id,
-                        onPressed: _taking == null ? () => _take(order) : null,
+                  for (final (i, order) in _available.indexed)
+                    Reveal(
+                      key: ValueKey(order.id),
+                      index: i,
+                      child: _OrderCard(
+                        order: order,
+                        action: PillButton(
+                          label: s.t('takeOrder'),
+                          busy: _taking == order.id,
+                          onPressed: _taking == null
+                              ? () => _take(order)
+                              : null,
+                        ),
                       ),
                     ),
               ],

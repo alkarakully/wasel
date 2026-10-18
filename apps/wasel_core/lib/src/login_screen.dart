@@ -12,6 +12,7 @@ import 'theme.dart';
 import 'widgets/brand.dart';
 import 'widgets/icons.dart';
 import 'widgets/language_switch.dart';
+import 'widgets/motion.dart';
 
 /// Phone login: number and channel, then the 6-digit code.
 class LoginScreen extends StatefulWidget {
@@ -160,13 +161,20 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Wordmark(size: wordmark),
+        Reveal(child: Wordmark(size: wordmark)),
         const SizedBox(height: 10),
         const GoldRule(),
         const SizedBox(height: 14),
-        Text(
-          s.t('brandLine'),
-          style: const TextStyle(color: Lapis.c100, fontSize: 17, height: 1.55),
+        Reveal(
+          index: 2,
+          child: Text(
+            s.t('brandLine'),
+            style: const TextStyle(
+              color: Lapis.c100,
+              fontSize: 17,
+              height: 1.55,
+            ),
+          ),
         ),
       ],
     );
@@ -207,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       padding: const EdgeInsets.all(32),
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 480),
-                        child: form,
+                        child: Reveal(index: 3, offset: 28, child: form),
                       ),
                     ),
                   ),
@@ -240,7 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     constraints: const BoxConstraints(maxWidth: 560),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: form,
+                      child: Reveal(index: 3, offset: 28, child: form),
                     ),
                   ),
                 ),

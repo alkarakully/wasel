@@ -286,3 +286,38 @@ class AdminAccountTests(TestCase):
         user = User.objects.create_user("0770 111 2233")
         self.assertEqual(user.phone, "+9647701112233")
         self.assertFalse(user.has_usable_password())
+
+    def test_staff_may_use_a_non_iraqi_number(self):
+        response = self.add_user(
+            phone="501 218 3813", name="Owner", password1="a-strong-admin-pass", password2="a-strong-admin-pass"
+        )
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(User.objects.filter(phone="5012183813").exists())
+        # createsuperuser goes through the manager.
+        admin = User.objects.create_superuser("+1 501 555 0100", "a-strong-admin-pass", name="Admin 2")
+        self.assertEqual(admin.phone, "+15015550100")
+
+    def test_app_accounts_still_need_an_iraqi_number(self):
+        response = self.add_user(phone="501 218 3813", role="captain")
+        self.assertContains(response, "Enter an Iraqi mobile number starting with 07.")
+        with self.assertRaises(InvalidPhone):
+            User.objects.create_user("5012183813", role="captain")
+
+    def test_editing_a_staff_account_keeps_its_number(self):
+        staff = User.objects.create_superuser("5012183813", "a-strong-admin-pass", name="Owner")
+        response = self.client.post(
+            f"/admin/accounts/user/{staff.pk}/change/",
+            {
+                "phone": "5012183813",
+                "name": "Owner",
+                "role": "customer",
+                "language_pref": "en",
+                "wallet_balance": "0",
+                "is_active": "on",
+                "is_staff": "on",
+                "is_superuser": "on",
+                "date_joined_0": "2026-01-01",
+                "date_joined_1": "10:00:00",
+            },
+        )
+        self.assertEqual(response.status_code, 302, response.content[:1500])

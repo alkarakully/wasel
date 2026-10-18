@@ -12,9 +12,28 @@ class CartBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<Cart>();
-    if (cart.isEmpty) return const SizedBox.shrink();
+    final reduce = MediaQuery.of(context).disableAnimations;
+    return AnimatedSwitcher(
+      duration: reduce ? Duration.zero : Motion.medium,
+      switchInCurve: Motion.spring,
+      switchOutCurve: Motion.out,
+      transitionBuilder: (child, animation) => SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(animation),
+        child: FadeTransition(opacity: animation, child: child),
+      ),
+      child: cart.isEmpty
+          ? const SizedBox.shrink(key: ValueKey('empty'))
+          : _bar(context, cart, reduce),
+    );
+  }
+
+  Widget _bar(BuildContext context, Cart cart, bool reduce) {
     final s = S.of(context);
     return SafeArea(
+      key: const ValueKey('bar'),
       minimum: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Semantics(
         button: true,
@@ -41,20 +60,28 @@ class CartBar extends StatelessWidget {
               padding: const EdgeInsetsDirectional.fromSTEB(8, 8, 22, 8),
               child: Row(
                 children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: Gold.c400,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '${cart.itemCount}',
-                      style: const TextStyle(
-                        color: Lapis.c950,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16,
+                  TweenAnimationBuilder<double>(
+                    key: ValueKey(cart.itemCount),
+                    tween: Tween(begin: reduce ? 1 : 1.3, end: 1),
+                    duration: Motion.medium,
+                    curve: Motion.spring,
+                    builder: (context, scale, child) =>
+                        Transform.scale(scale: scale, child: child),
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: Gold.c400,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${cart.itemCount}',
+                        style: const TextStyle(
+                          color: Lapis.c950,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),

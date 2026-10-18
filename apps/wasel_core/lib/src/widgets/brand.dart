@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../theme.dart';
 import 'icons.dart';
@@ -87,12 +88,14 @@ class GlazePanel extends StatelessWidget {
 }
 
 /// A thin gold line with a small diamond, used under the wordmark and titles.
+/// It draws itself in from the reading start the first time it appears.
 class GoldRule extends StatelessWidget {
   const GoldRule({super.key, this.width = 72});
   final double width;
 
   @override
   Widget build(BuildContext context) {
+    final reduce = MediaQuery.of(context).disableAnimations;
     // Align keeps the rule its own width inside stretched columns.
     return Align(
       alignment: AlignmentDirectional.centerStart,
@@ -101,18 +104,35 @@ class GoldRule extends StatelessWidget {
       child: SizedBox(
         width: width,
         height: 10,
-        child: Stack(
-          alignment: AlignmentDirectional.centerStart,
-          children: [
-            Container(height: 1.5, color: Gold.c400.withValues(alpha: 0.85)),
-            PositionedDirectional(
-              start: width / 2 - 4,
-              child: Transform.rotate(
-                angle: 0.785398,
-                child: Container(width: 7, height: 7, color: Gold.c400),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: reduce ? 1 : 0, end: 1),
+          duration: Motion.slow,
+          curve: Motion.out,
+          builder: (context, v, _) => Stack(
+            alignment: AlignmentDirectional.centerStart,
+            children: [
+              FractionallySizedBox(
+                widthFactor: v,
+                alignment: AlignmentDirectional.centerStart,
+                child: Container(
+                  height: 1.5,
+                  color: Gold.c400.withValues(alpha: 0.85),
+                ),
               ),
-            ),
-          ],
+              PositionedDirectional(
+                start: width / 2 - 4,
+                child: Transform.rotate(
+                  angle: 0.785398 * (1 + 2 * (1 - v)),
+                  child: Transform.scale(
+                    scale: Curves.easeOutBack.transform(
+                      ((v - 0.35) / 0.65).clamp(0.0, 1.0),
+                    ),
+                    child: Container(width: 7, height: 7, color: Gold.c400),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -222,7 +242,13 @@ class _PressableState extends State<Pressable> {
     final reduce = MediaQuery.of(context).disableAnimations;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: widget.onTap,
+      onTap: widget.onTap == null
+          ? null
+          : () {
+              // A light tick, like pressing a physical key.
+              HapticFeedback.selectionClick();
+              widget.onTap!();
+            },
       onTapDown: (_) => _set(true),
       onTapUp: (_) => _set(false),
       onTapCancel: () => _set(false),
@@ -409,7 +435,23 @@ class BrandSplash extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Wordmark(size: 72),
+                // The wordmark settles in like glaze catching light.
+                TweenAnimationBuilder<double>(
+                  tween: Tween(
+                    begin: MediaQuery.of(context).disableAnimations ? 1 : 0,
+                    end: 1,
+                  ),
+                  duration: Motion.slow,
+                  curve: Motion.out,
+                  builder: (context, v, child) => Opacity(
+                    opacity: v,
+                    child: Transform.scale(
+                      scale: 0.92 + 0.08 * v,
+                      child: child,
+                    ),
+                  ),
+                  child: const Wordmark(size: 72),
+                ),
                 const SizedBox(height: 12),
                 const GoldRule(width: 64),
                 if (caption != null) ...[

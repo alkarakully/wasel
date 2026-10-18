@@ -9,8 +9,12 @@ interface Props {
   api: Api
   orders: Order[]
   multiStore: boolean
+  /** First load still on its way: show card-shaped placeholders. */
+  loading?: boolean
   onChanged: (order: Order) => void
   onError: (error: unknown) => void
+  onPrint?: (order: Order) => void
+  autoPrint?: boolean
 }
 
 const ICONS = {
@@ -20,7 +24,7 @@ const ICONS = {
 } as const
 
 /** Three columns: new, preparing, ready. Oldest first so nothing waits too long. */
-export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
+export function Board({ api, orders, multiStore, loading = false, onChanged, onError, onPrint, autoPrint }: Props) {
   const { t } = useI18n()
   // Re-render every 30s so "x min ago" and countdowns stay current.
   const [, setTick] = useState(0)
@@ -42,7 +46,14 @@ export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
               {t(`col_${status}` as 'col_received')}
               <span className="count">{column.length}</span>
             </h2>
-            {column.length === 0 ? (
+            {loading ? (
+              <div className="skeleton-card" aria-hidden="true">
+                <span className="bone short" />
+                <span className="bone" />
+                <span className="bone" />
+                <span className="bone tall" />
+              </div>
+            ) : column.length === 0 ? (
               <p className="empty">
                 <Tray size={28} weight="light" aria-hidden="true" />
                 {t('emptyColumn')}
@@ -56,6 +67,8 @@ export function Board({ api, orders, multiStore, onChanged, onError }: Props) {
                   showStore={multiStore}
                   onChanged={onChanged}
                   onError={onError}
+                  onPrint={onPrint}
+                  autoPrint={autoPrint}
                 />
               ))
             )}

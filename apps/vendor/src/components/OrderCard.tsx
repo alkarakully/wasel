@@ -1,4 +1,4 @@
-import { Check, Clock, CreditCard, Hourglass, Money, Moped, Warning, X } from '@phosphor-icons/react'
+import { Check, Clock, CreditCard, Hourglass, Money, Moped, Printer, Warning, X } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { Api, type Order } from '../lib/api'
@@ -13,22 +13,28 @@ interface Props {
   showStore: boolean
   onChanged: (order: Order) => void
   onError: (error: unknown) => void
+  /** Print the kitchen ticket and package slip. */
+  onPrint?: (order: Order) => void
+  /** Print both slips as soon as the order is accepted. */
+  autoPrint?: boolean
 }
 
 function minutesBetween(from: string, to = Date.now()) {
   return Math.round((to - new Date(from).getTime()) / 60000)
 }
 
-export function OrderCard({ api, order, showStore, onChanged, onError }: Props) {
+export function OrderCard({ api, order, showStore, onChanged, onError, onPrint, autoPrint = false }: Props) {
   const { t, money, name } = useI18n()
   const [busy, setBusy] = useState(false)
   const [prep, setPrep] = useState(15)
   const [rejecting, setRejecting] = useState(false)
 
-  const run = async (step: () => Promise<Order>) => {
+  const run = async (step: () => Promise<Order>, then?: (result: Order) => void) => {
     setBusy(true)
     try {
-      onChanged(await step())
+      const result = await step()
+      onChanged(result)
+      then?.(result)
     } catch (e) {
       onError(e)
     } finally {
@@ -46,8 +52,19 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
         {showStore && <span className="muted">{order.vendor_name}</span>}
         <span className="muted time">
           <Clock size={16} weight="light" aria-hidden="true" />
-          {age < 1 ? t('justNow') : t('minutesAgo', { n: age })}
+          {age < 1 ? t('justNow') : age < 60 ? t('minutesAgo', { n: age }) : t('hoursAgo', { n: Math.floor(age / 60) })}
         </span>
+        {onPrint && (
+          <button
+            type="button"
+            className="icon-button print-button"
+            title={t('printOrder', { id: order.id })}
+            onClick={() => onPrint(order)}
+          >
+            <Printer size={18} weight="light" aria-hidden="true" />
+            <span className="sr-only">{t('printOrder', { id: order.id })}</span>
+          </button>
+        )}
       </header>
 
       <ul className="items">
@@ -93,7 +110,7 @@ export function OrderCard({ api, order, showStore, onChanged, onError }: Props) 
               type="button"
               className="primary"
               disabled={busy}
-              onClick={() => run(() => api.accept(order.id, prep))}
+              onClick={() => run(() => api.accept(order.id, prep), autoPrint ? onPrint : undefined)}
             >
               <Check size={20} weight="light" aria-hidden="true" />
               {t('accept')}

@@ -161,7 +161,12 @@ class _OfferSheetState extends State<OfferSheet> {
                           value: fraction,
                           strokeWidth: 5,
                           strokeCap: StrokeCap.round,
-                          color: Gold.c400,
+                          // Gold while there's time, warming to coral as it runs out.
+                          color: Color.lerp(
+                            const Color(0xFFFF8A80),
+                            Gold.c400,
+                            (fraction * 3).clamp(0.0, 1.0),
+                          ),
                           backgroundColor: Colors.white.withValues(alpha: 0.12),
                         ),
                         Center(

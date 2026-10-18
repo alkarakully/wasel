@@ -5,7 +5,7 @@ One Linux server running Docker serves everything from one domain:
 | Path | Served by |
 | :--- | :--- |
 | `/` | Store portal (React, built into the nginx image) |
-| `/api/`, `/admin/`, `/login/`, `/track/`, `/healthz/` | Django (Daphne) |
+| `/api/`, `/admin/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Daphne) |
 | `/ws/` | Live order socket (Daphne, kept open up to an hour between pings) |
 | `/static/` | Django static files, straight from nginx |
 
@@ -13,7 +13,7 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
 
 ```
              ┌──────────── nginx :80/:443 (TLS, portal, static) ────────────┐
- internet ──►│  /api /admin /login /track /ws  ──►  web (Daphne :8000)      │
+ internet ──►│  /api /admin /ops /login /track /ws ──► web (Daphne :8000)   │
              └──────────────────────────────────────────────────────────────┘
    web, worker (Celery), beat (Celery schedule) ──► db (PostGIS), redis
    migrate: runs once per deploy (migrations + static files)

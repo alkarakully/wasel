@@ -354,10 +354,17 @@ class _Panel extends StatelessWidget {
                   gradient: cancelled ? null : GlazePanel.gradient,
                   color: cancelled ? t.sunk : null,
                 ),
-                child: Icon(
-                  _stepIcons[order.status] ?? Ph.receipt,
-                  size: 26,
-                  color: cancelled ? t.muted : Gold.c400,
+                child: AnimatedSwitcher(
+                  duration: Motion.medium,
+                  switchInCurve: Motion.spring,
+                  transitionBuilder: (child, animation) =>
+                      ScaleTransition(scale: animation, child: child),
+                  child: Icon(
+                    _stepIcons[order.status] ?? Ph.receipt,
+                    key: ValueKey(order.status),
+                    size: 26,
+                    color: cancelled ? t.muted : Gold.c400,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -397,28 +404,31 @@ class _Panel extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: [
-                      AnimatedContainer(
-                        duration: Motion.medium,
-                        curve: Motion.spring,
-                        width: 34,
-                        height: 34,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: !cancelled && i <= current
-                              ? scheme.primary
-                              : t.sunk,
-                          border: i == current && !cancelled
-                              ? Border.all(color: Gold.c400, width: 2)
-                              : null,
-                        ),
-                        child: Icon(
-                          !cancelled && i < current
-                              ? Ph.check
-                              : _stepIcons[Order.steps[i]],
-                          size: 16,
-                          color: !cancelled && i <= current
-                              ? scheme.onPrimary
-                              : t.muted,
+                      _Breathe(
+                        on: i == current && !cancelled && !order.isFinished,
+                        child: AnimatedContainer(
+                          duration: Motion.medium,
+                          curve: Motion.spring,
+                          width: 34,
+                          height: 34,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: !cancelled && i <= current
+                                ? scheme.primary
+                                : t.sunk,
+                            border: i == current && !cancelled
+                                ? Border.all(color: Gold.c400, width: 2)
+                                : null,
+                          ),
+                          child: Icon(
+                            !cancelled && i < current
+                                ? Ph.check
+                                : _stepIcons[Order.steps[i]],
+                            size: 16,
+                            color: !cancelled && i <= current
+                                ? scheme.onPrimary
+                                : t.muted,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 6),
@@ -539,5 +549,80 @@ class _Panel extends StatelessWidget {
     return seconds < 60
         ? s.t('captainSeconds', {'n': seconds})
         : s.t('captainMinutes', {'n': (seconds / 60).round()});
+  }
+}
+
+/// A soft gold ring that swells and fades around the step in progress.
+class _Breathe extends StatefulWidget {
+  const _Breathe({required this.on, required this.child});
+  final bool on;
+  final Widget child;
+
+  @override
+  State<_Breathe> createState() => _BreatheState();
+}
+
+class _BreatheState extends State<_Breathe>
+    with SingleTickerProviderStateMixin {
+  late final _ring = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _sync();
+  }
+
+  @override
+  void didUpdateWidget(_Breathe old) {
+    super.didUpdateWidget(old);
+    _sync();
+  }
+
+  void _sync() {
+    if (widget.on && !MediaQuery.of(context).disableAnimations) {
+      if (!_ring.isAnimating) _ring.repeat();
+    } else {
+      _ring.stop();
+      _ring.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ring.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ring,
+      builder: (context, child) {
+        final v = Curves.easeOut.transform(_ring.value);
+        return Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            if (widget.on)
+              Container(
+                width: 34 + 18 * v,
+                height: 34 + 18 * v,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Gold.c400.withValues(alpha: 0.7 * (1 - v)),
+                    width: 2,
+                  ),
+                ),
+              ),
+            child!,
+          ],
+        );
+      },
+      child: widget.child,
+    );
   }
 }

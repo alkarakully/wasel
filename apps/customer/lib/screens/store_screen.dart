@@ -145,10 +145,13 @@ class _StoreScreenState extends State<StoreScreen> {
                               endIndent: 18,
                               color: t.hairline,
                             ),
-                          _ProductRow(
-                            product: product,
-                            enabled: store.isOpen && product.isAvailable,
-                            onTap: () => _open(store, product),
+                          Reveal(
+                            index: i,
+                            child: _ProductRow(
+                              product: product,
+                              enabled: store.isOpen && product.isAvailable,
+                              onTap: () => _open(store, product),
+                            ),
                           ),
                         ],
                       ],
@@ -271,6 +274,31 @@ class _StoreHero extends StatelessWidget {
                                   ],
                                 ),
                               ],
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Reveal(
+                            index: 1,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(Radii.lg),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Lapis.c950.withValues(alpha: 0.4),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: CuisineArt(
+                                cuisine: store.cuisine,
+                                type: store.type,
+                                size: 78,
+                                radius: Radii.lg,
+                              ),
                             ),
                           ),
                         ],

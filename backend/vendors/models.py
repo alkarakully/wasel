@@ -52,6 +52,30 @@ class Vendor(models.Model):
         return amount.quantize(Decimal(1), rounding=ROUND_HALF_UP)
 
 
+class StoreMember(models.Model):
+    """
+    Someone who works at a store besides its owner. Managers run the menu,
+    hours and reports; cashiers handle orders. Only the owner sees billing
+    and manages the team.
+    """
+
+    class Role(models.TextChoices):
+        MANAGER = "manager", "Manager"
+        CASHIER = "cashier", "Cashier"
+
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="members")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="store_memberships")
+    role = models.CharField(max_length=10, choices=Role.choices, default=Role.CASHIER)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [models.UniqueConstraint(fields=["vendor", "user"], name="one_membership_per_store")]
+
+    def __str__(self):
+        return f"{self.user} at {self.vendor} ({self.role})"
+
+
 class Product(models.Model):
     class UnitType(models.TextChoices):
         ITEM = "item", "Per item"
@@ -65,6 +89,8 @@ class Product(models.Model):
     price = money_field()
     unit_type = models.CharField(max_length=4, choices=UnitType.choices, default=UnitType.ITEM)
     is_available = models.BooleanField(default=True)
+    # Removed from the menu but kept, because past orders point at it.
+    is_archived = models.BooleanField(default=False)
 
     class Meta:
         # Menu order is the order the store added items; sections appear in

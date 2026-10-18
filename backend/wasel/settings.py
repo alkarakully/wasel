@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "vendors",
     "orders",
     "notifications",
+    "ops",
+    "billing",
 ]
 
 MIDDLEWARE = [
@@ -61,7 +63,8 @@ ROOT_URLCONF = "wasel.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        # Project-wide overrides, e.g. the branded admin header.
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -94,6 +97,8 @@ CELERY_BEAT_SCHEDULE = {
     "flag-stuck-orders": {"task": "orders.tasks.flag_stuck_orders", "schedule": 60.0},
     "expire-wasel-plus-trials": {"task": "subscriptions.tasks.expire_wasel_plus_trials", "schedule": 15 * 60.0},
     "sweep-dispatch-offers": {"task": "orders.tasks.sweep_dispatch_offers", "schedule": 15.0},
+    # Weekly store statements; does nothing until a week has ended.
+    "close-billing-weeks": {"task": "billing.tasks.close_weeks", "schedule": 60 * 60.0},
 }
 
 DATABASES = {

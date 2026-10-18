@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
 
+import '../print/printer.dart';
 import '../state/board.dart';
 
 const prepChoices = [10, 15, 20, 30, 45];
@@ -61,6 +62,27 @@ class _OrderCardState extends State<OrderCard>
     setState(() => _busy = true);
     await step(context.read<StoreBoard>());
     if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _print(Order order) async {
+    final s = S.read(context);
+    try {
+      await context.read<OrderPrinter>().printOrder(order, s);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(s.t('printFailed'))));
+    }
+  }
+
+  Future<void> _accept() async {
+    final board = context.read<StoreBoard>();
+    HapticFeedback.mediumImpact();
+    setState(() => _busy = true);
+    final accepted = await board.accept(widget.order, _prep);
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (accepted != null && board.autoPrint) await _print(accepted);
   }
 
   Future<void> _reject() async {
@@ -142,6 +164,14 @@ class _OrderCardState extends State<OrderCard>
                 Icon(Ph.clock, size: 16, color: t.muted),
                 const SizedBox(width: 4),
                 Text(ago, style: TextStyle(color: t.muted, fontSize: 14)),
+                const SizedBox(width: 6),
+                IconButton(
+                  key: Key('print-${order.id}'),
+                  tooltip: s.t('printOrder', {'id': order.id}),
+                  visualDensity: VisualDensity.compact,
+                  onPressed: () => _print(order),
+                  icon: Icon(Ph.printer, size: 20, color: scheme.primary),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -270,7 +300,7 @@ class _OrderCardState extends State<OrderCard>
                 label: s.t('accept'),
                 icon: Ph.check,
                 busy: _busy,
-                onPressed: () => _run((b) => b.accept(order, _prep)),
+                onPressed: _accept,
               );
               final reject = SizedBox(
                 height: 58,

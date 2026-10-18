@@ -2,12 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:pdf/pdf.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wasel_core/wasel_core.dart';
+import 'package:wasel_store/print/printer.dart';
+import 'package:wasel_store/print/slips.dart';
 import 'package:wasel_store/screens/home_screen.dart';
 import 'package:wasel_store/state/alarm.dart';
 import 'package:wasel_store/state/board.dart';
@@ -136,6 +139,7 @@ class Harness {
   late final StoreSession session;
   late final StoreBoard storeBoard;
   final alarm = SilentAlarm();
+  final printer = FakePrinter();
 
   Widget app() => MultiProvider(
     providers: [
@@ -144,6 +148,7 @@ class Harness {
       ChangeNotifierProvider<BaseSession>.value(value: session),
       ChangeNotifierProvider.value(value: session),
       ChangeNotifierProvider.value(value: storeBoard),
+      Provider<OrderPrinter>.value(value: printer),
     ],
     child: MediaQuery(
       data: const MediaQueryData(disableAnimations: true),
@@ -284,5 +289,60 @@ void main() {
     );
     expect(find.text('Out of stock'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('prints from the card, and on accept when asked to', (
+    tester,
+  ) async {
+    final h = await open(tester, board: [orderJson(1)]);
+    await tester.tap(find.byKey(const Key('print-1')));
+    await tester.pumpAndSettle();
+    expect(h.printer.printed, [1]);
+
+    await tester.tap(find.byKey(const Key('auto-print')));
+    await tester.pumpAndSettle();
+    expect(h.storeBoard.autoPrint, isTrue);
+    await tester.tap(find.byKey(const Key('accept-1')));
+    await tester.pumpAndSettle();
+    expect(h.printer.printed, [1, 1]);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  test('slips say what to cook and pack, never the PIN or phone', () {
+    final order = Order.fromJson({
+      ...orderJson(4, status: 'preparing'),
+      'delivery_pin': '4821',
+      'customer_contact': {'name': 'Zainab', 'phone': '+9647701234567'},
+    });
+    final slips = OrderSlips.of(order, S('en'), storeName: 'Tigris Grill');
+    expect(slips.orderNumber, '#4');
+    expect(slips.lines.single.quantity, '2×');
+    expect(slips.lines.single.name, 'Kebab');
+    expect(slips.lines.single.options, 'Large');
+    expect(slips.customer, 'Customer: Zainab');
+    expect(slips.payment, 'Cash: captain collects 13,000 IQD');
+    expect(slips.readyBy, startsWith('Ready by'));
+    final everything = [
+      slips.orderNumber,
+      slips.placed,
+      slips.readyBy,
+      slips.customer,
+      slips.payment,
+      for (final l in slips.lines) '${l.quantity}${l.name}${l.options}',
+    ].join(' ');
+    expect(everything, isNot(contains('4821')));
+    expect(everything, isNot(contains('7701234567')));
+  });
+
+  testWidgets('builds an 80 mm PDF with the Arabic font', (tester) async {
+    final order = Order.fromJson(orderJson(4));
+    final bytes = await tester.runAsync(
+      () => OrderPrinter.buildPdf(
+        OrderSlips.of(order, S('ar'), storeName: 'مطعم دجلة'),
+        PdfPageFormat.roll80,
+      ),
+    );
+    expect(String.fromCharCodes(bytes!.take(4)), '%PDF');
+    expect(bytes.length, greaterThan(10000)); // fonts embedded
   });
 }

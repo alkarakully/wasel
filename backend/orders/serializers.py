@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from vendors import access
+
 from .models import TRACKED_STATUSES, CaptainLocation, Order, OrderItem, OrderItemModifier
 from .pricing import round_dinars
 
@@ -115,7 +117,7 @@ class OrderSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not request or order.status in (Order.Status.DELIVERED, Order.Status.CANCELLED):
             return None
-        if request.user.pk not in (order.captain_id, order.vendor.owner_id):
+        if request.user.pk != order.captain_id and access.role_for(order.vendor, request.user) is None:
             return None
         return {"name": order.customer.name, "phone": order.customer.phone}
 

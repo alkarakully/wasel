@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{# Wasel branding for the Django admin: lapis glaze header, gold wordmark, Plex Arabic. #}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'wasel/admin.css' %}">
+{% endblock %}
+
+{% block branding %}
+<div id="site-name">
+  <a href="{% url 'admin:index' %}" class="wasel-brand">
+    <span class="wasel-mark" aria-hidden="true">و</span>
+    <span class="wasel-word">واصل</span>
+    <span class="wasel-tag">{{ site_header|default:_('Django administration') }}</span>
+  </a>
+</div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block userlinks %}
+  <a href="{% url 'ops' %}">Operations</a> /
+  {{ block.super }}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

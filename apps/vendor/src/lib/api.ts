@@ -24,6 +24,9 @@ export interface Order {
   payment_type: 'cod' | 'card' | 'wallet'
   delivery_address: string
   total_amount: string
+  subtotal?: string
+  /** Shown to the store's team while the order is in progress. */
+  customer_contact?: { name: string; phone: string } | null
   items: OrderItem[]
   created_at: string
   accepted_at: string | null
@@ -50,11 +53,98 @@ export interface Product {
   modifiers: Modifier[]
 }
 
+/** Who the signed-in user is at a store; decides which sections they see. */
+export type StoreRole = 'owner' | 'manager' | 'cashier'
+
+export const DAYS = ['sat', 'sun', 'mon', 'tue', 'wed', 'thu', 'fri'] as const
+export type Day = (typeof DAYS)[number]
+/** One opening per day as [open, close] ("10:00", "23:30"), or null when closed. */
+export type OpeningHours = Partial<Record<Day, [string, string] | null>>
+
 export interface Store {
   id: number
   name: string
   is_open: boolean
   products: Product[]
+  my_role?: StoreRole
+  commission_rate?: string
+  opening_hours?: OpeningHours
+}
+
+export interface ProductInput {
+  name_ar: string
+  name_ku: string
+  name_en: string
+  menu_section: string
+  price: string
+  unit_type: 'item' | 'kg'
+}
+
+export interface TeamMember {
+  id: number
+  user: number
+  phone: string
+  name: string
+  role: 'manager' | 'cashier'
+}
+
+export interface Team {
+  owner: { user: number; phone: string; name: string; role: 'owner' }
+  members: TeamMember[]
+}
+
+export interface Report {
+  from: string
+  to: string
+  orders: number
+  delivered: number
+  cancelled: number
+  cancelled_by: Record<string, number>
+  food_sales: number
+  store_discounts: number
+  commission: number
+  payout: number
+  average_order: number
+  average_prep_minutes: number | null
+  days: { date: string; orders: number; sales: number }[]
+  hours: { hour: number; orders: number }[]
+  top_items: { product: number; name: Names; quantity: string; orders: number; sales: number }[]
+}
+
+export interface WeekFigures {
+  orders_count: number
+  food_sales: number
+  store_discounts: number
+  commission: number
+  payout: number
+}
+
+export interface Statement extends WeekFigures {
+  id: number
+  store_name: string
+  period_start: string
+  period_end: string
+  status: 'due' | 'paid'
+  paid_at: string | null
+  paid_reference: string
+}
+
+export interface StatementLine {
+  order: number
+  delivered_at: string
+  payment_type: 'cod' | 'card' | 'wallet'
+  food_sales: number
+  store_discount: number
+  commission: number
+  payout: number
+}
+
+export interface Billing {
+  current_week: WeekFigures & { period_start: string; period_end: string }
+  due_total: number
+  paid_total: number
+  commission_rate: string
+  statements: Statement[]
 }
 
 export interface User {
@@ -141,7 +231,10 @@ export class Api {
 
   // Auth
   requestCode = (phone: string, channel: 'whatsapp' | 'sms') =>
-    this.send<{ phone: string; channel: string; resend_in: number }>('POST', '/api/auth/otp/request/', { phone, channel })
+    this.send<{ phone: string; channel: string; resend_in: number }>('POST', '/api/auth/otp/request/', {
+      phone,
+      channel,
+    })
   verifyCode = (phone: string, code: string) =>
     this.send<{ token: string; user: User }>('POST', '/api/auth/otp/verify/', { phone, code })
   me = () => this.send<User>('GET', '/api/auth/me/')
@@ -156,9 +249,47 @@ export class Api {
       is_available: isAvailable,
     })
 
+  // Store team, menu, hours (owner and managers)
+  team = (storeId: number) => this.send<Team>('GET', `/api/vendors/${storeId}/team/`)
+  addMember = (storeId: number, member: { phone: string; name: string; role: 'manager' | 'cashier' }) =>
+    this.send<TeamMember>('POST', `/api/vendors/${storeId}/team/`, member)
+  setMemberRole = (storeId: number, memberId: number, role: 'manager' | 'cashier') =>
+    this.send<TeamMember>('PATCH', `/api/vendors/${storeId}/team/${memberId}/`, { role })
+  removeMember = (storeId: number, memberId: number) =>
+    this.send<null>('DELETE', `/api/vendors/${storeId}/team/${memberId}/`)
+  addProduct = (storeId: number, product: ProductInput) =>
+    this.send<Product>('POST', `/api/vendors/${storeId}/products/`, product)
+  updateProduct = (productId: number, product: Partial<ProductInput>) =>
+    this.send<Product>('PATCH', `/api/products/${productId}/`, product)
+  removeProduct = (productId: number) => this.send<null>('DELETE', `/api/products/${productId}/`)
+  setHours = (storeId: number, hours: OpeningHours) =>
+    this.send<{ id: number; opening_hours: OpeningHours }>('PUT', `/api/vendors/${storeId}/hours/`, hours)
+
+  // Reports and billing
+  report = (storeId: number, from: string, to: string) =>
+    this.send<Report>('GET', `/api/vendors/${storeId}/report/?from=${from}&to=${to}`)
+  billing = (storeId: number) => this.send<Billing>('GET', `/api/vendors/${storeId}/billing/`)
+  statement = (storeId: number, statementId: number) =>
+    this.send<Statement & { orders: StatementLine[] }>('GET', `/api/vendors/${storeId}/statements/${statementId}/`)
+
+  /** Downloads a statement as a spreadsheet (CSV); the token rides in the header, not the URL. */
+  async downloadStatement(storeId: number, statement: Statement) {
+    const response = await fetch(`/api/vendors/${storeId}/statements/${statement.id}/?download=csv`, {
+      headers: this.token ? { Authorization: `Token ${this.token}` } : {},
+    })
+    if (!response.ok) throw new ApiError('generic', response.status)
+    const url = URL.createObjectURL(await response.blob())
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `wasel-${statement.period_start}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   // Orders
   openOrders = async () =>
-    (await this.send<{ results: Order[] }>('GET', `/api/orders/?status=${BOARD_STATUSES.join(',')}&page_size=100`)).results
+    (await this.send<{ results: Order[] }>('GET', `/api/orders/?status=${BOARD_STATUSES.join(',')}&page_size=100`))
+      .results
   accept = (id: number, prepMinutes: number) =>
     this.send<Order>('POST', `/api/orders/${id}/accept/`, { prep_minutes: prepMinutes })
   reject = (id: number, reason: string) => this.send<Order>('POST', `/api/orders/${id}/reject/`, { reason })

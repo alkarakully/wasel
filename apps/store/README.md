@@ -42,6 +42,7 @@ Only store owners (role Vendor) can log in. Add owners and their stores in the D
 | Reject | Pick a common reason or type one; the customer sees it. |
 | Ready | Marks it ready for the captain, then shows whether a captain is on the way. |
 | Menu | Every item with an in-stock switch. Out-of-stock items can't be ordered. |
+| Printing | The printer button on an order prints two 80 mm slips through AirPrint (iPad) or the Android print service: a kitchen ticket and a package slip to clip to the bag. Turn on **Print when accepting** to print them every time an order is accepted. The delivery PIN and customer phone are never printed. |
 
 Orders arrive over the live socket. If the connection drops, a banner says so and the board reloads as soon as it's back. The screen stays awake while signed in.
 

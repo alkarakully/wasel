@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
-from .phone import normalize_iraqi_phone
+from .phone import InvalidPhone, normalize_iraqi_phone, other_phone
 
 
 def money_field(**kwargs):
@@ -17,7 +17,15 @@ class UserManager(BaseUserManager):
         if not phone:
             raise ValueError("Users must have a phone number")
         # Same form the login code flow uses, so the account can sign in.
-        user = self.model(phone=normalize_iraqi_phone(phone), **extra_fields)
+        # Staff (createsuperuser) may use a non-Iraqi number for the admin.
+        try:
+            phone = normalize_iraqi_phone(phone)
+        except InvalidPhone:
+            other = other_phone(phone)
+            if not (other and (password or extra_fields.get("is_staff"))):
+                raise
+            phone = other
+        user = self.model(phone=phone, **extra_fields)
         if password:
             user.set_password(password)
         else:

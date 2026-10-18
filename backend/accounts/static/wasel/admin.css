@@ -1,0 +1,429 @@
+/* Wasel theme for the Django admin. Loaded after tokens.css; maps the admin's
+   own colour variables onto the lapis and gold tokens, light and dark. */
+
+:root,
+html[data-theme="light"] {
+  --primary: var(--lapis-700);
+  --secondary: var(--lapis-800);
+  --accent: var(--gold-400);
+  --primary-fg: #f7f8ff;
+
+  --body-fg: #10152b;
+  --body-bg: #fdfdff;
+  --body-quiet-color: #4b5272;
+  --body-medium-color: #2a3150;
+  --body-loud-color: #0b123a;
+
+  --header-color: var(--lapis-100);
+  --header-branding-color: var(--gold-400);
+  --header-bg: var(--lapis-900);
+  --header-link-color: #f7f8ff;
+
+  --breadcrumbs-fg: #4b5272;
+  --breadcrumbs-link-fg: var(--lapis-700);
+  --breadcrumbs-bg: #eef0f7;
+
+  --link-fg: var(--lapis-700);
+  --link-hover-color: var(--lapis-900);
+  --link-selected-fg: var(--lapis-800);
+
+  --hairline-color: rgb(19 31 92 / 0.08);
+  --border-color: rgb(19 31 92 / 0.16);
+
+  --error-fg: #b42318;
+  --message-success-bg: #e3f4ea;
+  --message-warning-bg: #fbebc2;
+  --message-error-bg: #fdecea;
+
+  --darkened-bg: #f5f6fb;
+  --selected-bg: #e1e7fa;
+  --selected-row: #fbebc2;
+
+  --button-fg: #f7f8ff;
+  --button-bg: var(--lapis-700);
+  --button-hover-bg: var(--lapis-800);
+  --default-button-bg: var(--lapis-800);
+  --default-button-hover-bg: var(--lapis-900);
+  --close-button-bg: #4b5272;
+  --close-button-hover-bg: #2a3150;
+  --delete-button-bg: #b42318;
+  --delete-button-hover-bg: #8f1c13;
+
+  --object-tools-fg: var(--lapis-700);
+  --object-tools-bg: var(--lapis-100);
+  --object-tools-hover-bg: var(--lapis-200);
+
+  --font-family-primary: "IBM Plex Sans Arabic", system-ui, sans-serif;
+
+  --wasel-shadow: 0 1px 2px rgb(19 31 92 / 0.05), 0 6px 18px -8px rgb(19 31 92 / 0.12);
+  --wasel-canvas: #f5f6fb;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --primary: var(--lapis-800);
+    --secondary: var(--lapis-900);
+    --primary-fg: #eef1fb;
+
+    --body-fg: #eef1fb;
+    --body-bg: #12172c;
+    --body-quiet-color: #a6adc8;
+    --body-medium-color: #cbd0e4;
+    --body-loud-color: #ffffff;
+
+    --breadcrumbs-fg: #a6adc8;
+    --breadcrumbs-link-fg: var(--lapis-300);
+    --breadcrumbs-bg: #0e1326;
+
+    --link-fg: var(--lapis-300);
+    --link-hover-color: var(--lapis-200);
+    --link-selected-fg: var(--lapis-200);
+
+    --hairline-color: rgb(238 241 251 / 0.08);
+    --border-color: rgb(238 241 251 / 0.16);
+
+    --error-fg: #ff8a80;
+    --message-success-bg: #0f3a26;
+    --message-warning-bg: #3a2e0c;
+    --message-error-bg: #3a1714;
+
+    --darkened-bg: #0e1326;
+    --selected-bg: #1c2450;
+    --selected-row: #3a2e0c;
+
+    --close-button-bg: #2a3150;
+    --close-button-hover-bg: #3a4268;
+
+    --object-tools-fg: var(--lapis-200);
+    --object-tools-bg: rgb(152 169 234 / 0.14);
+    --object-tools-hover-bg: rgb(152 169 234 / 0.24);
+
+    --wasel-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -10px rgb(0 0 0 / 0.5);
+    --wasel-canvas: #0a0e1f;
+  }
+}
+
+html[data-theme="dark"] {
+  --primary: var(--lapis-800);
+  --secondary: var(--lapis-900);
+  --primary-fg: #eef1fb;
+
+  --body-fg: #eef1fb;
+  --body-bg: #12172c;
+  --body-quiet-color: #a6adc8;
+  --body-medium-color: #cbd0e4;
+  --body-loud-color: #ffffff;
+
+  --breadcrumbs-fg: #a6adc8;
+  --breadcrumbs-link-fg: var(--lapis-300);
+  --breadcrumbs-bg: #0e1326;
+
+  --link-fg: var(--lapis-300);
+  --link-hover-color: var(--lapis-200);
+  --link-selected-fg: var(--lapis-200);
+
+  --hairline-color: rgb(238 241 251 / 0.08);
+  --border-color: rgb(238 241 251 / 0.16);
+
+  --error-fg: #ff8a80;
+  --message-success-bg: #0f3a26;
+  --message-warning-bg: #3a2e0c;
+  --message-error-bg: #3a1714;
+
+  --darkened-bg: #0e1326;
+  --selected-bg: #1c2450;
+  --selected-row: #3a2e0c;
+
+  --close-button-bg: #2a3150;
+  --close-button-hover-bg: #3a4268;
+
+  --object-tools-fg: var(--lapis-200);
+  --object-tools-bg: rgb(152 169 234 / 0.14);
+  --object-tools-hover-bg: rgb(152 169 234 / 0.24);
+
+  --wasel-shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -10px rgb(0 0 0 / 0.5);
+  --wasel-canvas: #0a0e1f;
+}
+
+body {
+  font-family: var(--font-family-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* --- Header: glazed lapis with the brick texture and the gold wordmark --- */
+
+#header {
+  background: var(--brick), radial-gradient(120% 140% at 90% -40%, rgb(106 128 218 / 0.35), transparent 60%), var(--glaze);
+  padding: 12px 32px;
+  border-bottom: 1px solid rgb(242 199 92 / 0.25);
+}
+
+#site-name {
+  margin: 0;
+}
+
+.wasel-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none !important;
+}
+
+.wasel-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgb(255 255 255 / 0.1);
+  border: 1px solid rgb(255 255 255 / 0.18);
+  color: var(--gold-400);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.wasel-word {
+  color: var(--gold-400);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.wasel-tag {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.08);
+  border: 1px solid rgb(255 255 255 / 0.16);
+  color: var(--lapis-100);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+#user-tools {
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+#user-tools a,
+#logout-form button {
+  border-bottom: 0 !important;
+  color: var(--lapis-100) !important;
+}
+
+#user-tools a:hover,
+#logout-form button:hover {
+  color: var(--gold-300) !important;
+}
+
+div.breadcrumbs {
+  padding: 12px 32px;
+  border-bottom: 1px solid var(--hairline-color);
+}
+
+/* --- Page and modules: plates on a soft canvas --- */
+
+#container,
+.main,
+#content-start {
+  background: var(--wasel-canvas);
+}
+
+#content {
+  padding: 24px 32px;
+}
+
+#content h1 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.module {
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--body-bg);
+  border: 1px solid var(--hairline-color);
+  box-shadow: var(--wasel-shadow);
+}
+
+.module h2,
+.module caption,
+.inline-group h2 {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 10px 14px;
+}
+
+.module h2,
+.module caption {
+  background: var(--brick), var(--glaze);
+  color: #f7f8ff;
+}
+
+.module h2 a,
+.module caption a {
+  color: #f7f8ff;
+}
+
+#changelist .actions,
+#changelist-filter,
+.results,
+fieldset.module {
+  border-radius: 16px;
+}
+
+#changelist-filter {
+  overflow: hidden;
+  border: 1px solid var(--hairline-color);
+  box-shadow: var(--wasel-shadow);
+}
+
+#changelist-filter h2 {
+  background: var(--brick), var(--glaze);
+  color: #f7f8ff;
+}
+
+#changelist-filter li.selected a {
+  color: var(--link-fg) !important;
+  font-weight: 700;
+}
+
+thead th,
+tfoot td {
+  background: var(--darkened-bg);
+}
+
+tr:nth-child(even) td,
+tr:nth-child(even) th {
+  background: transparent;
+}
+
+/* --- Sidebar --- */
+
+#nav-sidebar {
+  background: var(--wasel-canvas);
+  border-inline-end: 1px solid var(--hairline-color);
+}
+
+#nav-sidebar .current-model {
+  background: var(--selected-bg);
+}
+
+#nav-filter {
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
+
+/* --- Controls: pill buttons, rounded fields --- */
+
+.button,
+input[type="submit"],
+input[type="button"],
+.submit-row input,
+a.button {
+  border-radius: 999px !important;
+  padding: 10px 18px;
+  font-weight: 700;
+  transition:
+    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.button:active,
+input[type="submit"]:active,
+a.button:active {
+  transform: scale(0.97);
+}
+
+.submit-row {
+  border-radius: 16px;
+  border: 1px solid var(--hairline-color);
+  background: var(--darkened-bg);
+}
+
+.submit-row a.deletelink,
+.submit-row a.closelink {
+  border-radius: 999px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="tel"],
+input[type="search"],
+textarea,
+select,
+.vTextField {
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  padding: 7px 10px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--link-fg);
+  outline: 3px solid color-mix(in srgb, var(--link-fg) 20%, transparent);
+  outline-offset: 0;
+}
+
+.object-tools a:link,
+.object-tools a:visited {
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-weight: 700;
+}
+
+ul.messagelist li {
+  border-radius: 12px;
+  margin: 0 0 8px;
+}
+
+.paginator .this-page {
+  color: var(--lapis-700);
+  font-weight: 700;
+}
+
+/* --- Admin login: glazed card --- */
+
+.login #container {
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--hairline-color);
+  box-shadow: var(--wasel-shadow);
+}
+
+.login #header {
+  padding: 18px 24px;
+}
+
+@media (max-width: 767px) {
+  #header {
+    padding: 10px 16px;
+  }
+
+  .wasel-tag {
+    display: none;
+  }
+
+  #content {
+    padding: 16px;
+  }
+
+  div.breadcrumbs {
+    padding: 10px 16px;
+  }
+}
+
+/* The way to the operations page stands out in the header. */
+#user-tools a[href$="/ops/"] {
+  padding: 4px 12px;
+  margin-inline-end: 4px;
+  border-radius: 999px;
+  background: var(--gold-400);
+  color: var(--lapis-950) !important;
+  font-weight: 700;
+}

@@ -11,6 +11,16 @@ class InvalidPhone(ValueError):
     pass
 
 
+def other_phone(raw):
+    """
+    Any other phone number, tidied (spaces, dashes and brackets removed,
+    Arabic-Indic digits converted), or None if it isn't one. Only staff
+    accounts, which don't sign in by code, may use these.
+    """
+    tidy = re.sub(r"[\s\-()]", "", str(raw or "")).translate(_DIGIT_MAP)
+    return tidy if re.fullmatch(r"\+?\d{6,15}", tidy) else None
+
+
 def normalize_iraqi_phone(raw):
     """
     Return an Iraqi mobile number in E.164 form (+9647XXXXXXXXX).

@@ -41,7 +41,7 @@ def pricing_error_response(error):
 class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
     """
     Orders the signed-in user is part of: as the customer, the captain,
-    or the owner of the vendor.
+    or someone who works at the store (owner, manager or cashier).
 
     POST /api/orders/quote/ prices a cart without placing it.
     POST /api/orders/ places the order at exactly the quoted price.
@@ -65,7 +65,9 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         if statuses := self.request.query_params.get("status"):
             orders = orders.filter(status__in=statuses.split(","))
         return (
-            orders.filter(Q(customer=user) | Q(captain=user) | Q(vendor__owner=user))
+            orders.filter(
+                Q(customer=user) | Q(captain=user) | Q(vendor__owner=user) | Q(vendor__members__user=user)
+            )
             .distinct()
             .select_related("vendor", "customer", "captain__location")
             .prefetch_related("items__product", "items__modifiers__modifier")
