@@ -20,6 +20,9 @@ services:
 
   web:
     build: ./backend
+    # The image runs as an unprivileged user; in development root can write
+    # into the mounted source folder.
+    user: root
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
       DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
@@ -40,6 +43,7 @@ services:
   # run beat as its own single process instead.
   worker:
     build: ./backend
+    user: root
     command: celery -A wasel worker -B -l info
     environment:
       DATABASE_URL: postgis://wasel:wasel@db:5432/wasel

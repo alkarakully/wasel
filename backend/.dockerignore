@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+celerybeat-schedule*
+staticfiles/
+.env

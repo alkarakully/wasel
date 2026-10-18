@@ -1,0 +1,114 @@
+# Production stack. From the repository root:
+#   docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml up -d --build
+# See deploy/README.md for the first deploy and TLS.
+
+name: wasel-prod
+
+x-backend: &backend
+  build: ../backend
+  env_file: .env
+  environment:
+    DATABASE_URL: postgis://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+  volumes:
+    # Firebase service account and other files that must stay out of git.
+    - ./secrets:/run/secrets:ro
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+
+  # Runs once per deploy: database migrations and static files for nginx.
+  migrate:
+    <<: *backend
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    volumes:
+      - static:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    <<: *backend
+    command: celery -A wasel worker -l info --concurrency 2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  # Exactly one beat process schedules the periodic jobs.
+  beat:
+    <<: *backend
+    command: celery -A wasel beat -l info --schedule /tmp/celerybeat-schedule
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  nginx:
+    build:
+      context: ..
+      dockerfile: deploy/nginx/Dockerfile
+    environment:
+      SERVER_NAME: ${SERVER_NAME}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - static:/var/www/static:ro
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Let's Encrypt renewals; started with `--profile certbot` (see README).
+  certbot:
+    image: certbot/certbot:v4.1.1
+    profiles: ["certbot"]
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: sh -c "while true; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h; done"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  static:
+  letsencrypt:
+  certbot-www:

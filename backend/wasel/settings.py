@@ -12,6 +12,19 @@ if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off")
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# Full origins (scheme and host) allowed to post forms, e.g. https://wasel.example.com
+CSRF_TRUSTED_ORIGINS = [origin for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if origin]
+
+if not DEBUG:
+    # Behind nginx, which terminates HTTPS and says so in X-Forwarded-Proto.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+    # Docker health checks call this over plain HTTP from inside the network.
+    SECURE_REDIRECT_EXEMPT = [r"^healthz/$"]
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_HSTS_SECONDS", 60 * 60 * 24 * 30))
+    SECURE_REFERRER_POLICY = "same-origin"
 
 INSTALLED_APPS = [
     # Daphne first so `runserver` serves HTTP and WebSockets (ASGI).
@@ -104,7 +117,7 @@ TIME_ZONE = "Asia/Baghdad"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -196,7 +209,7 @@ PUSH = {
     "FCM_PROJECT_ID": os.environ.get("FCM_PROJECT_ID", ""),
     "SENDER": (
         "notifications.push.FcmSender"
-        if os.environ.get("FCM_CREDENTIALS_FILE")
+        if os.path.isfile(os.environ.get("FCM_CREDENTIALS_FILE", ""))
         else "notifications.push.ConsoleSender"
         if DEBUG
         else "notifications.push.UnconfiguredSender"
@@ -214,6 +227,7 @@ WHATSAPP = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
-    "handlers": {"console": {"class": "logging.StreamHandler"}},
-    "root": {"handlers": ["console"], "level": "WARNING"},
+    "formatters": {"plain": {"format": "%(asctime)s %(levelname)s %(name)s: %(message)s"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": os.environ.get("DJANGO_LOG_LEVEL", "WARNING")},
 }

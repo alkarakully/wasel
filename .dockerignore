@@ -1,0 +1,7 @@
+# Only the nginx image builds from the repository root; it needs the store
+# portal source and its own config. (The backend image uses backend/.)
+*
+!apps/vendor/
+apps/vendor/node_modules/
+apps/vendor/dist/
+!deploy/nginx/

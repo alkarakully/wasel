@@ -271,3 +271,16 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 * Sign the first restaurants on 30-day commission-free onboarding before launch.
 * Load-test API endpoints and WebSocket channels for peak dinner hours.
 * Submit mobile applications to Apple App Store and Google Play Store.
+
+---
+
+## Repository Layout
+
+| Folder | What it is |
+| :--- | :--- |
+| [`backend/`](backend/README.md) | Django REST API, live sockets, dispatch, Celery jobs, push notifications |
+| [`apps/customer/`](apps/customer/README.md) | Flutter customer app |
+| [`apps/captain/`](apps/captain/README.md) | Flutter captain app |
+| [`apps/wasel_core/`](apps/wasel_core/README.md) | Code shared by the two Flutter apps |
+| [`apps/vendor/`](apps/vendor/README.md) | React store portal |
+| [`deploy/`](deploy/README.md) | Production Docker setup: nginx, TLS, settings |

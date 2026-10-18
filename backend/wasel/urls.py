@@ -1,5 +1,7 @@
 from django.conf import settings
 from django.contrib import admin
+from django.db import connection
+from django.http import JsonResponse
 from django.urls import include, path
 from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
@@ -13,7 +15,17 @@ router.register("vendors", VendorViewSet, basename="vendor")
 router.register("offers", OfferViewSet, basename="offer")
 router.register("orders", OrderViewSet, basename="order")
 
+def healthz(request):
+    """For Docker and load balancers: the app is up and can reach the database."""
+    try:
+        connection.ensure_connection()
+    except Exception:
+        return JsonResponse({"status": "database unavailable"}, status=503)
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("healthz/", healthz, name="healthz"),
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/devices/", DeviceView.as_view(), name="devices"),

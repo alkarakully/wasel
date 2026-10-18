@@ -7,3 +7,8 @@ staticfiles/
 .DS_Store
 .playwright-mcp/
 celerybeat-schedule*
+
+# Production secrets
+deploy/.env
+deploy/secrets/*
+!deploy/secrets/README.md
