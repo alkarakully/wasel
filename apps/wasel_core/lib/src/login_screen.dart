@@ -128,70 +128,126 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final t = WaselTheme.of(context);
     final top = MediaQuery.paddingOf(context).top;
+
+    final form = BezelCard(
+      radius: Radii.xl,
+      padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
+      child: AnimatedSwitcher(
+        duration: Motion.medium,
+        switchInCurve: Motion.out,
+        switchOutCurve: Motion.out,
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(
+              begin: const Offset(0, 0.04),
+              end: Offset.zero,
+            ).animate(animation),
+            child: child,
+          ),
+        ),
+        child: Column(
+          key: ValueKey(_sentTo == null),
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: _sentTo == null
+              ? _phoneStep(s, theme)
+              : _codeStep(s, theme),
+        ),
+      ),
+    );
+
+    Widget brand(double wordmark) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Wordmark(size: wordmark),
+        const SizedBox(height: 10),
+        const GoldRule(),
+        const SizedBox(height: 14),
+        Text(
+          s.t('brandLine'),
+          style: const TextStyle(color: Lapis.c100, fontSize: 17, height: 1.55),
+        ),
+      ],
+    );
+
     return Scaffold(
       backgroundColor: t.canvas,
-      body: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          GlazePanel(
-            padding: EdgeInsets.fromLTRB(28, top + 20, 28, 72),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: LayoutBuilder(
+        builder: (context, box) {
+          // Tablets and wide windows: glaze panel beside a centred form.
+          if (box.maxWidth >= 900) {
+            return Row(
               children: [
-                const Align(
-                  alignment: AlignmentDirectional.centerEnd,
-                  child: LanguageSwitch(onDark: true),
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(12, top + 12, 12, 12),
+                    child: GlazePanel(
+                      radius: Radii.xl,
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: LanguageSwitch(onDark: true),
+                          ),
+                          const Spacer(),
+                          brand(104),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 28),
-                const Wordmark(size: 64),
-                const SizedBox(height: 10),
-                const GoldRule(),
-                const SizedBox(height: 14),
-                Text(
-                  s.t('brandLine'),
-                  style: const TextStyle(
-                    color: Lapis.c100,
-                    fontSize: 17,
-                    height: 1.55,
+                Expanded(
+                  flex: 7,
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
+                        child: form,
+                      ),
+                    ),
                   ),
                 ),
               ],
-            ),
-          ),
-          // The form card overlaps the hero, like a plate resting on glaze.
-          Transform.translate(
-            offset: const Offset(0, -44),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: BezelCard(
-                radius: Radii.xl,
-                padding: const EdgeInsets.fromLTRB(22, 26, 22, 24),
-                child: AnimatedSwitcher(
-                  duration: Motion.medium,
-                  switchInCurve: Motion.out,
-                  switchOutCurve: Motion.out,
-                  transitionBuilder: (child, animation) => FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween(
-                        begin: const Offset(0, 0.04),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
+            );
+          }
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              GlazePanel(
+                padding: EdgeInsets.fromLTRB(28, top + 20, 28, 72),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: LanguageSwitch(onDark: true),
                     ),
-                  ),
-                  child: Column(
-                    key: ValueKey(_sentTo == null),
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: _sentTo == null
-                        ? _phoneStep(s, theme)
-                        : _codeStep(s, theme),
+                    const SizedBox(height: 28),
+                    brand(64),
+                  ],
+                ),
+              ),
+              // The form card overlaps the hero, like a plate resting on glaze.
+              Transform.translate(
+                offset: const Offset(0, -44),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 560),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: form,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

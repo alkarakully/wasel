@@ -166,3 +166,37 @@ class OrderFlowPushTests(PushTestCase):
         self.assertEqual(to_captain[0].title, "New order for you")
         self.assertEqual(to_captain[0].data["order_id"], self.order.pk)
         self.assertIn("offer_id", to_captain[0].data)
+
+    def test_new_orders_ring_the_store_tablet(self, send):
+        from vendors.models import Product
+
+        self.owner.language_pref = "en"
+        self.owner.save()
+        Device.objects.create(user=self.owner, fid="store-tablet", platform="ios", app="store")
+        product = Product.objects.create(vendor=self.order.vendor, name_ar="كباب", price=9000)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                "/api/orders/",
+                {
+                    "vendor": self.order.vendor.pk,
+                    "items": [{"product": product.pk, "quantity": "1"}],
+                    "delivery_latitude": 33.3496,
+                    "delivery_longitude": 44.4009,
+                    "delivery_address": "Karrada",
+                    "payment_type": "cod",
+                },
+                format="json",
+            )
+        self.assertEqual(response.status_code, 201, response.content)
+        to_store = [m for token, m in RecordingSender.sent if token == "store-tablet"]
+        self.assertEqual(len(to_store), 1)
+        self.assertEqual(to_store[0].title, f"New order #{response.data['id']}")
+        self.assertTrue(to_store[0].urgent)
+
+    def test_customer_cancelling_tells_the_store(self, send):
+        Device.objects.create(user=self.owner, fid="store-tablet", platform="android", app="store")
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(f"/api/orders/{self.order.pk}/cancel/", {"reason": "Changed my mind"}, format="json")
+        to_store = [m for token, m in RecordingSender.sent if token == "store-tablet"]
+        self.assertEqual(len(to_store), 1)
+        self.assertEqual(to_store[0].data["kind"], "store_order_cancelled")

@@ -29,6 +29,16 @@ MESSAGES = {
         "ku": ("داواکارییەکەت لە {store} هەڵوەشێنرایەوە", "{reason}"),
         "en": ("Your order from {store} was cancelled", "{reason}"),
     },
+    "store_new_order": {
+        "ar": ("طلب جديد #{order_id}", "{store}: اقبل الطلب الآن حتى لا ينتظر الزبون."),
+        "ku": ("داواکاری نوێ #{order_id}", "{store}: ئێستا قبوڵی بکە با کڕیار چاوەڕێ نەکات."),
+        "en": ("New order #{order_id}", "{store}: accept it now so the customer isn't kept waiting."),
+    },
+    "store_order_cancelled": {
+        "ar": ("أُلغي الطلب #{order_id}", "ألغى الزبون الطلب من {store}. لا تحضّره."),
+        "ku": ("داواکاری #{order_id} هەڵوەشێنرایەوە", "کڕیار داواکارییەکەی لە {store} هەڵوەشاندەوە. ئامادەی مەکە."),
+        "en": ("Order #{order_id} was cancelled", "The customer cancelled their order from {store}. Don't prepare it."),
+    },
     "plus_trial_ended": {
         "ar": ("انتهت تجربة واصل بلس", "اشترك للاستمرار في التوصيل المجاني."),
         "ku": ("تاقیکردنەوەی واصل پلەس کۆتایی هات", "بەشداربە بۆ بەردەوامبوونی گەیاندنی بەخۆڕایی."),

@@ -12,6 +12,7 @@ class Device(models.Model):
     class App(models.TextChoices):
         CUSTOMER = "customer", "Customer app"
         CAPTAIN = "captain", "Captain app"
+        STORE = "store", "Store tablet app"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="devices")
     # The app instance's Firebase Installation ID, FCM's send target.

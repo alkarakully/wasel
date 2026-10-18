@@ -144,6 +144,7 @@ def cancel(order_id, user, reason=""):
     if order.status != Order.Status.RECEIVED:
         raise InvalidTransition("The store has already started this order, so it can't be cancelled in the app.")
     _cancel(order, Order.CancelledBy.CUSTOMER, reason)
+    notify(order.vendor.owner_id, "store", "store_order_cancelled", order_id=order.pk, store=order.vendor.name)
     return order
 
 

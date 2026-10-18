@@ -281,6 +281,7 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 | [`backend/`](backend/README.md) | Django REST API, live sockets, dispatch, Celery jobs, push notifications |
 | [`apps/customer/`](apps/customer/README.md) | Flutter customer app |
 | [`apps/captain/`](apps/captain/README.md) | Flutter captain app |
-| [`apps/wasel_core/`](apps/wasel_core/README.md) | Code shared by the two Flutter apps |
+| [`apps/store/`](apps/store/README.md) | Flutter store app for restaurant and shop tablets (iPad, Android) |
+| [`apps/wasel_core/`](apps/wasel_core/README.md) | Code shared by the Flutter apps |
 | [`apps/vendor/`](apps/vendor/README.md) | React store portal |
 | [`deploy/`](deploy/README.md) | Production Docker setup: nginx, TLS, settings |

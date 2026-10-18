@@ -256,8 +256,12 @@ class Order {
     this.paymentType = 'cod',
     this.customerName,
     this.customerPhone,
+    this.vendorId,
+    this.items = const [],
+    this.estimatedReadyAt,
   });
   final int id;
+  final int? vendorId;
   final String vendorName;
   final String status;
   final int? captainId;
@@ -274,6 +278,12 @@ class Order {
   final String? customerName;
   final String? customerPhone;
 
+  /// What was ordered; the store's board shows it.
+  final List<OrderItem> items;
+
+  /// When the store said it would be ready (set on accept).
+  final DateTime? estimatedReadyAt;
+
   /// Cash the captain collects at the door (0 when paid in the app).
   int get cashToCollect => paymentType == 'cod' ? total : 0;
 
@@ -284,6 +294,9 @@ class Order {
     'out_for_delivery',
     'delivered',
   ];
+
+  /// Statuses the store's board shows: new, cooking, waiting for a captain.
+  static const boardStatuses = ['received', 'preparing', 'ready'];
   bool get isFinished => status == 'delivered' || status == 'cancelled';
   bool get isTracked =>
       const ['preparing', 'ready', 'out_for_delivery'].contains(status);
@@ -303,7 +316,51 @@ class Order {
     paymentType: json['payment_type'] ?? 'cod',
     customerName: json['customer_contact']?['name'],
     customerPhone: json['customer_contact']?['phone'],
+    vendorId: json['vendor'],
+    items: [for (final i in json['items'] ?? []) OrderItem.fromJson(i)],
+    estimatedReadyAt: json['estimated_ready_at'] == null
+        ? null
+        : DateTime.parse(json['estimated_ready_at']),
   );
+}
+
+/// One line of an order, as the store sees it.
+class OrderItem {
+  OrderItem({
+    required this.names,
+    required this.quantity,
+    required this.unitType,
+    this.modifiers = const [],
+  });
+
+  /// Name per language: ar, ku, en.
+  final Map<String, String> names;
+  final double quantity;
+  final String unitType;
+
+  /// Chosen options, each as a name per language.
+  final List<Map<String, String>> modifiers;
+
+  bool get soldByKg => unitType == 'kg';
+  String name(String lang) => localizedName(
+    lang,
+    names['ar'] ?? '',
+    names['ku'] ?? '',
+    names['en'] ?? '',
+  );
+
+  factory OrderItem.fromJson(Map<String, dynamic> json) {
+    Map<String, String> names(dynamic n) => {
+      for (final lang in const ['ar', 'ku', 'en'])
+        lang: (n?[lang] ?? '').toString(),
+    };
+    return OrderItem(
+      names: names(json['name']),
+      quantity: double.parse('${json['quantity']}'),
+      unitType: json['unit_type'] ?? 'item',
+      modifiers: [for (final m in json['modifiers'] ?? []) names(m['name'])],
+    );
+  }
 }
 
 /// An order offered to this captain alone, until [expiresAt].

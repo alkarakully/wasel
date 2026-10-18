@@ -5,6 +5,7 @@ from django.db import transaction
 from django.db.models import F
 
 from accounts.models import User, WalletTransaction
+from notifications.push import notify
 
 from .models import Order, OrderItem, OrderItemModifier
 from .pricing import PricingError, build_quote
@@ -64,5 +65,8 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
                 user=customer, type=WalletTransaction.Type.PAYMENT, amount=-quote.total_amount, order=order
             )
             User.objects.filter(pk=customer.pk).update(wallet_balance=F("wallet_balance") - quote.total_amount)
+
+        # The store's tablet rings even if the app is closed; sent after commit.
+        notify(order.vendor.owner_id, "store", "store_new_order", order_id=order.pk, store=order.vendor.name)
 
     return order

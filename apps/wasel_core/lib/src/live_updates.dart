@@ -71,6 +71,8 @@ class LiveUpdates {
   }
 
   void _scheduleReconnect(int? closeCode) {
+    // Screens can show "reconnecting"; a later 'connected' clears it.
+    if (_connected) _events.add({'type': 'disconnected'});
     _connected = false;
     _ping?.cancel();
     if (!_wanted || closeCode == 4401) return; // signed out: don't retry

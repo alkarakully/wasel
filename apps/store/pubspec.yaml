@@ -1,0 +1,30 @@
+name: wasel_store
+description: "Wasel store app: the order board for restaurant and shop tablets."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  wasel_core:
+    path: ../wasel_core
+  audioplayers: ^6.8.1
+  provider: ^6.1.5+1
+  wakelock_plus: ^1.8.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  http: ^1.6.0
+  shared_preferences: ^2.5.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/sounds/

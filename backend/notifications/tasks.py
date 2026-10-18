@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Offers are useless once they expire; order updates can wait a little.
 TTL = {"offer": 30}
-URGENT = {"offer", "order_out_for_delivery"}
+URGENT = {"offer", "order_out_for_delivery", "store_new_order", "store_order_cancelled"}
 
 
 @shared_task

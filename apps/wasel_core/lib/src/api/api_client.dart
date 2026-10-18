@@ -210,6 +210,59 @@ class ApiClient {
   Future<void> declineOffer(int id) =>
       _send('POST', '/api/dispatch/offers/$id/decline/');
 
+  // --- Store owner -----------------------------------------------------------
+
+  /// The signed-in owner's stores, with full menus.
+  Future<List<VendorDetail>> myStores() async {
+    final data = await _send('GET', '/api/vendors/mine/');
+    return [for (final v in data) VendorDetail.fromJson(v)];
+  }
+
+  /// Opens or closes a store for new orders; returns the saved state.
+  Future<bool> setStoreOpen(int storeId, bool open) async {
+    final data = await _send(
+      'POST',
+      '/api/vendors/$storeId/open/',
+      body: {'is_open': open},
+    );
+    return data['is_open'] as bool;
+  }
+
+  /// Marks a menu item in or out of stock; returns the saved state.
+  Future<bool> setProductAvailable(int productId, bool available) async {
+    final data = await _send(
+      'POST',
+      '/api/products/$productId/availability/',
+      body: {'is_available': available},
+    );
+    return data['is_available'] as bool;
+  }
+
+  /// Orders the store still has to act on or hand over.
+  Future<List<Order>> storeBoard() async {
+    final data = await _send(
+      'GET',
+      '/api/orders/',
+      query: {'status': Order.boardStatuses.join(','), 'page_size': '100'},
+    );
+    return [for (final o in data['results']) Order.fromJson(o)];
+  }
+
+  Future<Order> acceptOrder(int id, int prepMinutes) async => Order.fromJson(
+    await _send(
+      'POST',
+      '/api/orders/$id/accept/',
+      body: {'prep_minutes': prepMinutes},
+    ),
+  );
+
+  Future<Order> rejectOrder(int id, String reason) async => Order.fromJson(
+    await _send('POST', '/api/orders/$id/reject/', body: {'reason': reason}),
+  );
+
+  Future<Order> markReady(int id) async =>
+      Order.fromJson(await _send('POST', '/api/orders/$id/ready/'));
+
   /// REST fallback for when the live socket is closed.
   Future<void> sendLocation(
     double lat,
