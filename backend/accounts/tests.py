@@ -221,3 +221,68 @@ class WhatsAppSenderTests(TestCase):
         self.assertEqual(request.get_header("Authorization"), "Bearer test-token")
         self.assertIn(b'"to": "9647701234567"', request.data)
         self.assertIn(b'"482913"', request.data)
+
+
+class AdminAccountTests(TestCase):
+    """Staff add captains and store owners in the admin; they then sign in by code."""
+
+    def setUp(self):
+        self.staff = User.objects.create_superuser("+9647700000999", "a-strong-admin-pass", name="Admin")
+        self.client.force_login(self.staff)
+
+    def add_user(self, **fields):
+        data = {"phone": "", "name": "", "role": "customer", "password1": "", "password2": ""}
+        data.update(fields)
+        return self.client.post("/admin/accounts/user/add/", data)
+
+    def test_any_phone_format_is_stored_the_way_login_finds_it(self):
+        response = self.add_user(phone="0750 123 4567", name="Ali", role="captain")
+        self.assertEqual(response.status_code, 302)
+        captain = User.objects.get(name="Ali")
+        self.assertEqual(captain.phone, "+9647501234567")
+        self.assertEqual(captain.role, "captain")
+
+    def test_app_accounts_need_no_password(self):
+        self.add_user(phone="٠٧٨٠١٢٣٤٥٦٧", name="Store owner", role="vendor")
+        owner = User.objects.get(phone="+9647801234567")
+        self.assertFalse(owner.has_usable_password())
+
+    def test_staff_can_still_get_a_password(self):
+        self.add_user(phone="07709998877", name="Support", password1="a-strong-admin-pass", password2="a-strong-admin-pass")
+        self.assertTrue(User.objects.get(phone="+9647709998877").check_password("a-strong-admin-pass"))
+
+    def test_mismatched_passwords_and_bad_numbers_are_refused(self):
+        response = self.add_user(phone="07709998877", password1="a-strong-admin-pass", password2="different-pass-1")
+        self.assertContains(response, "The two passwords don&#x27;t match.")
+        response = self.add_user(phone="12345")
+        self.assertContains(response, "Enter an Iraqi mobile number starting with 07.")
+        self.assertFalse(User.objects.filter(name="").exclude(pk=self.staff.pk).exists())
+
+    def test_a_number_already_in_use_is_caught_after_normalizing(self):
+        User.objects.create_user("+9647501234567", role="captain")
+        response = self.add_user(phone="0750 123 4567")
+        self.assertContains(response, "already exists")
+
+    def test_editing_normalizes_the_number_too(self):
+        user = User.objects.create_user("+9647501234567", name="Old")
+        response = self.client.post(
+            f"/admin/accounts/user/{user.pk}/change/",
+            {
+                "phone": "0750 765 4321",
+                "name": "Old",
+                "role": "captain",
+                "language_pref": "ar",
+                "wallet_balance": "0",
+                "is_active": "on",
+                "date_joined_0": "2026-01-01",
+                "date_joined_1": "10:00:00",
+            },
+        )
+        self.assertEqual(response.status_code, 302, response.content[:2000])
+        user.refresh_from_db()
+        self.assertEqual(user.phone, "+9647507654321")
+
+    def test_manager_normalizes_too(self):
+        user = User.objects.create_user("0770 111 2233")
+        self.assertEqual(user.phone, "+9647701112233")
+        self.assertFalse(user.has_usable_password())

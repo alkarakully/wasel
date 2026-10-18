@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
+from .phone import normalize_iraqi_phone
+
 
 def money_field(**kwargs):
     """Amounts in whole Iraqi dinars (IQD has no fractional unit in use)."""
@@ -14,7 +16,8 @@ class UserManager(BaseUserManager):
     def create_user(self, phone, password=None, **extra_fields):
         if not phone:
             raise ValueError("Users must have a phone number")
-        user = self.model(phone=phone, **extra_fields)
+        # Same form the login code flow uses, so the account can sign in.
+        user = self.model(phone=normalize_iraqi_phone(phone), **extra_fields)
         if password:
             user.set_password(password)
         else:
