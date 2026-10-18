@@ -27,17 +27,22 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription? _live;
   final _closedOffers = StreamController<int>.broadcast();
   bool _offerShowing = false;
+  bool _wasOnline = false;
+  late final CaptainSession _session = context.read<CaptainSession>();
 
   @override
   void initState() {
     super.initState();
     _refresh();
     _live = context.read<LiveUpdates>().events.listen(_onEvent);
+    _session.addListener(_onSessionChanged);
+    _onSessionChanged();
   }
 
   @override
   void dispose() {
     _live?.cancel();
+    _session.removeListener(_onSessionChanged);
     _closedOffers.close();
     super.dispose();
   }
@@ -126,9 +131,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _goOnline(bool value) async {
-    await context.read<CaptainSession>().setOnline(value);
-    if (value) _checkOffer();
+  Future<void> _goOnline(bool value) =>
+      context.read<CaptainSession>().setOnline(value);
+
+  /// Look for an offer whenever the captain goes online (switch or notification).
+  void _onSessionChanged() {
+    final online = context.read<CaptainSession>().online;
+    if (online && !_wasOnline) _checkOffer();
+    _wasOnline = online;
   }
 
   Future<void> _take(Order order) async {

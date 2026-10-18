@@ -186,6 +186,36 @@ When a store accepts an order, dispatch offers it to the **nearest free captain*
 
 Offers expire on time through a scheduled Celery task, with a sweep every 15 seconds as backup. Every offer is kept as a `DispatchOffer` (admin: Orders) with its distance and outcome.
 
+## Push notifications
+
+Pushes reach phones when the app is in the background or closed (the live socket covers it while open). They go through **Firebase Cloud Messaging**, which delivers to Android directly and to iPhones through APNs.
+
+| Push | To | When |
+| :--- | :--- | :--- |
+| New order offer (30-second window, high priority, dropped if not delivered in time) | The offered captain | Dispatch offers them an order |
+| "Store accepted, ready in about N minutes" | Customer | The store accepts |
+| "Your captain is on the way" | Customer | The captain picks up |
+| "Delivered" | Customer | Delivery confirmed with the PIN |
+| "Your order was cancelled" with the store's reason | Customer | The store rejects |
+| "Your Wasel Plus trial has ended" | Customer | The trial expires |
+
+Text is in each user's language (`language_pref`, which the apps keep in sync). Each push carries `kind` plus `order_id` / `offer_id`, so tapping it opens the right screen.
+
+Apps register their Firebase Installation ID (FID) with `POST /api/devices/ {fid, platform, app}` after login and remove it with `DELETE /api/devices/ {fid}` on logout. FIDs FCM reports as gone are deleted automatically. Pushes are queued after the change commits and sent by Celery (`notifications/tasks.py`).
+
+In development (`DJANGO_DEBUG=1`) pushes are written to the worker log instead:
+
+```bash
+docker compose logs worker | grep "Push to"
+```
+
+### Turning on real pushes
+
+1. Create a Firebase project and add four apps: iOS and Android for both the customer app (`com.wasel.waselCustomer`) and the captain app (`com.wasel.waselCaptain`).
+2. iPhone delivery: in the Apple Developer account create an **APNs key** (Keys > Apple Push Notifications service) and upload it in Firebase (Project settings > Cloud Messaging > Apple app configuration).
+3. Backend: in Firebase, Project settings > Service accounts > Generate new private key. Put the JSON file on the server (not in git) and set `FCM_CREDENTIALS_FILE=/path/to/key.json` (and `FCM_PROJECT_ID` if it differs from the file).
+4. Apps: build with the Firebase settings for that app and platform (see each app's README).
+
 ## Background jobs (Celery)
 
 The `worker` service runs Celery with its beat schedule (`celery -A wasel worker -B`). In production, run beat as its own single process (`celery -A wasel beat`) next to one or more workers.
@@ -204,4 +234,4 @@ Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) 
 
 **Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
 
-Not built yet: Wasel Plus billing, push notifications for when the app is closed, an SMS provider and card payments.
+Not built yet: Wasel Plus billing, an SMS provider and card payments.

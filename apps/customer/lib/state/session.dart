@@ -5,7 +5,10 @@ import '../config.dart';
 
 /// The customer's session, plus where to deliver.
 class Session extends BaseSession {
-  Session(super.api);
+  Session(super.api, {this.push});
+
+  /// Order updates while the app is closed; null in tests.
+  final PushService? push;
 
   GeoPoint deliveryPoint = const GeoPoint(
     Config.fallbackLat,
@@ -13,9 +16,15 @@ class Session extends BaseSession {
   );
   bool usingDeviceLocation = false;
 
-  // Ask for location only once someone is signed in and about to browse.
+  // Ask for location and notifications only once someone is signed in.
   @override
-  Future<void> onSignedIn() => refreshLocation();
+  Future<void> onSignedIn() async {
+    await refreshLocation();
+    await push?.start();
+  }
+
+  @override
+  Future<void> onSigningOut() async => push?.stop();
 
   /// Uses the phone's location when allowed; otherwise keeps the fallback spot.
   Future<void> refreshLocation() async {

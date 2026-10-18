@@ -4,15 +4,27 @@ import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import 'screens/home_screen.dart';
+import 'screens/tracking_screen.dart';
 import 'state/cart.dart';
 import 'state/session.dart';
 import 'strings.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   S.addStrings(customerStrings);
   final api = ApiClient();
-  final session = Session(api);
+  final push = PushService(api, app: 'customer');
+  final session = Session(api, push: push);
+  // Tapping an order notification opens that order's tracking screen.
+  push.onOpen = (data) {
+    final orderId = int.tryParse('${data['order_id']}');
+    if (orderId == null) return;
+    navigatorKey.currentState?.push(
+      MaterialPageRoute(builder: (_) => TrackingScreen(orderId: orderId)),
+    );
+  };
   final live = LiveUpdates(api);
   // Keep one live socket open whenever someone is signed in.
   session.addListener(() => session.signedIn ? live.start() : live.stop());
@@ -40,6 +52,7 @@ class WaselApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<Session>();
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'Wasel',
       debugShowCheckedModeBanner: false,
       // Kurdish (Sorani) uses Arabic script and right-to-left layout; Flutter's

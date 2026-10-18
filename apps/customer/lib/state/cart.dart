@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:wasel_core/wasel_core.dart';
 
-
 class CartLine {
   CartLine({
     required this.product,

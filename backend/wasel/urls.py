@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from rest_framework.routers import DefaultRouter
 
 from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferView, OfferAnswerView, OrderViewSet
+from notifications.views import DeviceView
 from vendors.views import OfferViewSet, ProductAvailabilityView, VendorViewSet
 
 router = DefaultRouter()
@@ -15,6 +16,7 @@ router.register("orders", OrderViewSet, basename="order")
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
+    path("api/devices/", DeviceView.as_view(), name="devices"),
     path("api/captain/location/", CaptainLocationView.as_view(), name="captain-location"),
     path("api/captain/status/", CaptainStatusView.as_view(), name="captain-status"),
     path("api/dispatch/offers/current/", CurrentOfferView.as_view(), name="dispatch-current"),

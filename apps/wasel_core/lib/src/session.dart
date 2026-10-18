@@ -21,6 +21,10 @@ class BaseSession extends ChangeNotifier {
   @protected
   Future<void> onSignedIn() async {}
 
+  /// Runs before signing out, while the API token still works.
+  @protected
+  Future<void> onSigningOut() async {}
+
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
     lang = prefs.getString('lang') ?? 'ar';
@@ -48,6 +52,7 @@ class BaseSession extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await onSigningOut();
     try {
       await api.logout();
     } on ApiException {
@@ -68,5 +73,11 @@ class BaseSession extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('lang', value);
+    if (!signedIn) return;
+    try {
+      await api.updateLanguage(value);
+    } on ApiException {
+      // Kept locally; the server catches up next time.
+    }
   }
 }

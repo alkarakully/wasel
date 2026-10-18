@@ -122,6 +122,25 @@ class ApiClient {
 
   Future<void> logout() => _send('POST', '/api/auth/logout/');
 
+  /// Notifications arrive in the language saved on the server.
+  Future<void> updateLanguage(String lang) =>
+      _send('PATCH', '/api/auth/me/', body: {'language_pref': lang});
+
+  // --- Push notifications ----------------------------------------------------
+
+  Future<void> registerDevice(
+    String fid, {
+    required String platform,
+    required String app,
+  }) => _send(
+    'POST',
+    '/api/devices/',
+    body: {'fid': fid, 'platform': platform, 'app': app},
+  );
+
+  Future<void> unregisterDevice(String fid) =>
+      _send('DELETE', '/api/devices/', body: {'fid': fid});
+
   // --- Stores ----------------------------------------------------------------
 
   Future<List<Vendor>> vendors({required GeoPoint at, String? cuisine}) async {

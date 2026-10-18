@@ -17,6 +17,7 @@ from django.db.models import F
 from django.utils import timezone
 
 from accounts.models import User, WalletTransaction
+from notifications.push import notify
 
 from .models import DispatchOffer, Order
 
@@ -80,6 +81,11 @@ def _require_captain(order, user):
         raise NotAllowed("Only the captain delivering this order can do this.")
 
 
+def _notify_customer(order, kind, **context):
+    """Push the customer's app; sent after the change commits."""
+    notify(order.customer_id, "customer", kind, order_id=order.pk, store=order.vendor.name, **context)
+
+
 def _refund_if_paid(order):
     if order.payment_type == Order.PaymentType.WALLET and order.payment_status == Order.PaymentStatus.PAID:
         WalletTransaction.objects.create(
@@ -102,6 +108,7 @@ def accept(order_id, user, prep_minutes):
     order.accepted_at = now
     order.estimated_ready_at = now + timedelta(minutes=prep_minutes)
     order.save()
+    _notify_customer(order, "order_preparing", minutes=prep_minutes)
     return order
 
 
@@ -111,6 +118,7 @@ def reject(order_id, user, reason):
     _require_vendor_owner(order, user)
     _require_status(order, Order.Status.RECEIVED)
     _cancel(order, Order.CancelledBy.VENDOR, reason)
+    _notify_customer(order, "order_cancelled", reason=reason)
     return order
 
 
@@ -181,6 +189,7 @@ def pickup(order_id, user):
     order.status = Order.Status.OUT_FOR_DELIVERY
     order.picked_up_at = timezone.now()
     order.save()
+    _notify_customer(order, "order_out_for_delivery")
     return order
 
 
@@ -204,6 +213,7 @@ def deliver(order_id, user, pin):
                 # The captain collected the cash at the door.
                 order.payment_status = Order.PaymentStatus.PAID
             order.save()
+            _notify_customer(order, "order_delivered")
             wrong = False
 
     if wrong:

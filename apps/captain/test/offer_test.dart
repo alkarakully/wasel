@@ -116,9 +116,14 @@ void main() {
   });
 
   testWidgets('closes by itself when time runs out', (tester) async {
-    final (result, _) = await open(tester, offer(left: const Duration(milliseconds: 600)));
+    final (result, _) = await open(
+      tester,
+      offer(left: const Duration(milliseconds: 600)),
+    );
     // The countdown reads the real clock, so let real time pass.
-    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 900)));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 900)),
+    );
     await tester.pump(const Duration(milliseconds: 300));
     await tester.pumpAndSettle();
     expect(await result.future, isNull);

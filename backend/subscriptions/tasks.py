@@ -3,6 +3,7 @@ import logging
 from celery import shared_task
 from django.utils import timezone
 
+from notifications.push import notify
 from orders.realtime import notify_user
 
 from .models import WaselPlusSubscription
@@ -31,6 +32,7 @@ def expire_wasel_plus_trials():
     ).update(status=WaselPlusSubscription.Status.EXPIRED)
     for _, user_id in ended:
         notify_user(user_id, {"type": "wasel_plus.trial_ended"})
+        notify(user_id, "customer", "plus_trial_ended")
 
     logger.warning("Expired %d Wasel Plus trials", len(ended))
     return {"expired": len(ended)}

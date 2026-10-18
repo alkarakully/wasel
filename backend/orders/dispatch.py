@@ -21,6 +21,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import User
+from notifications.push import notify
 
 from . import realtime, workflow
 from .models import TRACKED_STATUSES, CaptainLocation, DispatchOffer, Order
@@ -85,8 +86,19 @@ def offer_next(order_id, announce_if_none=True):
 
 
 def _after_offer(offer_id):
-    offer = DispatchOffer.objects.select_related("order").get(pk=offer_id)
+    offer = DispatchOffer.objects.select_related("order__vendor").get(pk=offer_id)
     realtime.send_offer(offer)
+    # Reaches the captain even when the app is in the background or closed.
+    notify(
+        offer.captain_id,
+        "captain",
+        "offer",
+        offer_id=offer.pk,
+        order_id=offer.order_id,
+        store=offer.order.vendor.name,
+        km=f"{offer.distance_m / 1000:.1f}",
+        seconds=settings.DISPATCH["OFFER_SECONDS"],
+    )
     # Expire it on time even if the captain's app never answers.
     try:
         expire_dispatch_offer.apply_async((offer.pk,), eta=offer.expires_at + timedelta(seconds=1))
