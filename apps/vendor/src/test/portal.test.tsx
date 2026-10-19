@@ -32,6 +32,8 @@ describe('strings', () => {
   it('maps unknown error codes to a generic message', () => {
     expect(errorText('en', 'invalid_code')).toBe('The code is wrong or has expired.')
     expect(errorText('en', 'something_new')).toBe('Something went wrong. Try again.')
+    expect(errorText('en', 'delivery_failed')).toBe("We couldn't send the code right now. Try again shortly.")
+    expect(errorText('ar', 'account_disabled')).toBe('هذا الحساب موقوف. تواصل مع فريق واصل.')
   })
 })
 
