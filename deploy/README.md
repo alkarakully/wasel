@@ -90,7 +90,7 @@ git pull
 docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-`migrate` runs again before the new `web` starts. Open sockets reconnect on their own.
+`migrate` runs again before the new `web` starts. Open sockets reconnect on their own. nginx looks up `web` again every 10 seconds, so a rebuilt `web` container takes traffic within seconds without restarting nginx (expect a few seconds of 502 while Daphne starts).
 
 ## Checks
 
