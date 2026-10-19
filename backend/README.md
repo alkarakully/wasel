@@ -47,25 +47,13 @@ Each teammate has one role, and the server enforces it on every request:
 
 Every change made there (store edits and approvals, cancellations with refunds, released captains, blocks, wallet adjustments with their reason, payouts, offers, team changes, sign-ins) is written to the audit log with who, when, what changed and from which IP. The API is `/api/console/` (`backend/console/`); it only accepts the platform admin's session cookie with CSRF, never an app token, and not a Django admin session without the authenticator code.
 
-## Admin and operations
+## Django admin
 
-Staff sign in at `/admin/` with the account from `createsuperuser` (any phone number works for staff; app accounts need an Iraqi number because they sign in by code). The admin is themed in the Wasel lapis and gold and has an **Operations** link to `/ops/`, the platform page for day-to-day running:
-
-| Section | What staff see and do |
-| :--- | :--- |
-| Overview | Sales, Wasel commission, service and delivery fees, orders, average delivery time and cancellations for today and this month; orders in progress by status; open alerts, online captains and open stores; top stores today; stuck orders, each with a link to the order and a **Done** button. |
-| Orders | Every order in progress, oldest first, with its stuck-order reasons. |
-| Captains | Captains active in the last day on a map and in a list: online or not, last seen, and the order they're carrying. |
-| Stores | Every approved store with today's orders and sales, commission rate and an open/closed switch. |
-| Applications | Stores waiting for approval, oldest first, on a map and in a list: owner, address, delivery distance, and whether it's a new owner or a new branch. **Approve** with a commission rate (15% by default) or **Reject** with a reason the owner sees. Rejected and approved ones are under their own filters; a rejected store can still be approved later. |
-| Payouts | Weekly statements due to stores, with **Mark paid** (and a transfer reference), and a button to make any missing statements now. |
-| Accounts | Customers, captains and store owners by role, searchable by phone or name, with an active switch (blocked accounts can't sign in). Staff accounts are managed in the admin. |
-
-The page refreshes every 10 seconds and works in Arabic, Kurdish and English. Its data comes from `/api/ops/`, which only accepts a signed-in staff session (not an app token).
+The Django admin is kept as an emergency tool at `/django-admin/` (set `DJANGO_ADMIN_PATH` to a long random path in production). Only superusers get in, with the account from `createsuperuser` (any phone number works for staff; app accounts need an Iraqi number because they sign in by code). Day-to-day work happens in the platform admin; the old operations page at `/ops/` now sends people there.
 
 ## Joining Wasel: store sign-up and approval
 
-Store owners sign themselves up from the store portal (**Join Wasel as a store**): they verify their number with the login code, then send their name and first store (name, restaurant or supermarket, cuisine, address, map spot, delivery distance). That makes the account a store account and the store an application (`Vendor.status` `pending`). Wasel staff approve or reject it in `/ops/` › Applications, and the owner gets a push and sees the result in the portal (with the reason when rejected, and a way to fix and resend). An approved owner adds more branches from **Store settings** in the portal; each goes through the same approval.
+Store owners sign themselves up from the store portal (**Join Wasel as a store**): they verify their number with the login code, then send their name and first store (name, restaurant or supermarket, cuisine, address, map spot, delivery distance). That makes the account a store account and the store an application (`Vendor.status` `pending`). Wasel staff approve or reject it in the platform admin › Stores › Applications, and the owner gets a push and sees the result in the portal (with the reason when rejected, and a way to fix and resend). An approved owner adds more branches from **Store settings** in the portal; each goes through the same approval.
 
 Until a store is approved, customers never see it (lists, details, offers, quotes and orders all act as if it doesn't exist), it can't open or take orders, and nobody has a role there, so none of the store endpoints below work for it. Stores staff create in the admin start out approved.
 
@@ -101,7 +89,7 @@ Everyone on the team gets the store's live order updates and new-order pushes.
 | `GET /api/vendors/{id}/billing/` | This week so far, totals due and paid, statements |
 | `GET /api/vendors/{id}/statements/{sid}/` | One week with every order; `?download=csv` for a spreadsheet |
 
-**Billing.** Wasel collects every payment (cash through captains, card and wallet in the app) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in `/ops/` › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
+**Billing.** Wasel collects every payment (cash through captains, card and wallet in the app) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in the platform admin › Money › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
 
 ## Tenant isolation
 
@@ -111,7 +99,7 @@ Every store is a tenant. Nobody at one store can see or change another store's o
 - **Order lists and order steps** are limited to the order's customer, its captain and the store's team. The customer's name and phone go only to the order's captain and store team while the order is in progress; the delivery PIN goes only to the customer.
 - **Live sockets** join only the channels of the stores the user works at, chosen when the socket connects. Any change to someone's access (removed from a team, added to one, blocked, signed out, store given to another owner) closes their open sockets at once (close code 4409); apps reconnect and get exactly what they're allowed now, or are refused (4401).
 - **Pushes** go to the store's current team only.
-- **Staff pages** (`/ops/` and its `/api/ops/` endpoints) need a signed-in staff session; app tokens don't work there.
+- **Staff endpoints** (`/api/console/` for the platform admin, and the older `/api/ops/`) need a signed-in staff session; app tokens don't work there. The platform admin also needs the authenticator code.
 - **Blocked accounts** lose API and socket access immediately.
 
 `vendors/test_isolation.py` tries every store endpoint from the owner, a manager and a cashier of store A against store B, and checks the sockets; add new store endpoints to it.

@@ -1,10 +1,9 @@
 from django.conf import settings
 from django.contrib import admin
-from django.contrib.admin.views.decorators import staff_member_required
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
-from django.views.generic import TemplateView
+from django.views.generic import RedirectView, TemplateView
 from rest_framework.routers import DefaultRouter
 
 from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferView, OfferAnswerView, OrderViewSet
@@ -69,7 +68,8 @@ urlpatterns = [
     path("api/store-invites/<int:pk>/decline/", AnswerInviteView.as_view(answer="decline"), name="invite-decline"),
     path("api/", include(router.urls)),
     # Staff operations page; signs in through the admin.
-    path("ops/", staff_member_required(TemplateView.as_view(template_name="ops/ops.html", extra_context={"map_styles": settings.MAP_STYLES})), name="ops"),
+    # The old operations page; the platform admin (/admin/) does all of it now.
+    path("ops/", RedirectView.as_view(url="/admin/", permanent=False), name="ops"),
     path("login/", TemplateView.as_view(template_name="accounts/login.html"), name="login"),
     path("track/<int:order_id>/", TemplateView.as_view(template_name="orders/track.html", extra_context={"map_styles": settings.MAP_STYLES}), name="track-order"),
     path("api-auth/", include("rest_framework.urls")),

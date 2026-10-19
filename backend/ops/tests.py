@@ -43,7 +43,6 @@ class AccessTests(OpsTestCase):
     def test_only_staff_get_in(self):
         self.client.force_login(self.customer)
         self.assertEqual(self.client.get("/api/ops/overview/").status_code, 403)
-        self.assertEqual(self.client.get("/ops/").status_code, 302)
 
     def test_app_tokens_dont_open_ops(self):
         """Staff use the admin session; a phone app's token is not enough."""
@@ -54,9 +53,9 @@ class AccessTests(OpsTestCase):
         response = self.client.get("/api/ops/overview/", HTTP_AUTHORIZATION=f"Token {token.key}")
         self.assertIn(response.status_code, (401, 403))
 
-    def test_page_loads_for_staff(self):
+    def test_the_old_page_sends_staff_to_the_platform_admin(self):
         response = self.client.get("/ops/")
-        self.assertContains(response, "ops/ops.js")
+        self.assertRedirects(response, "/admin/", fetch_redirect_response=False)
 
 
 class OverviewTests(OpsTestCase):
