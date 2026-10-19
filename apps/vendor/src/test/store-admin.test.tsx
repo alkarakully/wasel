@@ -53,28 +53,35 @@ describe('Menu editing', () => {
 })
 
 describe('Team', () => {
-  it('lists the owner and adds a cashier by phone, explaining refusals', async () => {
+  it('invites a cashier by phone, explaining refusals, and lists the invite until answered', async () => {
     const addMember = vi
       .fn()
       .mockRejectedValueOnce(new ApiError('phone_in_use', 400))
-      .mockResolvedValueOnce({ id: 3, user: 9, phone: '+9647801112233', name: 'Sara', role: 'cashier' })
-    const api = fakeApi({
-      team: vi.fn(async () => ({
+      .mockResolvedValueOnce({ id: 3, phone: '+9647801112233', name: 'Sara', role: 'cashier', created_at: '' })
+    const team = vi
+      .fn()
+      .mockResolvedValueOnce({ owner: { user: 1, phone: '+9647800000999', name: 'Ali', role: 'owner' }, members: [], invites: [] })
+      .mockResolvedValue({
         owner: { user: 1, phone: '+9647800000999', name: 'Ali', role: 'owner' },
         members: [],
-      })),
-      addMember,
-    })
+        invites: [{ id: 3, phone: '+9647801112233', name: 'Sara', role: 'cashier', created_at: '' }],
+      })
+    const api = fakeApi({ team, addMember, cancelInvite: vi.fn(async () => null) })
     inEnglish(<TeamView api={api} storeId={1} myUserId={1} onError={vi.fn()} />)
     expect(await screen.findByText('Owner · You')).toBeInTheDocument()
 
     await userEvent.type(screen.getByLabelText('Phone number'), '0780 111 2233')
     await userEvent.type(screen.getByLabelText('Name'), 'Sara')
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Send invite' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('already belongs to a customer or captain')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Add' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Send invite' }))
     expect(addMember).toHaveBeenLastCalledWith(1, { phone: '0780 111 2233', name: 'Sara', role: 'cashier' })
+    expect(await screen.findByRole('status')).toHaveTextContent('Invite sent to')
+    expect(await screen.findByText('Invited · Cashier')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel invite Sara' }))
+    expect(api.cancelInvite).toHaveBeenCalledWith(1, 3)
   })
 })
 

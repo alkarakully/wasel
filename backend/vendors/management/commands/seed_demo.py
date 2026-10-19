@@ -138,6 +138,7 @@ class Command(BaseCommand):
                     "location": Point(lng, lat, srid=4326),
                     "is_open": is_open,
                     "delivery_radius_km": Decimal("8"),
+                    "status": Vendor.Status.APPROVED,
                 },
             )
             if vendor.pk in old_ids:

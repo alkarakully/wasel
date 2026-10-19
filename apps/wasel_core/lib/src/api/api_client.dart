@@ -212,6 +212,16 @@ class ApiClient {
 
   // --- Store owner -----------------------------------------------------------
 
+  /// Team invites waiting for the signed-in person.
+  Future<List<StoreInvite>> storeInvites() async {
+    final data = await _send('GET', '/api/store-invites/') as List;
+    return data.map((e) => StoreInvite.fromJson(e)).toList();
+  }
+
+  /// Join the store's team, or turn the invite down.
+  Future<void> answerStoreInvite(int id, {required bool accept}) =>
+      _send('POST', '/api/store-invites/$id/${accept ? 'accept' : 'decline'}/');
+
   /// The signed-in owner's stores, with full menus.
   Future<List<VendorDetail>> myStores() async {
     final data = await _send('GET', '/api/vendors/mine/');

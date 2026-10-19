@@ -31,15 +31,31 @@ Staff sign in at `/admin/` with the account from `createsuperuser` (any phone nu
 | Overview | Sales, Wasel commission, service and delivery fees, orders, average delivery time and cancellations for today and this month; orders in progress by status; open alerts, online captains and open stores; top stores today; stuck orders, each with a link to the order and a **Done** button. |
 | Orders | Every order in progress, oldest first, with its stuck-order reasons. |
 | Captains | Captains active in the last day on a map and in a list: online or not, last seen, and the order they're carrying. |
-| Stores | Every store with today's orders and sales, commission rate and an open/closed switch. |
+| Stores | Every approved store with today's orders and sales, commission rate and an open/closed switch. |
+| Applications | Stores waiting for approval, oldest first, on a map and in a list: owner, address, delivery distance, and whether it's a new owner or a new branch. **Approve** with a commission rate (15% by default) or **Reject** with a reason the owner sees. Rejected and approved ones are under their own filters; a rejected store can still be approved later. |
 | Payouts | Weekly statements due to stores, with **Mark paid** (and a transfer reference), and a button to make any missing statements now. |
 | Accounts | Customers, captains and store owners by role, searchable by phone or name, with an active switch (blocked accounts can't sign in). Staff accounts are managed in the admin. |
 
 The page refreshes every 10 seconds and works in Arabic, Kurdish and English. Its data comes from `/api/ops/`, which only accepts a signed-in staff session (not an app token).
 
+## Joining Wasel: store sign-up and approval
+
+Store owners sign themselves up from the store portal (**Join Wasel as a store**): they verify their number with the login code, then send their name and first store (name, restaurant or supermarket, cuisine, address, map spot, delivery distance). That makes the account a store account and the store an application (`Vendor.status` `pending`). Wasel staff approve or reject it in `/ops/` › Applications, and the owner gets a push and sees the result in the portal (with the reason when rejected, and a way to fix and resend). An approved owner adds more branches from **Store settings** in the portal; each goes through the same approval.
+
+Until a store is approved, customers never see it (lists, details, offers, quotes and orders all act as if it doesn't exist), it can't open or take orders, and nobody has a role there, so none of the store endpoints below work for it. Stores staff create in the admin start out approved.
+
+A fresh customer account (no orders, no wallet history) may become a store account; numbers with a customer history, captains and staff can't.
+
+| Endpoint | What it does |
+| :--- | :--- |
+| `GET /api/store-applications/` | Your stores in every state, whether you may apply now and why not (`application_pending`, `too_many_applications`, `phone_in_use`) |
+| `POST /api/store-applications/` | Apply: `{owner_name?, name, type, cuisine, address, latitude, longitude, delivery_radius_km}` |
+| `GET /api/ops/applications/?status=` | Staff: applications (pending by default) |
+| `POST /api/ops/applications/{id}/approve/` / `reject/` | Staff: `{commission_rate}` / `{reason}` |
+
 ## Stores: team, menu, reports and billing
 
-Each store has an owner (`Vendor.owner`) and can have a team (`StoreMember`, role manager or cashier). Owners add people by phone from the store portal; those accounts have the Vendor role and sign in with a code. The rules live in `vendors/access.py`:
+Each store has an owner (`Vendor.owner`) and can have a team (`StoreMember`, role manager or cashier). Owners invite people by phone from the store portal (`StoreInvite`); the person joins only when they accept, the next time they sign in to the portal or the tablet app (a new number just signs in with a code and sees the invite first). Accepting makes the account a store account. The rules live in `vendors/access.py`:
 
 | | Orders, stock, open/closed | Menu, hours | Reports | Billing | Team |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -51,7 +67,9 @@ Everyone on the team gets the store's live order updates and new-order pushes.
 
 | Endpoint | What it does |
 | :--- | :--- |
-| `GET/POST /api/vendors/{id}/team/`, `PATCH/DELETE .../team/{member}/` | List, add (by phone), change role, remove |
+| `GET/POST /api/vendors/{id}/team/`, `PATCH/DELETE .../team/{member}/` | List members and open invites, invite (by phone), change role, remove |
+| `DELETE /api/vendors/{id}/team/invites/{invite}/` | Cancel an invite |
+| `GET /api/store-invites/`, `POST /api/store-invites/{id}/accept/` / `decline/` | The invited person: invites to their number, and their answer |
 | `POST /api/vendors/{id}/products/`, `PATCH/DELETE /api/products/{id}/` | Add, edit, remove menu items (ordered items are archived) |
 | `PUT /api/vendors/{id}/hours/` | Opening hours: `{"sat": ["10:00", "23:30"], "fri": null, ...}` |
 | `GET /api/vendors/{id}/report/?from=&to=` | Sales, earnings, orders, prep time, cancellations, by day and hour, best sellers |
@@ -253,6 +271,8 @@ Pushes reach phones when the app is in the background or closed (the live socket
 | "Delivered" | Customer | Delivery confirmed with the PIN |
 | "Your order was cancelled" with the store's reason | Customer | The store rejects |
 | "Your Wasel Plus trial has ended" | Customer | The trial expires |
+| "Your store is approved" / "wasn't approved" with the reason | Store owner (tablet app) | Staff review the application |
+| "You're invited to join {store}" | The invited person (tablet app), if they have an account | The owner invites them |
 
 Text is in each user's language (`language_pref`, which the apps keep in sync). Each push carries `kind` plus `order_id` / `offer_id`, so tapping it opens the right screen.
 

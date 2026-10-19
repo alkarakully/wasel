@@ -15,7 +15,7 @@ TAHRIR = (33.3406, 44.4009)
 
 
 def make_vendor(owner, name, lat, lng, **kwargs):
-    return Vendor.objects.create(owner=owner, name=name, location=Point(lng, lat, srid=4326), **kwargs)
+    return Vendor.objects.create(status=Vendor.Status.APPROVED, owner=owner, name=name, location=Point(lng, lat, srid=4326), **kwargs)
 
 
 class CommissionTests(TestCase):

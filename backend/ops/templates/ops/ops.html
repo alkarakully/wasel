@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'ops/ops.css' %}">
 </head>
-<body>
+<body data-admin="{% url 'admin:index' %}" data-login="{% url 'admin:login' %}?next={{ request.path|urlencode }}">
   <header class="bar glaze">
     <a class="brand" href="{% url 'ops' %}">
       <span class="mark" aria-hidden="true">و</span>
@@ -23,6 +23,7 @@
       <button type="button" data-view="orders" aria-pressed="false"><i class="ph-light ph-receipt" aria-hidden="true"></i><span data-i18n="orders">الطلبات</span><span class="count" id="count-orders" hidden></span></button>
       <button type="button" data-view="captains" aria-pressed="false"><i class="ph-light ph-moped" aria-hidden="true"></i><span data-i18n="captains">الكباتن</span></button>
       <button type="button" data-view="stores" aria-pressed="false"><i class="ph-light ph-storefront" aria-hidden="true"></i><span data-i18n="stores">المتاجر</span></button>
+      <button type="button" data-view="applications" aria-pressed="false"><i class="ph-light ph-seal-check" aria-hidden="true"></i><span data-i18n="applications">طلبات الانضمام</span><span class="count" id="count-applications" hidden></span></button>
       <button type="button" data-view="payouts" aria-pressed="false"><i class="ph-light ph-bank" aria-hidden="true"></i><span data-i18n="payouts">المدفوعات</span></button>
       <button type="button" data-view="users" aria-pressed="false"><i class="ph-light ph-users" aria-hidden="true"></i><span data-i18n="users">الحسابات</span></button>
     </nav>
@@ -136,6 +137,24 @@
           </table>
         </div>
       </article>
+    </section>
+
+    <!-- Store applications -->
+    <section class="view" id="view-applications" hidden>
+      <div class="split apps-split">
+        <article class="panel">
+          <div class="panel-head">
+            <h2><i class="ph-light ph-seal-check" aria-hidden="true"></i><span data-i18n="applications">طلبات الانضمام</span></h2>
+            <div class="chips" id="app-filter" role="group" aria-label="Status">
+              <button type="button" data-status="pending" aria-pressed="true"><span data-i18n="app_pending">بانتظار المراجعة</span> <span class="chip-count" id="app-count-pending"></span></button>
+              <button type="button" data-status="rejected" aria-pressed="false"><span data-i18n="app_rejected">مرفوضة</span> <span class="chip-count" id="app-count-rejected"></span></button>
+              <button type="button" data-status="approved" aria-pressed="false"><span data-i18n="app_approved">مقبولة</span> <span class="chip-count" id="app-count-approved"></span></button>
+            </div>
+          </div>
+          <ul class="applications" id="applications"></ul>
+        </article>
+        <article class="panel map-panel"><div id="app-map" aria-label="Map"></div></article>
+      </div>
     </section>
 
     <!-- Payouts -->

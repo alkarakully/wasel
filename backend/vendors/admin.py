@@ -1,6 +1,6 @@
 from django.contrib.gis import admin
 
-from .models import Offer, Product, ProductModifier, Vendor
+from .models import Offer, Product, ProductModifier, StoreInvite, Vendor
 
 
 class ProductInline(admin.TabularInline):
@@ -11,10 +11,16 @@ class ProductInline(admin.TabularInline):
 
 @admin.register(Vendor)
 class VendorAdmin(admin.GISModelAdmin):
-    list_display = ["name", "type", "cuisine", "is_open", "commission_rate", "commission_free_until"]
-    list_filter = ["type", "cuisine", "is_open"]
+    list_display = ["name", "status", "type", "cuisine", "is_open", "commission_rate", "commission_free_until"]
+    list_filter = ["status", "type", "cuisine", "is_open"]
     search_fields = ["name", "owner__phone"]
+    readonly_fields = ["reviewed_at", "reviewed_by"]
     inlines = [ProductInline]
+
+    def get_changeform_initial_data(self, request):
+        # A store staff set up here themselves is approved; owners' own
+        # applications are reviewed in /ops/.
+        return {"status": Vendor.Status.APPROVED, **super().get_changeform_initial_data(request)}
 
 
 class ProductModifierInline(admin.TabularInline):
@@ -28,6 +34,13 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ["unit_type", "is_available"]
     search_fields = ["name_ar", "name_en", "vendor__name"]
     inlines = [ProductModifierInline]
+
+
+@admin.register(StoreInvite)
+class StoreInviteAdmin(admin.ModelAdmin):
+    list_display = ["phone", "vendor", "role", "status", "created_at", "answered_at"]
+    list_filter = ["status", "role"]
+    search_fields = ["phone", "vendor__name"]
 
 
 @admin.register(Offer)

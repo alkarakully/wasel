@@ -25,6 +25,7 @@ class StoreTestCase(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user("+9647800000700", role=User.Role.VENDOR, name="Owner")
         self.store = Vendor.objects.create(
+            status=Vendor.Status.APPROVED,
             owner=self.owner, name="Tigris Grill", location=BAGHDAD, is_open=True, commission_rate=Decimal("15")
         )
         self.kebab = Product.objects.create(vendor=self.store, name_ar="كباب", name_en="Kebab", price=9000)
@@ -57,23 +58,37 @@ class StoreTestCase(TestCase):
 
 
 class TeamTests(StoreTestCase):
-    def test_owner_adds_a_cashier_by_phone(self):
+    def test_owner_invites_a_cashier_who_joins_on_accepting(self):
         response = self.client.post(
             f"/api/vendors/{self.store.pk}/team/", {"phone": "0780 111 2233", "name": "Sara", "role": "cashier"}, format="json"
         )
         self.assertEqual(response.status_code, 201, response.data)
-        cashier = User.objects.get(phone="+9647801112233")
-        self.assertEqual(cashier.role, User.Role.VENDOR)
+        # Nothing is created for the number until its owner says yes.
+        self.assertFalse(User.objects.filter(phone="+9647801112233").exists())
         team = self.client.get(f"/api/vendors/{self.store.pk}/team/").data
         self.assertEqual(team["owner"]["role"], "owner")
-        self.assertEqual([m["name"] for m in team["members"]], ["Sara"])
+        self.assertEqual(team["members"], [])
+        self.assertEqual([(i["name"], i["role"]) for i in team["invites"]], [("Sara", "cashier")])
 
-    def test_customers_cant_be_added_and_nobody_twice(self):
+        sara = User.objects.create_user("+9647801112233")  # signs in for the first time
+        self.client.force_authenticate(sara)
+        invite = self.client.get("/api/store-invites/").data[0]
+        self.assertEqual(invite["store"]["name"], "Tigris Grill")
+        self.assertEqual(self.client.post(f"/api/store-invites/{invite['id']}/accept/").status_code, 200)
+        sara.refresh_from_db()
+        self.assertEqual((sara.role, sara.name), (User.Role.VENDOR, "Sara"))
+        self.assertEqual(self.client.get("/api/vendors/mine/").data[0]["my_role"], "cashier")
+
+    def test_customers_with_orders_cant_be_invited_and_nobody_twice(self):
+        self.order(timezone.now())  # 07700000701 is a real customer
         response = self.client.post(f"/api/vendors/{self.store.pk}/team/", {"phone": "07700000701"}, format="json")
         self.assertEqual(response.data["error"], "phone_in_use")
         self.member("cashier")
         response = self.client.post(f"/api/vendors/{self.store.pk}/team/", {"phone": "07800000702"}, format="json")
         self.assertEqual(response.data["error"], "already_member")
+        self.client.post(f"/api/vendors/{self.store.pk}/team/", {"phone": "07800000799"}, format="json")
+        response = self.client.post(f"/api/vendors/{self.store.pk}/team/", {"phone": "07800000799"}, format="json")
+        self.assertEqual(response.data["error"], "already_invited")
 
     def test_cashiers_run_orders_but_not_menu_reports_billing_or_team(self):
         cashier = self.member("cashier")

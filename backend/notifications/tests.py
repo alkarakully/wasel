@@ -130,7 +130,7 @@ class OrderFlowPushTests(PushTestCase):
         super().setUp()
         owner = User.objects.create_user(phone="+9647800000502", role=User.Role.VENDOR)
         self.owner = owner
-        store = Vendor.objects.create(owner=owner, name="Tigris Grill", location=Point(44.4009, 33.3406, srid=4326), is_open=True)
+        store = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=owner, name="Tigris Grill", location=Point(44.4009, 33.3406, srid=4326), is_open=True)
         self.order = Order.objects.create(
             customer=self.customer, vendor=store, delivery_address="Karrada", delivery_location=Point(44.4009, 33.3496, srid=4326)
         )

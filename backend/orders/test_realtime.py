@@ -22,6 +22,7 @@ class OrderUpdatesSocketTests(TransactionTestCase):
         self.owner = User.objects.create_user(phone="+9647800000052", role=User.Role.VENDOR)
         self.captain = User.objects.create_user(phone="+9647500000053", role=User.Role.CAPTAIN)
         self.vendor = Vendor.objects.create(
+            status=Vendor.Status.APPROVED,
             owner=self.owner, name="Socket Grill", location=Point(44.4009, 33.3406, srid=4326), is_open=True
         )
         self.product = Product.objects.create(vendor=self.vendor, name_ar="تكة", price=9000)

@@ -39,6 +39,21 @@ MESSAGES = {
         "ku": ("داواکاری #{order_id} هەڵوەشێنرایەوە", "کڕیار داواکارییەکەی لە {store} هەڵوەشاندەوە. ئامادەی مەکە."),
         "en": ("Order #{order_id} was cancelled", "The customer cancelled their order from {store}. Don't prepare it."),
     },
+    "store_approved": {
+        "ar": ("تمت الموافقة على {store}", "متجرك جاهز على واصل. أضف قائمتك وافتح المتجر لاستقبال الطلبات."),
+        "ku": ("{store} پەسەند کرا", "دووکانەکەت لە واصل ئامادەیە. لیستەکەت زیاد بکە و دووکان بکەرەوە بۆ وەرگرتنی داواکاری."),
+        "en": ("{store} is approved", "Your store is ready on Wasel. Add your menu and open the store to take orders."),
+    },
+    "store_rejected": {
+        "ar": ("لم نوافق على {store}", "{reason}"),
+        "ku": ("{store} پەسەند نەکرا", "{reason}"),
+        "en": ("{store} wasn't approved", "{reason}"),
+    },
+    "store_invite": {
+        "ar": ("دعوة للانضمام إلى {store}", "سجّل الدخول إلى تطبيق المتجر لقبول الدعوة أو رفضها."),
+        "ku": ("بانگهێشت بۆ بەشداریکردن لە {store}", "بچۆ ژوورەوە بۆ ئەپی دووکان بۆ قبوڵکردن یان ڕەتکردنەوەی بانگهێشتەکە."),
+        "en": ("You're invited to join {store}", "Sign in to the store app to accept or decline."),
+    },
     "plus_trial_ended": {
         "ar": ("انتهت تجربة واصل بلس", "اشترك للاستمرار في التوصيل المجاني."),
         "ku": ("تاقیکردنەوەی واصل پلەس کۆتایی هات", "بەشداربە بۆ بەردەوامبوونی گەیاندنی بەخۆڕایی."),

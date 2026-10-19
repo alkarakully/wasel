@@ -21,7 +21,7 @@ class StuckOrderTests(TestCase):
         self.customer = User.objects.create_user(phone="+9647700000060")
         self.captain = User.objects.create_user(phone="+9647500000061", role=User.Role.CAPTAIN)
         owner = User.objects.create_user(phone="+9647800000062", role=User.Role.VENDOR)
-        self.vendor = Vendor.objects.create(owner=owner, name="Slow Grill", location=BAGHDAD, is_open=True)
+        self.vendor = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=owner, name="Slow Grill", location=BAGHDAD, is_open=True)
         self.now = timezone.now()
 
     def order(self, minutes_old=0, **fields):

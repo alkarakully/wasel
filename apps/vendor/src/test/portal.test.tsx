@@ -115,27 +115,78 @@ describe('MenuView', () => {
   })
 })
 
+/** A fetch stand-in answering the login flow; `routes` adds or overrides answers by URL part. */
+function loginFetch(role: string, routes: Record<string, unknown> = {}) {
+  const answers: Record<string, unknown> = {
+    'otp/request': { phone: '+9647701234567', channel: 'whatsapp', resend_in: 60 },
+    'otp/verify': { token: 't', user: { id: 1, phone: '+9647701234567', name: '', role } },
+    'store-invites': [],
+    'vendors/mine': [],
+    'store-applications': { can_apply: true, reason: null, applications: [] },
+    ...routes,
+  }
+  return vi.fn(async (url: string) => {
+    const key = Object.keys(answers).find((part) => url.includes(part))
+    const body = key ? answers[key] : null
+    return new Response(body ? JSON.stringify(body) : null, { status: body ? 200 : 204 })
+  })
+}
+
+async function signIn(join = false) {
+  if (join) {
+    await userEvent.click(screen.getByRole('button', { name: 'Join Wasel as a store' }))
+    expect(screen.getByRole('heading', { name: 'Join Wasel' })).toBeInTheDocument()
+  }
+  await userEvent.type(screen.getByLabelText('Phone number'), '07701234567')
+  await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
+  await userEvent.type(await screen.findByLabelText('Login code'), '482913')
+}
+
 describe('Login', () => {
-  it('refuses accounts that are not stores', async () => {
-    const fetchMock = vi.fn(async (url: string) => {
-      const body = url.includes('request')
-        ? { phone: '+9647701234567', channel: 'whatsapp', resend_in: 60 }
-        : url.includes('verify')
-          ? { token: 't', user: { id: 1, phone: '+9647701234567', name: '', role: 'customer' } }
-          : null
-      return new Response(body ? JSON.stringify(body) : null, { status: body ? 200 : 204 })
-    })
+  it('refuses accounts that are not stores, pointing to joining', async () => {
+    const fetchMock = loginFetch('customer')
     vi.stubGlobal('fetch', fetchMock)
     const onSignedIn = vi.fn()
     inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
+    await signIn()
 
-    await userEvent.type(screen.getByLabelText('Phone number'), '07701234567')
-    await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
-    await userEvent.type(await screen.findByLabelText('Login code'), '482913')
-
-    expect(await screen.findByRole('alert')).toHaveTextContent("This number isn't a store account.")
+    expect(await screen.findByRole('alert')).toHaveTextContent("This number isn't a store account yet. Choose “Join Wasel as a store”")
     expect(onSignedIn).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout/', expect.anything())
+    vi.unstubAllGlobals()
+  })
+
+  it('lets a new number join and fill in its first store', async () => {
+    vi.stubGlobal('fetch', loginFetch('customer'))
+    const onSignedIn = vi.fn()
+    inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
+    await signIn(true)
+
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
+    expect(onSignedIn).toHaveBeenCalledWith('t', expect.objectContaining({ role: 'customer' }), { kind: 'apply' }, true)
+    vi.unstubAllGlobals()
+  })
+
+  it("won't turn a customer with orders into a store", async () => {
+    const fetchMock = loginFetch('customer', {
+      'store-applications': { can_apply: false, reason: 'phone_in_use', applications: [] },
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    inLang(<Login api={new Api(null)} onSignedIn={vi.fn()} setLang={vi.fn()} />)
+    await signIn(true)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign your store up with another number.')
+    expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout/', expect.anything())
+    vi.unstubAllGlobals()
+  })
+
+  it('shows team invites first, even to a brand-new number', async () => {
+    const invite = { id: 4, store: { id: 1, name: 'Tigris Grill', type: 'restaurant' }, role: 'cashier', invited_by: 'Ali', created_at: '' }
+    vi.stubGlobal('fetch', loginFetch('customer', { 'store-invites': [invite] }))
+    const onSignedIn = vi.fn()
+    inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
+    await signIn()
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
+    expect(onSignedIn.mock.calls[0][2]).toEqual({ kind: 'invites', invites: [invite] })
     vi.unstubAllGlobals()
   })
 })

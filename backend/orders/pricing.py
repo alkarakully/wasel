@@ -177,7 +177,12 @@ def _pick_offer(vendor, offer_id, subtotal, delivery_fee, at):
 def build_quote(customer, vendor_id, items, delivery_point, offer_id=None, tip=0, at=None):
     at = at or timezone.now()
 
-    vendor = Vendor.objects.annotate(distance=Distance("location", delivery_point)).filter(pk=vendor_id).first()
+    # Stores waiting for approval don't exist as far as customers can tell.
+    vendor = (
+        Vendor.objects.annotate(distance=Distance("location", delivery_point))
+        .filter(pk=vendor_id, status=Vendor.Status.APPROVED)
+        .first()
+    )
     if vendor is None:
         raise PricingError("vendor_not_found", "This store doesn't exist.")
     if not vendor.is_open:

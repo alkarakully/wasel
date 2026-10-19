@@ -1,8 +1,9 @@
 """
 Store self-service for the portal: the team, the menu and opening hours.
 
-  GET/POST     /api/vendors/{id}/team/             owner
+  GET/POST     /api/vendors/{id}/team/             owner (POST invites someone)
   PATCH/DELETE /api/vendors/{id}/team/{member}/    owner
+  DELETE       /api/vendors/{id}/team/invites/{invite}/  owner (cancels an invite)
   POST         /api/vendors/{id}/products/         owner, manager
   PATCH/DELETE /api/products/{id}/                 owner, manager
   PUT          /api/vendors/{id}/hours/            owner, manager
@@ -10,7 +11,7 @@ Store self-service for the portal: the team, the menu and opening hours.
 
 import re
 
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, serializers
 from rest_framework.response import Response
@@ -18,9 +19,11 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 from accounts.phone import InvalidPhone, normalize_iraqi_phone
+from notifications.push import notify
 
 from . import access
-from .models import Product, StoreMember, Vendor
+from .models import Product, StoreInvite, StoreMember, Vendor
+from .onboarding import store_account_problem
 from .serializers import ProductSerializer
 
 DAYS = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"]
@@ -70,8 +73,21 @@ class AddMemberSerializer(serializers.Serializer):
             raise serializers.ValidationError(str(error)) from error
 
 
+def _invite_row(invite):
+    return {
+        "id": invite.pk,
+        "phone": invite.phone,
+        "name": invite.name,
+        "role": invite.role,
+        "created_at": invite.created_at.isoformat(),
+    }
+
+
 class TeamView(StoreView):
-    """The owner adds managers and cashiers by phone; they sign in with a code."""
+    """
+    The owner invites managers and cashiers by phone. They join when they
+    accept, the next time they sign in to the portal or the tablet app.
+    """
 
     area = "team"
 
@@ -81,10 +97,12 @@ class TeamView(StoreView):
             return _denied("team")
         owner = store.owner
         members = store.members.select_related("user")
+        invites = store.invites.filter(status=StoreInvite.Status.PENDING)
         return Response(
             {
                 "owner": {"user": owner.pk, "phone": owner.phone, "name": owner.name, "role": access.OWNER},
                 "members": [_member_row(m) for m in members],
+                "invites": [_invite_row(i) for i in invites],
             }
         )
 
@@ -98,23 +116,41 @@ class TeamView(StoreView):
         phone, role = data.validated_data["phone"], data.validated_data["role"]
         name = data.validated_data.get("name", "")
 
-        with transaction.atomic():
-            user = User.objects.filter(phone=phone).first()
-            if user is None:
-                user = User.objects.create_user(phone, name=name, role=User.Role.VENDOR)
-            elif user.role != User.Role.VENDOR or user.is_staff:
-                # A customer or captain account can't double as store staff.
-                return Response(
-                    {"error": "phone_in_use", "detail": "This number is already used by another kind of account."},
-                    status=400,
+        user = User.objects.filter(phone=phone).first()
+        if user is not None and store_account_problem(user):
+            # A customer, captain or staff account can't double as store staff.
+            return Response(
+                {"error": "phone_in_use", "detail": "This number is already used by another kind of account."},
+                status=400,
+            )
+        if user is not None and (user.pk == store.owner_id or store.members.filter(user=user).exists()):
+            return Response({"error": "already_member", "detail": "This person is already on the team."}, status=400)
+        try:
+            with transaction.atomic():
+                invite = StoreInvite.objects.create(
+                    vendor=store, phone=phone, name=name, role=role, invited_by=request.user
                 )
-            if user.pk == store.owner_id or store.members.filter(user=user).exists():
-                return Response({"error": "already_member", "detail": "This person is already on the team."}, status=400)
-            if name and not user.name:
-                user.name = name
-                user.save(update_fields=["name"])
-            member = StoreMember.objects.create(vendor=store, user=user, role=role)
-        return Response(_member_row(member), status=201)
+                if user is not None:
+                    notify(user.pk, "store", "store_invite", store=store.name, invite_id=invite.pk)
+        except IntegrityError:
+            # One open invite per number per store.
+            return Response(
+                {"error": "already_invited", "detail": "This number already has an invite waiting."}, status=400
+            )
+        return Response(_invite_row(invite), status=201)
+
+
+class InviteView(StoreView):
+    area = "team"
+
+    def delete(self, request, pk, invite_id):
+        store = self.store(request, pk)
+        if store is None:
+            return _denied("team")
+        invite = get_object_or_404(StoreInvite, pk=invite_id, vendor=store, status=StoreInvite.Status.PENDING)
+        invite.status = StoreInvite.Status.CANCELLED
+        invite.save(update_fields=["status"])
+        return Response(status=204)
 
 
 class RoleSerializer(serializers.Serializer):

@@ -25,7 +25,7 @@ class TrackingSetup:
         self.customer = User.objects.create_user(phone="+9647700000080")
         self.owner = User.objects.create_user(phone="+9647800000081", role=User.Role.VENDOR)
         self.captain = User.objects.create_user(phone="+9647500000082", role=User.Role.CAPTAIN)
-        self.vendor = Vendor.objects.create(owner=self.owner, name="Map Grill", location=STORE, is_open=True)
+        self.vendor = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=self.owner, name="Map Grill", location=STORE, is_open=True)
 
     def make_order(self, **fields):
         fields.setdefault("captain", self.captain)

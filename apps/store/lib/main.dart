@@ -5,6 +5,7 @@ import 'package:wasel_core/wasel_core.dart';
 
 import 'print/printer.dart';
 import 'screens/home_screen.dart';
+import 'screens/invites_screen.dart';
 import 'state/alarm.dart';
 import 'state/board.dart';
 import 'state/store_session.dart';
@@ -20,8 +21,14 @@ void main() {
   final board = StoreBoard(api, live);
   final alarm = OrderAlarm();
 
-  // Tapping a new-order notification opens the board fresh.
-  push.onOpen = (_) => board.reload();
+  // Tapping a new-order notification opens the board fresh; an invite
+  // notification brings the invites back up.
+  push.onOpen = (data) =>
+      data['kind'] == 'store_invite' ? session.loadInvites() : board.reload();
+  session.onJoinedStore = () {
+    board.loadStores();
+    board.reload();
+  };
   session.addListener(() {
     if (session.signedIn) {
       live.start();
@@ -88,14 +95,19 @@ class StoreApp extends StatelessWidget {
           ],
           theme: waselTheme(Brightness.light),
           darkTheme: waselTheme(Brightness.dark),
-          home: !session.loaded
+          home: !session.loaded || (session.signedIn && session.invites == null)
               ? BrandSplash(caption: S.read(context).t('orders'))
-              : session.signedIn
-              ? const HomeScreen()
-              : LoginScreen(
-                  acceptUser: (user) => user.role == 'vendor',
+              : !session.signedIn
+              ? LoginScreen(
+                  // Store accounts, and new numbers someone invited to a team.
+                  admitUser: (api, user) async =>
+                      user.role == 'vendor' ||
+                      (await api.storeInvites()).isNotEmpty,
                   rejectedError: 'err_not_store',
-                ),
+                )
+              : session.invites!.isNotEmpty
+              ? const InvitesScreen()
+              : const HomeScreen(),
         ),
       ),
     );

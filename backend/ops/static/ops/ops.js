@@ -6,6 +6,13 @@
 
   var STRINGS = {
     ar: {
+      applications: "طلبات الانضمام", app_pending: "بانتظار المراجعة", app_rejected: "مرفوضة", app_approved: "مقبولة",
+      newOwner: "متجر جديد", newBranch: "فرع جديد", approve: "موافقة", reject: "رفض", confirmReject: "تأكيد الرفض", cancel: "إلغاء",
+      rejectReason: "سبب الرفض (يراه صاحب المتجر)", commissionPct: "العمولة ٪", radius: "يوصّل حتى {n} كم", appliedAgo: "قدّم {t}",
+      noApplications: "لا توجد طلبات هنا.", rejectedBecause: "سبب الرفض: {r}", reviewedBy: "راجعه {who} {t}", onMap: "على الخريطة",
+      type_restaurant: "مطعم", type_supermarket: "سوبرماركت", c_popular: "شعبي", c_eastern: "شرقي", c_western: "غربي",
+      c_fast_food: "وجبات سريعة", c_sweets: "حلويات", c_drinks: "مشروبات", agoMin: "قبل {n} د", agoHour: "قبل {n} س", agoDay: "قبل {n} يوم",
+      reviewFailed: "تعذّر الحفظ. حاول مرة أخرى.",
       payouts: "المدفوعات", dueToStores: "مستحق للمتاجر", weeklyNote: "كشف أسبوعي من السبت إلى الجمعة لكل متجر.", due: "مستحق", paid: "مدفوع",
       closeWeeks: "إنشاء الكشوفات المتأخرة", statements: "الكشوفات", week: "الأسبوع", foodSales: "مبيعات الطعام", payout: "المستحق",
       markPaid: "تم الدفع", reference: "رقم التحويل", noStatements: "لا توجد كشوفات هنا.", madeStatements: "أُنشئ {n} كشف",
@@ -27,6 +34,13 @@
       connection: "تعذّر تحديث البيانات. نعيد المحاولة...", sales: "المبيعات", currency: "د.ع", unassigned: "—",
     },
     ku: {
+      applications: "داواکاری بەشداربوون", app_pending: "چاوەڕێی پێداچوونەوە", app_rejected: "ڕەتکراوە", app_approved: "پەسەندکراو",
+      newOwner: "دووکانی نوێ", newBranch: "لقی نوێ", approve: "پەسەندکردن", reject: "ڕەتکردنەوە", confirmReject: "دڵنیاکردنەوەی ڕەتکردنەوە", cancel: "پاشگەزبوونەوە",
+      rejectReason: "هۆکاری ڕەتکردنەوە (خاوەن دووکان دەیبینێت)", commissionPct: "کۆمیسیۆن ٪", radius: "تا {n} کم دەگەیەنێت", appliedAgo: "داواکرا {t}",
+      noApplications: "هیچ داواکارییەک نییە.", rejectedBecause: "هۆکاری ڕەتکردنەوە: {r}", reviewedBy: "{who} پێداچووەوە {t}", onMap: "لەسەر نەخشە",
+      type_restaurant: "چێشتخانە", type_supermarket: "سوپەرمارکێت", c_popular: "میللی", c_eastern: "ڕۆژهەڵاتی", c_western: "ڕۆژئاوایی",
+      c_fast_food: "خواردنی خێرا", c_sweets: "شیرینی", c_drinks: "خواردنەوە", agoMin: "پێش {n} خ", agoHour: "پێش {n} ک", agoDay: "پێش {n} ڕۆژ",
+      reviewFailed: "پاشەکەوت نەکرا. دووبارە هەوڵ بدە.",
       payouts: "پارەدانەکان", dueToStores: "قەرزی دووکانەکان", weeklyNote: "کەشفی هەفتانە لە شەممە تا هەینی بۆ هەر دووکانێک.", due: "ماوە", paid: "دراوە",
       closeWeeks: "دروستکردنی کەشفە دواکەوتووەکان", statements: "کەشفەکان", week: "هەفتە", foodSales: "فرۆشی خواردن", payout: "شایستە",
       markPaid: "درا", reference: "ژمارەی گواستنەوە", noStatements: "هیچ کەشفێک نییە.", madeStatements: "{n} کەشف دروستکرا",
@@ -48,6 +62,13 @@
       connection: "نوێکردنەوە سەرکەوتوو نەبوو. هەوڵ دەدەینەوە...", sales: "فرۆش", currency: "د.ع", unassigned: "—",
     },
     en: {
+      applications: "Applications", app_pending: "Waiting", app_rejected: "Rejected", app_approved: "Approved",
+      newOwner: "New store", newBranch: "New branch", approve: "Approve", reject: "Reject", confirmReject: "Reject store", cancel: "Cancel",
+      rejectReason: "Reason (the owner sees this)", commissionPct: "Commission %", radius: "Delivers up to {n} km", appliedAgo: "Applied {t}",
+      noApplications: "No applications here.", rejectedBecause: "Rejected: {r}", reviewedBy: "Reviewed by {who} {t}", onMap: "On the map",
+      type_restaurant: "Restaurant", type_supermarket: "Supermarket", c_popular: "Popular", c_eastern: "Eastern", c_western: "Western",
+      c_fast_food: "Fast food", c_sweets: "Sweets", c_drinks: "Drinks", agoMin: "{n} min ago", agoHour: "{n} h ago", agoDay: "{n} days ago",
+      reviewFailed: "Couldn't save. Try again.",
       payouts: "Payouts", dueToStores: "Due to stores", weeklyNote: "One statement per store each week, Saturday to Friday.", due: "Due", paid: "Paid",
       closeWeeks: "Make missing statements", statements: "Statements", week: "Week", foodSales: "Food sales", payout: "Payout",
       markPaid: "Mark paid", reference: "Transfer number", noStatements: "No statements here.", madeStatements: "{n} statements made",
@@ -79,6 +100,10 @@
   var map = null;
   var markers = {};
   var fitted = false;
+
+  // The Django admin's address comes from settings (DJANGO_ADMIN_PATH), so the page passes it in.
+  var ADMIN = document.body.dataset.admin || "/django-admin/";
+  var LOGIN = document.body.dataset.login || ADMIN + "login/?next=/ops/";
 
   function $(id) { return document.getElementById(id); }
   function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
@@ -125,7 +150,7 @@
     }
     return fetch("/api/ops/" + path, options).then(function (response) {
       if (response.status === 401 || response.status === 403) {
-        window.location.href = "/admin/login/?next=/ops/";
+        window.location.href = LOGIN;
         throw new Error("signed out");
       }
       if (!response.ok) throw new Error("HTTP " + response.status);
@@ -171,6 +196,9 @@
     var counter = $("count-orders");
     counter.hidden = !live.active_orders;
     counter.textContent = live.active_orders;
+    var waiting = $("count-applications");
+    waiting.hidden = !live.applications;
+    waiting.textContent = live.applications;
 
     var pipeline = $("pipeline");
     pipeline.replaceChildren();
@@ -218,7 +246,7 @@
           el("strong", { text: "#" + alert.order + " · " + alert.store }),
           el("span", { class: "muted", text: t("r_" + alert.reason) + " · " + t("minutes", { n: alert.minutes }) }),
         ]),
-        editLink("/admin/orders/order/" + alert.order + "/change/"),
+        editLink(ADMIN + "orders/order/" + alert.order + "/change/"),
         done,
       ]));
     });
@@ -242,7 +270,7 @@
         el("td", { dir: "auto", text: order.captain || t("unassigned") }),
         el("td", { class: "num", text: money(order.total) }),
         el("td", { class: "num" + (late ? " late-text" : ""), text: t("minutes", { n: order.minutes }) }),
-        el("td", {}, [editLink("/admin/orders/order/" + order.id + "/change/")]),
+        el("td", {}, [editLink(ADMIN + "orders/order/" + order.id + "/change/")]),
       ]));
     });
   }
@@ -324,10 +352,173 @@
           api("stores/" + store.id + "/open/", { is_open: on }).then(refresh, function () { input.checked = !on; })
             .finally(function () { input.disabled = false; });
         })]),
-        el("td", {}, [editLink("/admin/vendors/vendor/" + store.id + "/change/")]),
+        el("td", {}, [editLink(ADMIN + "vendors/vendor/" + store.id + "/change/")]),
       ]));
     });
   }
+
+  // --- Store applications ----------------------------------------------------------
+
+  var appStatus = "pending";
+  var appMap = null;
+  var appMarkers = {};
+  var appFramed = "";
+
+  function ago(iso) {
+    var minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+    if (minutes < 60) return t("agoMin", { n: minutes });
+    if (minutes < 60 * 24) return t("agoHour", { n: Math.round(minutes / 60) });
+    return t("agoDay", { n: Math.round(minutes / 1440) });
+  }
+
+  function ensureAppMap() {
+    if (appMap || !window.maplibregl) return;
+    var styles = JSON.parse($("map-styles").textContent);
+    var dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    appMap = new maplibregl.Map({
+      container: "app-map",
+      style: dark ? styles.dark : styles.light,
+      center: [44.4214, 33.3045],
+      zoom: 10,
+      attributionControl: { compact: true },
+    });
+    appMap.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-left");
+  }
+
+  function focusOnMap(app) {
+    if (!appMap) return;
+    appMap.flyTo({ center: [app.lng, app.lat], zoom: 14 });
+    Object.keys(appMarkers).forEach(function (id) {
+      appMarkers[id].getElement().classList.toggle("on", String(id) === String(app.id));
+    });
+  }
+
+  function reviewActions(app, card) {
+    var problem = el("p", { class: "review-error", role: "alert", hidden: "" });
+    var fail = function (button) {
+      return function () {
+        button.disabled = false;
+        problem.textContent = t("reviewFailed");
+        problem.hidden = false;
+      };
+    };
+
+    var rate = el("input", {
+      type: "number", class: "rate-input", min: "0", max: "100", step: "0.5", value: "15", dir: "ltr",
+      "aria-label": t("commissionPct") + " · " + app.name,
+    });
+    var approve = el("button", { type: "button", class: "small primary-small" }, [icon("check"), " ", t("approve")]);
+    approve.addEventListener("click", function () {
+      approve.disabled = true;
+      api("applications/" + app.id + "/approve/", { commission_rate: rate.value || "15" }).then(refresh, fail(approve));
+    });
+    var approveRow = el("div", { class: "review-row" }, [
+      el("label", { class: "rate" }, [el("span", { class: "muted", text: t("commissionPct") }), rate]),
+      approve,
+    ]);
+    if (app.status !== "pending") return el("div", { class: "review" }, [approveRow, problem]);
+
+    var reason = el("textarea", { class: "reason-input", rows: "2", maxlength: "300", placeholder: t("rejectReason"), "aria-label": t("rejectReason") });
+    var confirm = el("button", { type: "button", class: "small danger-small", text: t("confirmReject") });
+    var cancel = el("button", { type: "button", class: "small", text: t("cancel") });
+    var rejectForm = el("div", { class: "reject-form", hidden: "" }, [reason, el("div", { class: "review-row" }, [cancel, confirm])]);
+    var reject = el("button", { type: "button", class: "small" }, [icon("x"), " ", t("reject")]);
+    approveRow.appendChild(reject);
+
+    reject.addEventListener("click", function () {
+      rejectForm.hidden = false;
+      card.classList.add("editing");
+      reason.focus();
+    });
+    cancel.addEventListener("click", function () {
+      rejectForm.hidden = true;
+      card.classList.remove("editing");
+    });
+    confirm.addEventListener("click", function () {
+      if (!reason.value.trim()) { reason.focus(); return; }
+      confirm.disabled = true;
+      api("applications/" + app.id + "/reject/", { reason: reason.value.trim() })
+        .then(function () { card.classList.remove("editing"); return refresh(); }, fail(confirm));
+    });
+    return el("div", { class: "review" }, [approveRow, rejectForm, problem]);
+  }
+
+  function renderApplications(data) {
+    Object.keys(data.counts).forEach(function (status) {
+      var count = $("app-count-" + status);
+      if (count) count.textContent = number(data.counts[status]);
+    });
+    var list = $("applications");
+    // Don't wipe a commission or reason someone is typing on the 10-second refresh.
+    if (list.contains(document.activeElement) && document.activeElement.matches("input, textarea")) return;
+    if (list.querySelector(".editing")) return;
+    var edited = Array.prototype.some.call(list.querySelectorAll(".rate-input"), function (input) { return input.value !== "15"; });
+    if (edited) return;
+
+    list.replaceChildren();
+    if (!data.results.length) list.appendChild(empty(t("noApplications")));
+    var seen = {};
+    data.results.forEach(function (app, i) {
+      var card = el("li", { class: "application", style: "--i:" + Math.min(i, 12) });
+      var kind = t("type_" + app.type) + (app.cuisine ? " · " + t("c_" + app.cuisine) : "");
+      var where = el("button", { type: "button", class: "link-button" }, [icon("map-pin"), " ", t("onMap")]);
+      where.addEventListener("click", function () { focusOnMap(app); });
+      var notes = [];
+      if (app.status === "rejected") notes.push(el("p", { class: "note warn-note", dir: "auto", text: t("rejectedBecause", { r: app.rejection_reason }) }));
+      if (app.reviewed_at) notes.push(el("p", { class: "muted small-text", text: t("reviewedBy", { who: app.reviewed_by || "—", t: ago(app.reviewed_at) }) }));
+      [
+        el("div", { class: "app-head" }, [
+          el("span", { class: "app-icon" }, [icon(app.type === "supermarket" ? "basket" : "fork-knife")]),
+          el("div", { class: "grow" }, [
+            el("strong", { dir: "auto", text: app.name }),
+            el("span", { class: "muted", text: kind }),
+          ]),
+          el("span", { class: "chip " + (app.new_branch ? "role-captain" : "warn"), text: t(app.new_branch ? "newBranch" : "newOwner") }),
+        ]),
+        el("dl", { class: "app-facts" }, [
+          el("dt", {}, [icon("user")]), el("dd", {}, [
+            el("span", { dir: "auto", text: app.owner.name || "—" }), " · ", el("bdi", { dir: "ltr", text: app.owner.phone }),
+          ]),
+          el("dt", {}, [icon("map-trifold")]), el("dd", { dir: "auto", text: app.address }),
+          el("dt", {}, [icon("moped")]), el("dd", {}, [t("radius", { n: app.delivery_radius_km }), " · ", where]),
+          el("dt", {}, [icon("clock")]), el("dd", { text: t("appliedAgo", { t: ago(app.created_at) }) }),
+        ]),
+      ].concat(notes).forEach(function (node) { card.appendChild(node); });
+      if (app.status !== "approved") card.appendChild(reviewActions(app, card));
+      else card.appendChild(el("p", { class: "muted small-text", text: t("commission") + ": " + app.commission_rate + "%" }));
+      list.appendChild(card);
+
+      if (appMap) {
+        seen[app.id] = true;
+        if (!appMarkers[app.id]) {
+          var pin = el("div", { class: "cap-marker app-marker", title: app.name }, [icon(app.type === "supermarket" ? "basket" : "storefront")]);
+          pin.addEventListener("click", function () { card.scrollIntoView({ behavior: "smooth", block: "center" }); });
+          appMarkers[app.id] = new maplibregl.Marker({ element: pin }).setLngLat([app.lng, app.lat]).addTo(appMap);
+        }
+      }
+    });
+    Object.keys(appMarkers).forEach(function (id) {
+      if (!seen[id]) { appMarkers[id].remove(); delete appMarkers[id]; }
+    });
+    // Frame the pins when the list changes; between changes staff pan freely.
+    var key = appStatus + ":" + data.results.map(function (app) { return app.id; }).join(",");
+    if (appMap && data.results.length && key !== appFramed) {
+      appFramed = key;
+      var bounds = new maplibregl.LngLatBounds();
+      data.results.forEach(function (app) { bounds.extend([app.lng, app.lat]); });
+      appMap.fitBounds(bounds, { padding: 80, maxZoom: 13, duration: 0 });
+    }
+  }
+
+  document.querySelectorAll("#app-filter button").forEach(function (button) {
+    button.addEventListener("click", function () {
+      appStatus = button.dataset.status;
+      document.querySelectorAll("#app-filter button").forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b === button));
+      });
+      refresh();
+    });
+  });
 
   // --- Payouts -----------------------------------------------------------------------
 
@@ -409,7 +600,7 @@
           api("users/" + user.id + "/active/", { is_active: on }).then(refresh, function () { input.checked = !on; })
             .finally(function () { input.disabled = false; });
         })]),
-        el("td", {}, [editLink("/admin/accounts/user/" + user.id + "/change/")]),
+        el("td", {}, [editLink(ADMIN + "accounts/user/" + user.id + "/change/")]),
       ]));
     });
   }
@@ -425,6 +616,7 @@
     if (view === "orders") loads.push(api("orders/").then(renderOrders));
     if (view === "captains") { ensureMap(); loads.push(api("captains/").then(renderCaptains)); }
     if (view === "stores") loads.push(api("stores/").then(renderStores));
+    if (view === "applications") { ensureAppMap(); loads.push(api("applications/?status=" + appStatus).then(renderApplications)); }
     if (view === "payouts") loads.push(api("payouts/" + (payoutStatus ? "?status=" + payoutStatus : "")).then(renderPayouts));
     if (view === "users") {
       var params = new URLSearchParams();
@@ -455,6 +647,7 @@
     write("wasel_ops_view", name);
     if (!quiet) refresh();
     if (name === "captains" && map) setTimeout(function () { map.resize(); }, 0);
+    if (name === "applications" && appMap) setTimeout(function () { appMap.resize(); }, 0);
   }
 
   function applyLanguage(code) {

@@ -11,7 +11,8 @@ from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferVie
 from notifications.views import DeviceView
 from billing.api import BillingView, CloseWeeksView, MarkPaidView, StatementView
 from billing.api import PayoutsView as BillingPayouts
-from vendors.manage import HoursView, MemberView, ProductsView, ProductView, TeamView
+from vendors.manage import HoursView, InviteView, MemberView, ProductsView, ProductView, TeamView
+from vendors.onboarding import AnswerInviteView, ApplicationsView, MyInvitesView
 from vendors.reports import ReportView
 from vendors.views import OfferViewSet, ProductAvailabilityView, VendorViewSet
 
@@ -51,12 +52,18 @@ urlpatterns = [
     # Store self-service (team, menu, hours, reports, billing).
     path("api/vendors/<int:pk>/team/", TeamView.as_view(), name="store-team"),
     path("api/vendors/<int:pk>/team/<int:member_id>/", MemberView.as_view(), name="store-member"),
+    path("api/vendors/<int:pk>/team/invites/<int:invite_id>/", InviteView.as_view(), name="store-invite"),
     path("api/vendors/<int:pk>/products/", ProductsView.as_view(), name="store-products"),
     path("api/vendors/<int:pk>/hours/", HoursView.as_view(), name="store-hours"),
     path("api/vendors/<int:pk>/report/", ReportView.as_view(), name="store-report"),
     path("api/vendors/<int:pk>/billing/", BillingView.as_view(), name="store-billing"),
     path("api/vendors/<int:pk>/statements/<int:statement_id>/", StatementView.as_view(), name="store-statement"),
     path("api/products/<int:pk>/", ProductView.as_view(), name="product"),
+    # Onboarding: applying to sell on Wasel and answering team invites.
+    path("api/store-applications/", ApplicationsView.as_view(), name="store-applications"),
+    path("api/store-invites/", MyInvitesView.as_view(), name="my-invites"),
+    path("api/store-invites/<int:pk>/accept/", AnswerInviteView.as_view(answer="accept"), name="invite-accept"),
+    path("api/store-invites/<int:pk>/decline/", AnswerInviteView.as_view(answer="decline"), name="invite-decline"),
     path("api/", include(router.urls)),
     # Staff operations page; signs in through the admin.
     path("ops/", staff_member_required(TemplateView.as_view(template_name="ops/ops.html", extra_context={"map_styles": settings.MAP_STYLES})), name="ops"),

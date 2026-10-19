@@ -2,16 +2,18 @@ import { BellRinging, BellSlash, Printer, SignOut, Storefront } from '@phosphor-
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OrderAlarm } from '../lib/alarm'
-import { Api, ApiError, type Lang, type Order, type Store, type StoreRole, type User } from '../lib/api'
+import { Api, ApiError, type Invite, type Lang, type Order, type Store, type StoreRole, type User } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { useLiveOrders } from '../lib/useLiveOrders'
 import { BillingView } from './BillingView'
 import { Board } from './Board'
 import { HoursEditor } from './HoursEditor'
+import { InviteList } from './Invites'
 import { LanguageSwitch } from './LanguageSwitch'
 import { MenuView } from './MenuView'
 import { PrintSlips } from './PrintSlips'
 import { ReportsView } from './ReportsView'
+import { StoresView } from './StoresView'
 import { TeamView } from './TeamView'
 
 interface Props {
@@ -22,11 +24,11 @@ interface Props {
   setLang: (lang: Lang) => void
 }
 
-type Tab = 'orders' | 'menu' | 'reports' | 'billing' | 'team'
+type Tab = 'orders' | 'menu' | 'reports' | 'billing' | 'team' | 'settings'
 
 /** Which sections each role sees (the server checks the same rules). */
 const TABS: Record<StoreRole, Tab[]> = {
-  owner: ['orders', 'menu', 'reports', 'billing', 'team'],
+  owner: ['orders', 'menu', 'reports', 'billing', 'team', 'settings'],
   manager: ['orders', 'menu', 'reports'],
   cashier: ['orders', 'menu'],
 }
@@ -76,6 +78,12 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
       .catch((e) => e instanceof ApiError && e.code === 'unauthorized' && onUnauthorized())
   }, [api, onUnauthorized])
   useEffect(loadStores, [loadStores])
+
+  // Someone already signed in here may get invited to another store's team.
+  const [invites, setInvites] = useState<Invite[]>([])
+  useEffect(() => {
+    api.myInvites().then(setInvites, () => {})
+  }, [api])
 
   const newOrders = orders.filter((o) => o.status === 'received')
   const ringing = newOrders.some((o) => !silenced.has(o.id))
@@ -206,6 +214,19 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
           </button>
         )}
         {!connected && <p className="banner banner-warn">{t('offline')}</p>}
+        {invites.length > 0 && (
+          <section className="banner-invites plate-card">
+            <h2>{t('invitesTitle')}</h2>
+            <InviteList
+              api={api}
+              invites={invites}
+              onAnswered={(invite, answer) => {
+                setInvites((list) => list.filter((i) => i.id !== invite.id))
+                if (answer === 'accept') loadStores()
+              }}
+            />
+          </section>
+        )}
         {notice && (
           <p className="banner banner-error" role="alert" onClick={() => setNotice(null)}>
             {notice}
@@ -221,6 +242,8 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
           <ReportsView api={api} storeId={store.id} onError={showError} />
         ) : section === 'billing' && store ? (
           <BillingView api={api} storeId={store.id} onError={showError} />
+        ) : section === 'settings' ? (
+          <StoresView api={api} onError={showError} />
         ) : section === 'team' && store ? (
           <TeamView api={api} storeId={store.id} myUserId={user.id} onError={showError} />
         ) : section === 'orders' ? (

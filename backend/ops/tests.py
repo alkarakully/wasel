@@ -19,6 +19,7 @@ class OpsTestCase(TestCase):
         self.captain = User.objects.create_user("+9647500000992", role=User.Role.CAPTAIN, name="Ali")
         owner = User.objects.create_user("+9647800000993", role=User.Role.VENDOR)
         self.store = Vendor.objects.create(
+            status=Vendor.Status.APPROVED,
             owner=owner, name="Tigris Grill", location=BAGHDAD, is_open=True, commission_rate=Decimal("15")
         )
         self.client.force_login(self.staff)

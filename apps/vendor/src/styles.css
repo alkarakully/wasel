@@ -2147,3 +2147,461 @@ select {
     text-align: center;
   }
 }
+
+/* --- Joining Wasel: sign-up, applications, invites --------------------------------- */
+
+.join-switch {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The form is long; the brand panel stays in view beside it. */
+.onboarding .login-brand {
+  position: sticky;
+  top: 12px;
+  height: calc(100dvh - 24px);
+}
+
+.login-panel.wide {
+  max-width: 640px;
+  justify-content: flex-start;
+}
+
+.panel-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding .plate h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  line-height: 1.3;
+}
+
+.onboarding .plate .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Store form */
+.store-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.store-form > label,
+.store-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.store-form .text-input {
+  padding: 12px 14px;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.store-form select.text-input {
+  height: auto;
+  min-height: 50px;
+  line-height: 1.5;
+}
+
+textarea.text-input {
+  resize: vertical;
+  font: inherit;
+  line-height: 1.5;
+}
+
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.field-label-row strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.store-form .help {
+  font-weight: 400;
+}
+
+.store-form .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kind {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.kind legend {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.kind-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline-strong);
+  background: var(--surface);
+  cursor: pointer;
+  transition:
+    border-color 0.2s var(--out),
+    background-color 0.2s var(--out),
+    transform 0.35s var(--spring);
+}
+
+.kind-option svg {
+  color: var(--accent);
+}
+
+.kind-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kind-option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.kind-option:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.kind-option:active {
+  transform: scale(0.98);
+}
+
+.range {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+/* Map picker: the map moves under a fixed pin. */
+.location-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-weight: 400;
+}
+
+.map-frame {
+  position: relative;
+  height: 300px;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  border: 1px solid var(--hairline-strong);
+  background: var(--sunk);
+}
+
+.map-frame.loading {
+  background: linear-gradient(100deg, var(--sunk) 30%, var(--surface) 50%, var(--sunk) 70%) 0 0 / 300% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.map-frame .map {
+  position: absolute;
+  inset: 0;
+}
+
+.map-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -100%);
+  color: var(--accent);
+  filter: drop-shadow(0 4px 6px rgb(11 18 58 / 0.35));
+  pointer-events: none;
+  transition: transform 0.35s var(--spring);
+}
+
+.map-pin.lifted {
+  transform: translate(-50%, calc(-100% - 10px));
+}
+
+.map-pin::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 10px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgb(11 18 58 / 0.35);
+  transform: translateX(-50%);
+}
+
+.map-hint {
+  position: absolute;
+  inset-inline: 56px 12px;
+  top: 12px;
+  margin: 0;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-raised);
+  text-align: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.location-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.secondary.small-button {
+  min-height: 40px;
+  padding: 6px 16px;
+  font-size: 0.9375rem;
+}
+
+/* Waiting for approval */
+.waiting-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.waiting-state .lead {
+  margin: 0;
+  max-width: 44ch;
+}
+
+.status-badge {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+}
+
+.status-badge.pending {
+  background: var(--gold-wash);
+  color: var(--gold-text);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--gold-400) 14%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .status-badge.pending svg {
+    animation: hourglass 2.4s var(--spring) infinite;
+  }
+}
+
+@keyframes hourglass {
+  0%,
+  70% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(180deg);
+  }
+}
+
+.status-badge.rejected {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.applications {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.applications li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--hairline);
+}
+
+.applications li:first-child {
+  border-top: 0;
+}
+
+.applications .store-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.applications .reason {
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: var(--r-sm);
+  background: var(--error-soft);
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.status-chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.status-chip.pending {
+  background: var(--gold-wash);
+  color: var(--gold-text);
+}
+
+.status-chip.approved {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+
+.status-chip.rejected {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.stores-page {
+  max-width: 780px;
+  margin-inline: auto;
+}
+
+.success-note {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.success-note svg {
+  color: var(--success);
+}
+
+/* Invites */
+.invites {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.invite {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  box-shadow: var(--shadow-raised);
+  animation: rise 0.5s var(--out) backwards;
+}
+
+.invite-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-md);
+  color: var(--gold-400);
+}
+
+.invite .grow {
+  flex: 1 1 220px;
+  gap: 2px;
+}
+
+/* Beside the text when there's room, on their own row when not. */
+.invite-actions {
+  display: flex;
+  gap: 8px;
+  margin-inline-start: auto;
+}
+
+.invite-actions button {
+  min-height: 42px;
+  padding: 8px 16px;
+  font-size: 0.9375rem;
+}
+
+.banner-invites {
+  padding: 18px;
+}
+
+.banner-invites .invite {
+  box-shadow: none;
+}
+
+.people li.invited > svg {
+  color: var(--muted);
+}
+
+.role-chip.invited-chip {
+  background: var(--gold-wash);
+  color: var(--gold-text);
+}
+
+@media (max-width: 767px) {
+  .onboarding .login-brand {
+    position: static;
+    height: auto;
+  }
+
+  .kind {
+    grid-template-columns: 1fr;
+  }
+
+  .invite {
+    flex-wrap: wrap;
+  }
+
+  .invite-actions {
+    width: 100%;
+  }
+
+  .invite-actions button {
+    flex: 1;
+  }
+
+  .map-frame {
+    height: 260px;
+  }
+}

@@ -389,3 +389,33 @@ class DispatchOffer {
     expiresAt: DateTime.parse(json['expires_at']),
   );
 }
+
+/// An invite to join a store's team, as the invited person sees it.
+class StoreInvite {
+  StoreInvite({
+    required this.id,
+    required this.storeId,
+    required this.storeName,
+    required this.storeType,
+    required this.role,
+    required this.invitedBy,
+  });
+
+  final int id;
+  final int storeId;
+  final String storeName;
+  final String storeType;
+
+  /// "manager" or "cashier".
+  final String role;
+  final String invitedBy;
+
+  factory StoreInvite.fromJson(Map<String, dynamic> json) => StoreInvite(
+    id: json['id'],
+    storeId: json['store']['id'],
+    storeName: json['store']['name'],
+    storeType: json['store']['type'] ?? 'restaurant',
+    role: json['role'],
+    invitedBy: json['invited_by'] ?? '',
+  );
+}

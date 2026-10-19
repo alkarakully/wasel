@@ -21,7 +21,7 @@ from billing.models import Statement
 from orders.models import Order, OrderItem
 from wasel.asgi import application
 
-from .models import Product, StoreMember, Vendor
+from .models import Product, StoreInvite, StoreMember, Vendor
 
 BAGHDAD = Point(44.4214, 33.3045, srid=4326)
 IN_MEMORY_LAYER = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
@@ -29,7 +29,7 @@ IN_MEMORY_LAYER = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"
 
 def make_store(name, owner_phone):
     owner = User.objects.create_user(owner_phone, role=User.Role.VENDOR, name=f"{name} owner")
-    store = Vendor.objects.create(owner=owner, name=name, location=BAGHDAD, is_open=True, commission_rate=Decimal("15"))
+    store = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=owner, name=name, location=BAGHDAD, is_open=True, commission_rate=Decimal("15"))
     product = Product.objects.create(vendor=store, name_ar="كباب", name_en="Kebab", price=9000)
     return owner, store, product
 
@@ -69,6 +69,9 @@ class CrossStoreTests(TestCase):
             vendor=self.store_b, period_start=start, period_end=start + timedelta(days=6), orders_count=1, payout=7650
         )
         self.everyone_at_a = [self.owner_a, self.manager_a, self.cashier_a]
+        # Store B's open invite and its new branch waiting for approval.
+        self.invite_b = StoreInvite.objects.create(vendor=self.store_b, phone="+9647800000308", role="manager")
+        self.branch_b = Vendor.objects.create(owner=self.owner_b, name="Store B 2", location=BAGHDAD)
 
     def client_for(self, user):
         client = APIClient()
@@ -85,6 +88,11 @@ class CrossStoreTests(TestCase):
             ("team add", "post", f"/api/vendors/{b}/team/", {"phone": "07800000399", "role": "manager"}),
             ("member role", "patch", f"/api/vendors/{b}/team/{self.membership_b.pk}/", {"role": "manager"}),
             ("member remove", "delete", f"/api/vendors/{b}/team/{self.membership_b.pk}/", None),
+            ("invite cancel", "delete", f"/api/vendors/{b}/team/invites/{self.invite_b.pk}/", None),
+            ("invite accept", "post", f"/api/store-invites/{self.invite_b.pk}/accept/", {}),
+            ("invite decline", "post", f"/api/store-invites/{self.invite_b.pk}/decline/", {}),
+            ("pending branch team", "get", f"/api/vendors/{self.branch_b.pk}/team/", None),
+            ("pending branch open", "post", f"/api/vendors/{self.branch_b.pk}/open/", {"is_open": True}),
             ("add item", "post", f"/api/vendors/{b}/products/", {"name_ar": "x", "price": "1000"}),
             ("edit item", "patch", f"/api/products/{prod_b}/", {"price": "1"}),
             ("remove item", "delete", f"/api/products/{prod_b}/", None),
@@ -117,6 +125,8 @@ class CrossStoreTests(TestCase):
         self.assertEqual(self.membership_b.role, "cashier")
         self.assertEqual(self.store_b.products.count(), 1)
         self.assertEqual(self.store_b.members.count(), 1)
+        self.invite_b.refresh_from_db()
+        self.assertEqual(self.invite_b.status, StoreInvite.Status.PENDING)
 
     def test_lists_only_show_your_own_store(self):
         for user in self.everyone_at_a:
@@ -125,6 +135,26 @@ class CrossStoreTests(TestCase):
             self.assertEqual([o["id"] for o in orders], [self.order_a.pk], user.phone)
             stores = client.get("/api/vendors/mine/").data
             self.assertEqual([s["id"] for s in stores], [self.store_a.pk], user.phone)
+
+    def test_applications_and_invites_are_your_own(self):
+        own = self.client_for(self.owner_a).get("/api/store-applications/").data["applications"]
+        self.assertEqual([a["id"] for a in own], [self.store_a.pk])
+        for user in (self.manager_a, self.cashier_a):
+            client = self.client_for(user)
+            self.assertEqual(client.get("/api/store-applications/").data["applications"], [], user.phone)
+            self.assertEqual(client.get("/api/store-invites/").data, [], user.phone)
+        self.assertEqual(self.client_for(self.owner_a).get("/api/store-invites/").data, [])
+
+        # Inviting into your own store never reaches store B's team or invites.
+        response = self.client_for(self.owner_a).post(
+            f"/api/vendors/{self.store_a.pk}/team/", {"phone": "07800000308", "role": "cashier"}, format="json"
+        )
+        self.assertEqual(response.status_code, 201)
+        invitee = User.objects.create_user("+9647800000308", role=User.Role.VENDOR)
+        invites = self.client_for(invitee).get("/api/store-invites/").data
+        self.assertEqual(sorted(i["store"]["id"] for i in invites), sorted([self.store_a.pk, self.store_b.pk]))
+        team_a = self.client_for(self.owner_a).get(f"/api/vendors/{self.store_a.pk}/team/").data
+        self.assertEqual([i["phone"] for i in team_a["invites"]], ["+9647800000308"])
 
     def test_a_statement_id_from_another_store_is_not_found_through_your_own(self):
         response = self.client_for(self.owner_a).get(
@@ -153,7 +183,7 @@ class CrossStoreTests(TestCase):
         for user in (self.owner_a, self.customer):
             client = APIClient()
             client.force_login(user)
-            for path in ("/api/ops/overview/", "/api/ops/orders/", "/api/ops/users/", "/api/ops/payouts/"):
+            for path in ("/api/ops/overview/", "/api/ops/orders/", "/api/ops/users/", "/api/ops/payouts/", "/api/ops/applications/"):
                 self.assertEqual(client.get(path).status_code, 403, f"{user.phone} {path}")
 
     def test_blocked_accounts_lose_api_access(self):
@@ -246,6 +276,18 @@ class SocketIsolationTests(TransactionTestCase):
         await retry.connect()
         self.assertEqual(await retry.receive_output(timeout=2), {"type": "websocket.close", "code": 4401})
         await retry.disconnect()
+        await self.close_all()
+
+    async def test_taking_a_store_back_cuts_its_team_off(self):
+        cashier, _ = await self.connect(self.cashier)
+
+        def reject():
+            self.store_a.status = Vendor.Status.REJECTED
+            self.store_a.save()
+
+        await database_sync_to_async(reject)()
+        closed = await cashier.receive_output(timeout=2)
+        self.assertEqual(closed["code"], 4409)
         await self.close_all()
 
     async def test_signing_out_closes_open_sockets(self):

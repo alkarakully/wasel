@@ -19,12 +19,18 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
     this.acceptUser,
+    this.admitUser,
     this.rejectedError = 'err_not_allowed',
   });
 
   /// Lets an app accept only some accounts (the captain app takes captains).
   /// A rejected sign-in is logged out on the server and shows [rejectedError].
   final bool Function(User user)? acceptUser;
+
+  /// Like [acceptUser], for when the answer needs the server (the store app
+  /// also lets in someone with a team invite). The client is already signed
+  /// in with the new token while it runs.
+  final Future<bool> Function(ApiClient api, User user)? admitUser;
   final String rejectedError;
 
   @override
@@ -92,7 +98,16 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final api = context.read<ApiClient>();
       final result = await api.verifyCode(_sentTo!, _code.text);
-      if (widget.acceptUser != null && !widget.acceptUser!(result.user)) {
+      var admitted = widget.acceptUser?.call(result.user) ?? true;
+      if (admitted && widget.admitUser != null) {
+        api.token = result.token;
+        try {
+          admitted = await widget.admitUser!(api, result.user);
+        } finally {
+          api.token = null;
+        }
+      }
+      if (!admitted) {
         // Don't leave a usable token behind for an account this app refuses.
         api.token = result.token;
         try {

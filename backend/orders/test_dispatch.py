@@ -22,6 +22,7 @@ class DispatchTests(TestCase):
         self.customer = User.objects.create_user(phone="+9647700000090")
         self.owner = User.objects.create_user(phone="+9647800000091", role=User.Role.VENDOR)
         self.store = Vendor.objects.create(
+            status=Vendor.Status.APPROVED,
             owner=self.owner, name="Dispatch Grill", location=Point(STORE[1], STORE[0], srid=4326), is_open=True
         )
         product = Product.objects.create(vendor=self.store, name_ar="تكة", price=8000)

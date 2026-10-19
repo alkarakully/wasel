@@ -1,6 +1,6 @@
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db.models import F, Prefetch
+from django.db.models import F, Prefetch, Q
 from django.utils import timezone
 from rest_framework import permissions, serializers, status, viewsets
 from rest_framework.decorators import action
@@ -19,14 +19,15 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
 
     `?lat=..&lng=..` limits the list to vendors that deliver to that spot,
     nearest first. `?type=` and `?cuisine=` filter further. Open vendors
-    always come before closed ones.
+    always come before closed ones. Stores waiting for approval (or
+    rejected) are never listed.
     """
 
     def get_serializer_class(self):
         return VendorDetailSerializer if self.action == "retrieve" else VendorSerializer
 
     def get_queryset(self):
-        queryset = Vendor.objects.all()
+        queryset = Vendor.objects.filter(status=Vendor.Status.APPROVED)
         params = self.request.query_params
 
         if vendor_type := params.get("type"):
@@ -108,7 +109,9 @@ class OfferViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         now = timezone.now()
-        queryset = Offer.objects.filter(starts_at__lte=now, ends_at__gte=now)
+        queryset = Offer.objects.filter(starts_at__lte=now, ends_at__gte=now).filter(
+            Q(vendor__isnull=True) | Q(vendor__status=Vendor.Status.APPROVED)
+        )
         if self.request.query_params.get("banner") == "1":
             queryset = queryset.filter(is_banner=True)
         return queryset

@@ -9,6 +9,7 @@ from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
 
 from accounts.models import User
+from vendors import access
 from vendors.models import StoreMember, Vendor
 
 from .realtime import revoke_sockets
@@ -46,12 +47,18 @@ def signed_out(sender, instance, **kwargs):
 @receiver(pre_save, sender=Vendor)
 def _remember_owner(sender, instance, **kwargs):
     if instance.pk:
-        instance._old_owner_id = Vendor.objects.filter(pk=instance.pk).values_list("owner_id", flat=True).first()
+        instance._old_store = Vendor.objects.filter(pk=instance.pk).values("owner_id", "status").first()
 
 
 @receiver(post_save, sender=Vendor)
 def owner_changed(sender, instance, created, **kwargs):
-    old = getattr(instance, "_old_owner_id", None)
-    if not created and old and old != instance.owner_id:
-        revoke_sockets(old)
+    old = getattr(instance, "_old_store", None)
+    if created or not old:
+        return
+    if old["owner_id"] != instance.owner_id:
+        revoke_sockets(old["owner_id"])
         revoke_sockets(instance.owner_id)
+    elif old["status"] != instance.status:
+        # Approved: the team joins the store's orders. Taken back: they stop.
+        for user_id in access.staff_ids(instance):
+            revoke_sockets(user_id)

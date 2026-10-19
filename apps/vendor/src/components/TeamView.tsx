@@ -1,7 +1,7 @@
-import { Plus, Trash, UserCircle } from '@phosphor-icons/react'
+import { EnvelopeSimple, PaperPlaneTilt, Trash, UserCircle, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
-import { Api, ApiError, type Team, type TeamMember } from '../lib/api'
+import { Api, ApiError, type Team, type TeamInvite, type TeamMember } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
 
 type Role = TeamMember['role']
 
-/** The owner adds managers and cashiers by phone; they sign in with a code. */
+/** The owner invites managers and cashiers by phone; they join once they accept at their next sign-in. */
 export function TeamView({ api, storeId, myUserId, onError }: Props) {
   const { t, error: errorMessage } = useI18n()
   const [team, setTeam] = useState<Team | null>(null)
@@ -22,6 +22,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
   const [role, setRole] = useState<Role>('cashier')
   const [problem, setProblem] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [sentTo, setSentTo] = useState<string | null>(null)
 
   const load = useCallback(() => {
     api.team(storeId).then(setTeam, onError)
@@ -32,8 +33,10 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
     event.preventDefault()
     setBusy(true)
     setProblem(null)
+    setSentTo(null)
     try {
-      await api.addMember(storeId, { phone, name, role })
+      const invite = await api.addMember(storeId, { phone, name, role })
+      setSentTo(invite.phone)
       setPhone('')
       setName('')
       load()
@@ -47,6 +50,15 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
   const changeRole = async (member: TeamMember, next: Role) => {
     try {
       await api.setMemberRole(storeId, member.id, next)
+      load()
+    } catch (e) {
+      onError(e)
+    }
+  }
+
+  const cancelInvite = async (invite: TeamInvite) => {
+    try {
+      await api.cancelInvite(storeId, invite.id)
       load()
     } catch (e) {
       onError(e)
@@ -113,6 +125,31 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
               </button>
             </li>
           ))}
+          {team?.invites.map((invite) => (
+            <li key={`invite-${invite.id}`} className="invited">
+              <EnvelopeSimple size={36} weight="light" aria-hidden="true" />
+              <span className="grow">
+                <strong>{invite.name || invite.phone}</strong>
+                <span className="muted" dir="ltr">
+                  {invite.phone}
+                </span>
+              </span>
+              <span className="role-chip invited-chip">
+                {t('invitedChip', { role: t(invite.role) })}
+              </span>
+              <button
+                type="button"
+                className="icon-button danger-icon"
+                title={t('cancelInvite')}
+                onClick={() => cancelInvite(invite)}
+              >
+                <X size={18} weight="light" aria-hidden="true" />
+                <span className="sr-only">
+                  {t('cancelInvite')} {invite.name || invite.phone}
+                </span>
+              </button>
+            </li>
+          ))}
         </ul>
       </section>
 
@@ -158,9 +195,14 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
             {errorMessage(problem)}
           </p>
         )}
+        {sentTo && (
+          <p className="note success-note" role="status">
+            {t('inviteSent', { phone: '\u2066' + sentTo + '\u2069' })}
+          </p>
+        )}
         <div className="actions">
           <button type="submit" className="primary" disabled={busy || !phone.trim()}>
-            <Plus size={20} weight="light" aria-hidden="true" />
+            <PaperPlaneTilt size={20} weight="light" aria-hidden="true" />
             {t('addPerson')}
           </button>
         </div>

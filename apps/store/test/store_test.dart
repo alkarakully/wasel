@@ -12,6 +12,7 @@ import 'package:wasel_core/wasel_core.dart';
 import 'package:wasel_store/print/printer.dart';
 import 'package:wasel_store/print/slips.dart';
 import 'package:wasel_store/screens/home_screen.dart';
+import 'package:wasel_store/screens/invites_screen.dart';
 import 'package:wasel_store/state/alarm.dart';
 import 'package:wasel_store/state/board.dart';
 import 'package:wasel_store/state/store_session.dart';
@@ -344,5 +345,172 @@ void main() {
     );
     expect(String.fromCharCodes(bytes!.take(4)), '%PDF');
     expect(bytes.length, greaterThan(10000)); // fonts embedded
+  });
+
+  group('team invites', () {
+    final invite = {
+      'id': 4,
+      'store': {'id': 1, 'name': 'Tigris Grill', 'type': 'restaurant'},
+      'role': 'cashier',
+      'invited_by': 'Ali',
+      'created_at': '',
+    };
+
+    /// A client for someone invited to Tigris Grill; [role] is their account now.
+    ApiClient inviteApi(List<String> requests, {String role = 'customer'}) {
+      var joined = false;
+      return ApiClient(
+        baseUrl: 'http://test',
+        client: MockClient((request) async {
+          requests.add('${request.method} ${request.url.path}');
+          final path = request.url.path;
+          if (path == '/api/store-invites/')
+            return json(joined ? [] : [invite]);
+          if (path == '/api/store-invites/4/accept/') {
+            joined = true;
+            return json({'id': 4, 'status': 'accepted'});
+          }
+          if (path == '/api/store-invites/4/decline/') {
+            joined = true;
+            return json({'id': 4, 'status': 'declined'});
+          }
+          if (path == '/api/auth/me/') {
+            return json({
+              'id': 7,
+              'phone': '+9647801112233',
+              'name': 'Sara',
+              'role': joined && request.method == 'GET' ? 'vendor' : role,
+            });
+          }
+          if (path == '/api/auth/otp/request/') {
+            return json({
+              'phone': '+9647801112233',
+              'channel': 'whatsapp',
+              'resend_in': 60,
+            });
+          }
+          if (path == '/api/auth/otp/verify/') {
+            return json({
+              'token': 'new',
+              'user': {
+                'id': 7,
+                'phone': '+9647801112233',
+                'name': '',
+                'role': role,
+              },
+            });
+          }
+          return http.Response('', 204);
+        }),
+      );
+    }
+
+    Widget screen(StoreSession session, Widget home) => MultiProvider(
+      providers: [
+        Provider<ApiClient>.value(value: session.api),
+        ChangeNotifierProvider<BaseSession>.value(value: session),
+        ChangeNotifierProvider.value(value: session),
+      ],
+      child: MediaQuery(
+        data: const MediaQueryData(disableAnimations: true),
+        child: MaterialApp(theme: waselTheme(Brightness.light), home: home),
+      ),
+    );
+
+    testWidgets('accepting joins the team and loads the store', (tester) async {
+      useTablet(tester);
+      final requests = <String>[];
+      final session = StoreSession(inviteApi(requests), keepAwake: false)
+        ..lang = 'en'
+        ..loaded = true;
+      var joined = 0;
+      session.onJoinedStore = () => joined++;
+      await session.signIn(
+        'abc',
+        User.fromJson({
+          'id': 7,
+          'phone': '+9647801112233',
+          'name': '',
+          'role': 'customer',
+        }),
+      );
+      expect(session.invites, hasLength(1));
+
+      await tester.pumpWidget(screen(session, const InvitesScreen()));
+      expect(find.text('Tigris Grill'), findsOneWidget);
+      expect(find.text('Ali invited you to join as Cashier'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('accept-invite-4')));
+      await tester.pumpAndSettle();
+      expect(requests, contains('POST /api/store-invites/4/accept/'));
+      expect(session.invites, isEmpty);
+      expect(session.user!.role, 'vendor');
+      expect(session.signedIn, isTrue);
+      expect(joined, 1);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('a new number that declines is signed out', (tester) async {
+      useTablet(tester);
+      final requests = <String>[];
+      final session = StoreSession(inviteApi(requests), keepAwake: false)
+        ..lang = 'en'
+        ..loaded = true;
+      await session.signIn(
+        'abc',
+        User.fromJson({
+          'id': 7,
+          'phone': '+9647801112233',
+          'name': '',
+          'role': 'customer',
+        }),
+      );
+      await tester.pumpWidget(screen(session, const InvitesScreen()));
+
+      await tester.tap(find.byKey(const Key('decline-4')));
+      await tester.pumpAndSettle();
+      expect(requests, contains('POST /api/store-invites/4/decline/'));
+      expect(session.signedIn, isFalse);
+      await tester.pumpWidget(const SizedBox());
+    });
+
+    testWidgets('sign-in lets in invited numbers and refuses other customers', (
+      tester,
+    ) async {
+      useTablet(tester);
+      for (final invited in [true, false]) {
+        final requests = <String>[];
+        final api = inviteApi(requests);
+        final session = StoreSession(api, keepAwake: false)
+          ..lang = 'en'
+          ..loaded = true;
+        await tester.pumpWidget(
+          screen(
+            session,
+            LoginScreen(
+              admitUser: (api, user) async =>
+                  user.role == 'vendor' ||
+                  (invited && (await api.storeInvites()).isNotEmpty),
+              rejectedError: 'err_not_store',
+            ),
+          ),
+        );
+        await tester.enterText(find.byType(TextField).first, '07801112233');
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        final send = find.byWidgetPredicate((w) => w is PillButton);
+        await tester.tap(send.first);
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField).first, '482913');
+        await tester.pumpAndSettle();
+
+        expect(session.signedIn, invited, reason: 'invited: $invited');
+        if (!invited) {
+          expect(find.textContaining("isn't a store account"), findsOneWidget);
+          expect(requests.last, 'POST /api/auth/logout/');
+        }
+        await tester.pumpWidget(const SizedBox());
+      }
+    });
   });
 }

@@ -16,7 +16,7 @@ class OrderApiTests(TestCase):
         self.other_customer = User.objects.create_user(phone="+9647700000011")
         self.captain = User.objects.create_user(phone="+9647700000012", role=User.Role.CAPTAIN)
         self.owner = User.objects.create_user(phone="+9647700000013", role=User.Role.VENDOR)
-        vendor = Vendor.objects.create(owner=self.owner, name="Kebab", location=BAGHDAD)
+        vendor = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=self.owner, name="Kebab", location=BAGHDAD)
 
         self.order = Order.objects.create(
             customer=self.customer,
@@ -76,6 +76,7 @@ class PricingTestBase(TestCase):
         self.customer = User.objects.create_user(phone="+9647700000020")
         self.owner = User.objects.create_user(phone="+9647700000021", role=User.Role.VENDOR)
         self.vendor = Vendor.objects.create(
+            status=Vendor.Status.APPROVED,
             owner=self.owner,
             name="Tahrir Grill",
             location=Point(TAHRIR_LNG, TAHRIR_LAT, srid=4326),
@@ -160,7 +161,7 @@ class QuoteTests(PricingTestBase):
         self.assertError(self.quote(), "product_unavailable")
 
     def test_product_from_another_vendor(self):
-        other = Vendor.objects.create(owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
+        other = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
         foreign = Product.objects.create(vendor=other, name_ar="شاي", price=500)
         self.assertError(self.quote(items=[{"product": foreign.pk}]), "product_not_found")
 
@@ -210,7 +211,7 @@ class OfferAndCommissionTests(PricingTestBase):
         self.assertError(self.quote(offer=offer.pk), "offer_not_applicable")
 
     def test_expired_or_other_vendors_offers_never_apply(self):
-        other = Vendor.objects.create(owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
+        other = Vendor.objects.create(status=Vendor.Status.APPROVED, owner=self.owner, name="Other", location=Point(TAHRIR_LNG, TAHRIR_LAT))
         self.make_offer(vendor=other, type=Offer.Type.PERCENT, value=50)
         expired = self.make_offer(type=Offer.Type.PERCENT, value=50)
         Offer.objects.filter(pk=expired.pk).update(ends_at=timezone.now() - timedelta(minutes=1))

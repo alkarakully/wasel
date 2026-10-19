@@ -88,9 +88,67 @@ export interface TeamMember {
   role: 'manager' | 'cashier'
 }
 
+/** Someone the owner invited; they join when they accept at their next sign-in. */
+export interface TeamInvite {
+  id: number
+  phone: string
+  name: string
+  role: 'manager' | 'cashier'
+  created_at: string
+}
+
 export interface Team {
   owner: { user: number; phone: string; name: string; role: 'owner' }
   members: TeamMember[]
+  invites: TeamInvite[]
+}
+
+/** An invite to join a store's team, as the invited person sees it. */
+export interface Invite {
+  id: number
+  store: { id: number; name: string; type: StoreType }
+  role: 'manager' | 'cashier'
+  invited_by: string
+  created_at: string
+}
+
+export type StoreType = 'restaurant' | 'supermarket'
+export const CUISINES = ['popular', 'eastern', 'western', 'fast_food', 'sweets', 'drinks'] as const
+export type Cuisine = (typeof CUISINES)[number]
+export type ApplicationStatus = 'pending' | 'approved' | 'rejected'
+
+/** One of the owner's stores in any state: waiting for Wasel, approved or rejected. */
+export interface StoreApplication {
+  id: number
+  name: string
+  type: StoreType
+  cuisine: Cuisine | ''
+  address: string
+  latitude: number
+  longitude: number
+  delivery_radius_km: string
+  status: ApplicationStatus
+  rejection_reason: string
+  created_at: string
+  reviewed_at: string | null
+}
+
+export interface Applications {
+  can_apply: boolean
+  /** Why not: phone_in_use, application_pending or too_many_applications. */
+  reason: string | null
+  applications: StoreApplication[]
+}
+
+export interface ApplicationInput {
+  owner_name?: string
+  name: string
+  type: StoreType
+  cuisine: Cuisine | ''
+  address: string
+  latitude: number
+  longitude: number
+  delivery_radius_km: string
 }
 
 export interface Report {
@@ -240,6 +298,13 @@ export class Api {
   me = () => this.send<User>('GET', '/api/auth/me/')
   logout = () => this.send<null>('POST', '/api/auth/logout/')
 
+  // Joining Wasel: store applications and team invites
+  applications = () => this.send<Applications>('GET', '/api/store-applications/')
+  apply = (input: ApplicationInput) => this.send<StoreApplication>('POST', '/api/store-applications/', input)
+  myInvites = () => this.send<Invite[]>('GET', '/api/store-invites/')
+  answerInvite = (inviteId: number, answer: 'accept' | 'decline') =>
+    this.send<{ id: number; status: string }>('POST', `/api/store-invites/${inviteId}/${answer}/`)
+
   // Stores and menus
   myStores = () => this.send<Store[]>('GET', '/api/vendors/mine/')
   setOpen = (storeId: number, isOpen: boolean) =>
@@ -251,8 +316,11 @@ export class Api {
 
   // Store team, menu, hours (owner and managers)
   team = (storeId: number) => this.send<Team>('GET', `/api/vendors/${storeId}/team/`)
+  /** Invites someone by phone; they join when they accept. */
   addMember = (storeId: number, member: { phone: string; name: string; role: 'manager' | 'cashier' }) =>
-    this.send<TeamMember>('POST', `/api/vendors/${storeId}/team/`, member)
+    this.send<TeamInvite>('POST', `/api/vendors/${storeId}/team/`, member)
+  cancelInvite = (storeId: number, inviteId: number) =>
+    this.send<null>('DELETE', `/api/vendors/${storeId}/team/invites/${inviteId}/`)
   setMemberRole = (storeId: number, memberId: number, role: 'manager' | 'cashier') =>
     this.send<TeamMember>('PATCH', `/api/vendors/${storeId}/team/${memberId}/`, { role })
   removeMember = (storeId: number, memberId: number) =>

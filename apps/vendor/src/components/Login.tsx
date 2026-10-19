@@ -1,18 +1,22 @@
-import { ArrowLeft, ArrowRight } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowRight, Storefront } from '@phosphor-icons/react'
 import { useState, type FormEvent } from 'react'
 
 import { Api, ApiError, type Lang, type User } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { nextStep, type Step } from '../lib/onboarding'
 import { codeDigits, isRtl } from '../lib/strings'
 import { LanguageSwitch } from './LanguageSwitch'
 
 interface Props {
   api: Api
-  onSignedIn: (token: string, user: User) => void
+  onSignedIn: (token: string, user: User, step: Step, joining: boolean) => void
   setLang: (lang: Lang) => void
 }
 
-/** Phone number, then the 6-digit code. Only store owners get in. */
+/**
+ * Phone number, then the 6-digit code. Store owners and their team sign in;
+ * "Join Wasel as a store" lets a new owner verify their number and apply.
+ */
 export function Login({ api, onSignedIn, setLang }: Props) {
   const { t, error: errorMessage, lang } = useI18n()
   const rtl = isRtl(lang)
@@ -23,6 +27,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [joining, setJoining] = useState(false)
 
   // Put the phone number inside the sentence, kept left-to-right.
   const [before, after] = t('codeLead', { phone: '\u0000' }).split('\u0000')
@@ -49,14 +54,15 @@ export function Login({ api, onSignedIn, setLang }: Props) {
     setError(null)
     try {
       const result = await api.verifyCode(sentTo, value)
-      if (result.user.role !== 'vendor') {
+      const session = new Api(result.token)
+      const step = await nextStep(session, result.user, joining)
+      if (step.kind === 'refused') {
         // Don't leave a usable token behind for an account the portal refuses.
-        const check = new Api(result.token)
-        await check.logout().catch(() => {})
-        setError('not_vendor')
+        await session.logout().catch(() => {})
+        setError(step.code)
         return
       }
-      onSignedIn(result.token, result.user)
+      onSignedIn(result.token, result.user, step, joining)
     } catch (e) {
       setError(e instanceof ApiError ? e.code : 'generic')
     } finally {
@@ -80,8 +86,8 @@ export function Login({ api, onSignedIn, setLang }: Props) {
           <div className="plate">
             {sentTo === null ? (
               <form onSubmit={sendCode} noValidate>
-                <h1>{t('loginTitle')}</h1>
-                <p className="lead">{t('loginLead')}</p>
+                <h1>{t(joining ? 'joinTitle' : 'loginTitle')}</h1>
+                <p className="lead">{t(joining ? 'joinLead' : 'loginLead')}</p>
                 <label htmlFor="phone">{t('phone')}</label>
                 <div className="phone-input" dir="ltr">
                   <span>+964</span>
@@ -114,6 +120,20 @@ export function Login({ api, onSignedIn, setLang }: Props) {
                     <Forward size={20} weight="light" />
                   </span>
                 </button>
+                <div className="join-switch">
+                  <span className="muted">{t(joining ? 'haveStore' : 'newToWasel')}</span>
+                  <button
+                    type="button"
+                    className="link"
+                    onClick={() => {
+                      setJoining(!joining)
+                      setError(null)
+                    }}
+                  >
+                    {!joining && <Storefront size={18} weight="light" aria-hidden="true" />}
+                    {t(joining ? 'backToLogin' : 'joinAsStore')}
+                  </button>
+                </div>
               </form>
             ) : (
               <form onSubmit={(e) => (e.preventDefault(), verify(code))} noValidate>

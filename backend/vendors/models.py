@@ -21,8 +21,22 @@ class Vendor(models.Model):
         SWEETS = "sweets", "Sweets"
         DRINKS = "drinks", "Drinks"
 
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for approval"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="vendors")
     name = models.CharField(max_length=150)
+    # New stores wait for Wasel staff to approve them. Until then customers
+    # never see them and they can't take orders.
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
+    rejection_reason = models.CharField(max_length=300, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+    address = models.CharField(max_length=300, blank=True)
     type = models.CharField(max_length=12, choices=Type.choices, default=Type.RESTAURANT)
     cuisine = models.CharField(max_length=10, choices=Cuisine.choices, blank=True)
     location = models.PointField(geography=True)
@@ -42,6 +56,10 @@ class Vendor(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_approved(self):
+        return self.status == self.Status.APPROVED
 
     def commission_for(self, subtotal, at=None):
         """Commission owed on an order subtotal, 0 during the commission-free period."""
@@ -74,6 +92,43 @@ class StoreMember(models.Model):
 
     def __str__(self):
         return f"{self.user} at {self.vendor} ({self.role})"
+
+
+class StoreInvite(models.Model):
+    """
+    The owner asks someone to join the store's team. The person becomes a
+    StoreMember only when they accept, the next time they sign in to the
+    portal or the tablet app. The invite is for a phone number, so it works
+    before that person has an account.
+    """
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting for an answer"
+        ACCEPTED = "accepted", "Accepted"
+        DECLINED = "declined", "Declined"
+        CANCELLED = "cancelled", "Cancelled"
+
+    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="invites")
+    phone = models.CharField(max_length=20, db_index=True)
+    name = models.CharField(max_length=150, blank=True)
+    role = models.CharField(max_length=10, choices=StoreMember.Role.choices, default=StoreMember.Role.CASHIER)
+    invited_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="+")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    answered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["vendor", "phone"],
+                condition=models.Q(status="pending"),
+                name="one_open_invite_per_phone_per_store",
+            )
+        ]
+
+    def __str__(self):
+        return f"Invite for {self.phone} to {self.vendor} ({self.role}, {self.status})"
 
 
 class Product(models.Model):
