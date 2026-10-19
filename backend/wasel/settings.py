@@ -79,6 +79,8 @@ TEMPLATES = [
 WSGI_APPLICATION = "wasel.wsgi.application"
 ASGI_APPLICATION = "wasel.asgi.application"
 
+TESTING = "test" in sys.argv
+
 # Live order updates go through Redis so every server process can reach every socket.
 CHANNEL_LAYERS = {
     "default": {
@@ -86,12 +88,16 @@ CHANNEL_LAYERS = {
         "CONFIG": {"hosts": [os.environ.get("REDIS_URL", "redis://localhost:6379/0")]},
     }
 }
+if TESTING:
+    # Tests must never reach real sockets: a test order for a test store whose
+    # id matches a real one would ring that store's real tablets.
+    CHANNEL_LAYERS = {"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}}
 
 # Background jobs. Beat runs the periodic checks below.
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", "redis://localhost:6379/1")
 CELERY_TASK_IGNORE_RESULT = True
 # Tests run tasks inline instead of needing a broker.
-CELERY_TASK_ALWAYS_EAGER = "test" in sys.argv
+CELERY_TASK_ALWAYS_EAGER = TESTING
 CELERY_TIMEZONE = "Asia/Baghdad"
 CELERY_BEAT_SCHEDULE = {
     "flag-stuck-orders": {"task": "orders.tasks.flag_stuck_orders", "schedule": 60.0},
