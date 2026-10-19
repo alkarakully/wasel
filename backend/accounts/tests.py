@@ -1,6 +1,7 @@
 from datetime import timedelta
 from unittest import mock
 
+from django.conf import settings
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -233,7 +234,7 @@ class AdminAccountTests(TestCase):
     def add_user(self, **fields):
         data = {"phone": "", "name": "", "role": "customer", "password1": "", "password2": ""}
         data.update(fields)
-        return self.client.post("/admin/accounts/user/add/", data)
+        return self.client.post(f"/{settings.DJANGO_ADMIN_PATH}accounts/user/add/", data)
 
     def test_any_phone_format_is_stored_the_way_login_finds_it(self):
         response = self.add_user(phone="0750 123 4567", name="Ali", role="captain")
@@ -266,7 +267,7 @@ class AdminAccountTests(TestCase):
     def test_editing_normalizes_the_number_too(self):
         user = User.objects.create_user("+9647501234567", name="Old")
         response = self.client.post(
-            f"/admin/accounts/user/{user.pk}/change/",
+            f"/{settings.DJANGO_ADMIN_PATH}accounts/user/{user.pk}/change/",
             {
                 "phone": "0750 765 4321",
                 "name": "Old",
@@ -306,7 +307,7 @@ class AdminAccountTests(TestCase):
     def test_editing_a_staff_account_keeps_its_number(self):
         staff = User.objects.create_superuser("5012183813", "a-strong-admin-pass", name="Owner")
         response = self.client.post(
-            f"/admin/accounts/user/{staff.pk}/change/",
+            f"/{settings.DJANGO_ADMIN_PATH}accounts/user/{staff.pk}/change/",
             {
                 "phone": "5012183813",
                 "name": "Owner",

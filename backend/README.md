@@ -10,7 +10,7 @@ From the repository root:
 docker compose up
 ```
 
-This starts the API server, PostGIS, Redis and a Celery worker. The API is at http://localhost:8000/api/ and the admin at http://localhost:8000/admin/. If port 8000 (or 5432) is taken, pick others:
+This starts the API server, PostGIS, Redis and a Celery worker. The API is at http://localhost:8000/api/ and the Django admin at http://localhost:8000/django-admin/ (superusers only; set `DJANGO_ADMIN_PATH` to move it). The Wasel team's day-to-day tool is the platform admin in `apps/admin` (see below). If port 8000 (or 5432) is taken, pick others:
 
 ```bash
 WASEL_WEB_PORT=8010 WASEL_DB_PORT=5433 docker compose up
@@ -21,6 +21,31 @@ Create an admin user:
 ```bash
 docker compose run --rm web python manage.py createsuperuser
 ```
+
+## Platform admin
+
+The Wasel team runs the platform from the platform admin, a React app at `/admin/` (source in [`apps/admin`](../apps/admin/README.md)). Staff sign in with a work email, a password and a 6-digit code from an authenticator app (set up on first sign-in), separately from the phone-code login the apps use. Five wrong tries lock the account for 15 minutes; a session lasts 12 hours.
+
+Create the first login (it asks for the password; `--phone` instead gives an existing superuser a login):
+
+```bash
+docker compose run --rm web python manage.py create_console_admin --email you@wasel.iq --name "Your Name"
+```
+
+Each teammate has one role, and the server enforces it on every request:
+
+| Area | Admin | Operations | Support | Finance | Marketing |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| Overview | view | view | view | view | view |
+| Orders, dispatch and alerts | change | change | change | view | — |
+| Stores, applications, menus, store teams | change | change | view | view | view |
+| People (block, unblock) | change | change | change | view | — |
+| Money (payouts, wallet ledger, wallet adjustments) | change | — | — | change | — |
+| Reports | view | view | — | view | view |
+| Marketing (offers, banners, Wasel Plus) | change | view | — | — | change |
+| Team and audit log | change | — | — | — | — |
+
+Every change made there (store edits and approvals, cancellations with refunds, released captains, blocks, wallet adjustments with their reason, payouts, offers, team changes, sign-ins) is written to the audit log with who, when, what changed and from which IP. The API is `/api/console/` (`backend/console/`); it only accepts the platform admin's session cookie with CSRF, never an app token, and not a Django admin session without the authenticator code.
 
 ## Admin and operations
 

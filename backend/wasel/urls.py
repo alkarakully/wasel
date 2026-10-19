@@ -19,6 +19,8 @@ from vendors.views import OfferViewSet, ProductAvailabilityView, VendorViewSet
 admin.site.site_header = "Wasel admin"
 admin.site.site_title = "Wasel admin"
 admin.site.index_title = "Platform administration"
+# Day-to-day work happens in the platform admin; only superusers get into this one.
+admin.site.has_permission = lambda request: request.user.is_active and request.user.is_superuser
 
 router = DefaultRouter()
 router.register("vendors", VendorViewSet, basename="vendor")
@@ -36,7 +38,8 @@ def healthz(request):
 
 urlpatterns = [
     path("healthz/", healthz, name="healthz"),
-    path("admin/", admin.site.urls),
+    path(settings.DJANGO_ADMIN_PATH, admin.site.urls),
+    path("api/console/", include("console.urls")),
     path("api/auth/", include("accounts.urls")),
     path("api/devices/", DeviceView.as_view(), name="devices"),
     path("api/captain/location/", CaptainLocationView.as_view(), name="captain-location"),

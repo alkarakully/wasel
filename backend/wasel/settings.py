@@ -11,6 +11,10 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-insecure-key" if DEBU
 if not SECRET_KEY:
     raise RuntimeError("DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is off")
 
+# The Django admin is an emergency tool for superusers, at a path only the team knows.
+# /admin/ is the platform admin app (apps/admin). Set a long random path in production.
+DJANGO_ADMIN_PATH = os.environ.get("DJANGO_ADMIN_PATH", "django-admin/").strip("/") + "/"
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 # Full origins (scheme and host) allowed to post forms, e.g. https://wasel.example.com
 CSRF_TRUSTED_ORIGINS = [origin for origin in os.environ.get("DJANGO_CSRF_TRUSTED_ORIGINS", "").split(",") if origin]
@@ -46,6 +50,7 @@ INSTALLED_APPS = [
     "notifications",
     "ops",
     "billing",
+    "console",
 ]
 
 MIDDLEWARE = [
@@ -148,6 +153,8 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "otp_request": "10/hour",
         "otp_verify": "30/hour",
+        # Platform admin sign-in, per IP; accounts also lock after 5 wrong passwords.
+        "console_login": "30/hour",
     },
 }
 

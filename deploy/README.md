@@ -5,7 +5,9 @@ One Linux server running Docker serves everything from one domain:
 | Path | Served by |
 | :--- | :--- |
 | `/` | Store portal (React, built into the nginx image) |
-| `/api/`, `/admin/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Daphne) |
+| `/admin/` | Platform admin for the Wasel team (React, built into the nginx image) |
+| `/api/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Daphne) |
+| `/<DJANGO_ADMIN_PATH>/` | Django admin, superusers only, for emergencies |
 | `/ws/` | Live order socket (Daphne, kept open up to an hour between pings) |
 | `/static/` | Django static files, straight from nginx |
 
@@ -13,7 +15,7 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
 
 ```
              ┌──────────── nginx :80/:443 (TLS, portal, static) ────────────┐
- internet ──►│  /api /admin /ops /login /track /ws ──► web (Daphne :8000)   │
+ internet ──►│  /api /ops /login /track /ws ──► web (Daphne :8000)          │
              └──────────────────────────────────────────────────────────────┘
    web, worker (Celery), beat (Celery schedule) ──► db (PostGIS), redis
    migrate: runs once per deploy (migrations + static files)
@@ -66,7 +68,13 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
    docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml --profile certbot up -d certbot
    ```
 
-5. Create the first admin account, then add stores and captains in `/admin/`:
+5. Create the first platform admin login (it asks for a password), then sign in at `https://your-domain/admin/` and set up the authenticator app it shows:
+
+   ```bash
+   docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml exec web python manage.py create_console_admin --email you@your-company.com --name "Your Name"
+   ```
+
+   Add the rest of the team from **Team** in the platform admin. Keep one superuser for the Django admin at `/<DJANGO_ADMIN_PATH>/` for emergencies:
 
    ```bash
    docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml exec web python manage.py createsuperuser
@@ -120,6 +128,7 @@ All settings live in `deploy/.env` (see `.env.example`):
 | `DJANGO_SECRET_KEY` | Long random secret; changing it signs everyone out of the admin |
 | `DJANGO_ALLOWED_HOSTS` | Comma-separated host names Django accepts |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `https://` origins allowed to post forms (admin) |
+| `DJANGO_ADMIN_PATH` | Secret path of the Django admin (no slashes); nginx and Django both read it |
 | `DJANGO_HSTS_SECONDS` | How long browsers must use HTTPS (default 30 days) |
 | `DJANGO_LOG_LEVEL` | `WARNING` by default; `INFO` for more detail |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name and credentials |
