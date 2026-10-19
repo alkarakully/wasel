@@ -153,60 +153,52 @@ class Wordmark extends StatelessWidget {
   const Wordmark({
     super.key,
     this.size = 56,
-    this.color = Gold.c400,
-    this.latinColor,
+    this.latinColor = const Color(0xFFF4F6FF),
+    this.arabicColor = logoGold,
     this.stacked = false,
   });
 
-  /// About the height of the Arabic name, as when it was set as text.
+  /// About the height of the Arabic name; the divider reaches a little past it.
   final double size;
 
-  /// واصل's colour; WASEL uses [latinColor], or the same colour.
-  final Color color;
-  final Color? latinColor;
+  /// WASEL's colour: light on the lapis glaze (default), [logoBlue] on light screens.
+  final Color latinColor;
 
-  /// واصل over a gold rule and WASEL, for splash screens.
+  /// واصل and the divider stay gold unless a screen needs otherwise.
+  final Color arabicColor;
+
+  /// واصل over the divider and WASEL, for splash screens.
   final bool stacked;
+
+  static const logoBlue = Color(0xFF033990);
+  static const logoGold = Color(0xFFE4A739);
 
   static String _hex(Color c) =>
       '#${(c.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0')}';
-  static String _alpha(Color c) => (c.a).toStringAsFixed(3);
-
-  static String _diamond(double cx, double cy, double k) =>
-      'M$cx ${cy - k}L${cx + k} ${cy}L$cx ${cy + k}L${cx - k} ${cy}Z';
 
   String _svg() {
-    final ink = _hex(color), inkA = _alpha(color);
-    final latin = latinColor ?? color;
-    final la = _hex(latin), laA = _alpha(latin);
-    const gold = '#F2C75C';
+    final la = _hex(latinColor), ar = _hex(arabicColor);
+    final laA = latinColor.a.toStringAsFixed(3);
     if (stacked) {
-      const g = logoStacked;
-      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.width} ${g.height}">'
-          '<path transform="translate(${g.arabicX} ${g.arabicY})" d="$logoArabicPath" fill="$ink" fill-opacity="$inkA"/>'
-          '<path d="M${g.ruleFrom} ${g.ruleY}H${g.ruleTo}" stroke="$gold" stroke-width="1.4"/>'
-          '<path d="${_diamond(g.width / 2, g.ruleY, 3.8)}" fill="$gold"/>'
-          '<path transform="translate(${g.latinX} ${g.latinY})" d="$logoStackedLatinPath" fill="$la" fill-opacity="$laA"/>'
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="$logoStackedViewBox">'
+          '<path transform="$logoStackedArabicTransform" d="$logoArabicPath" fill="$ar" fill-rule="evenodd"/>'
+          '<path d="$logoStackedRulePath" fill="$ar"/>'
+          '<path transform="$logoStackedLatinTransform" d="$logoLatinPath" fill="$la" fill-opacity="$laA" fill-rule="evenodd"/>'
           '</svg>';
     }
-    const g = logoHorizontal;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.width} ${g.height}">'
-        '<path transform="translate(${g.latinX} ${g.latinY})" d="$logoLatinPath" fill="$la" fill-opacity="$laA"/>'
-        '<path d="M${g.dividerX} ${g.dividerTop}V${g.dividerBottom}" stroke="$gold" stroke-width="1.6"/>'
-        '<path d="${_diamond(g.dividerX, g.dividerMid, 5)}" fill="$gold"/>'
-        '<path transform="translate(${g.arabicX} ${g.arabicY})" d="$logoArabicPath" fill="$ink" fill-opacity="$inkA"/>'
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="$logoViewBox">'
+        '<path d="$logoLatinPath" fill="$la" fill-opacity="$laA" fill-rule="evenodd"/>'
+        '<path d="$logoDividerPath" fill="$ar"/>'
+        '<path d="$logoArabicPath" fill="$ar" fill-rule="evenodd"/>'
         '</svg>';
   }
 
   @override
   Widget build(BuildContext context) {
-    // The drawing's height is the Arabic name's full height (stems to tail);
-    // stacked adds the rule and WASEL below it.
-    final height = stacked
-        ? size * 1.15 * logoStacked.height / logoHorizontal.height
-        : size * 1.15;
+    // Same overall height as the text wordmark it replaced, so layouts keep their rhythm.
+    final height = stacked ? size * 2.2 : size * 1.15;
     return Semantics(
-      label: 'واصل WASEL',
+      label: 'WASEL واصل',
       image: true,
       child: SvgPicture.string(
         _svg(),
@@ -502,11 +494,7 @@ class BrandSplash extends StatelessWidget {
                       child: child,
                     ),
                   ),
-                  child: const Wordmark(
-                    size: 72,
-                    stacked: true,
-                    latinColor: Lapis.c100,
-                  ),
+                  child: const Wordmark(size: 72, stacked: true),
                 ),
                 if (caption != null) ...[
                   const SizedBox(height: 14),

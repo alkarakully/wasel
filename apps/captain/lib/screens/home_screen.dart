@@ -186,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
             children: [
               Row(
                 children: [
-                  Wordmark(size: 30, color: scheme.primary),
+                  const Wordmark(size: 30, latinColor: Wordmark.logoBlue),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(

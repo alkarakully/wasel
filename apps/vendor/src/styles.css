@@ -163,15 +163,14 @@ button:disabled {
   height: auto;
 }
 
+/* On the lapis glaze: light WASEL, gold واصل. */
 .logo.wordmark {
   width: min(100%, clamp(15rem, 34vw, 28rem));
-  --logo-ink: var(--gold-400);
-  --logo-latin: var(--lapis-100);
+  --logo-latin: #f4f6ff;
 }
 
 .logo.wordmark.small {
   width: 8.5rem;
-  --logo-ink: var(--accent);
   --logo-latin: var(--accent);
 }
 
