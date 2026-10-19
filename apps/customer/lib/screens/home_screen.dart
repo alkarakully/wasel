@@ -432,7 +432,7 @@ class _Banner extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                 ] else ...[
-                  const Wordmark(size: 30),
+                  const Wordmark(size: 30, latinColor: Lapis.c100),
                   const SizedBox(height: 4),
                 ],
                 FractionallySizedBox(

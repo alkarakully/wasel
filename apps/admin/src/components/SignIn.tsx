@@ -7,6 +7,7 @@ import { useI18n } from '../lib/i18n'
 import { useAction } from '../lib/useLoad'
 import { LanguageSwitch } from './LanguageSwitch'
 import { Button, ErrorNote, TextField } from './ui'
+import { Logo } from './Logo'
 
 type Step = { kind: 'password' } | { kind: 'code' } | { kind: 'setup'; secret: string; uri: string }
 
@@ -44,7 +45,7 @@ export function SignIn({ onSignedIn, setLang }: { onSignedIn: (me: Me) => void; 
   return (
     <div className="signin">
       <section className="signin-brand glaze" aria-hidden="true">
-        <p className="wordmark">واصل</p>
+        <Logo className="wordmark" />
         <span className="gold-rule" />
         <p className="signin-tag">{t('app_name')}</p>
       </section>

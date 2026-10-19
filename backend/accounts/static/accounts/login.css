@@ -35,10 +35,15 @@ body {
 
 .brand-mark {
   margin: 0;
-  font-size: clamp(4rem, 9vw, 7.5rem);
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--brand-gold);
+  min-width: 0;
+  line-height: 0;
+}
+
+/* WASEL ◆ واصل, drawn as SVG; sized by width so it never pushes the page wider. */
+.brand-mark img {
+  display: block;
+  width: min(100%, clamp(15rem, 38vw, 30rem));
+  height: auto;
 }
 
 .brand-line {

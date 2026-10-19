@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <link rel="icon" href="data:,">
+  <link rel="icon" href="{% static 'wasel/favicon.svg' %}" type="image/svg+xml">
   <title>واصل | تسجيل الدخول</title>
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
   <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
@@ -13,7 +13,7 @@
 <body>
   <main class="shell">
     <aside class="brand glaze" aria-hidden="true">
-      <p class="brand-mark">واصل</p>
+      <p class="brand-mark"><img src="{% static 'wasel/wasel-logo-on-glaze.svg' %}" alt="واصل WASEL"></p>
       <span class="gold-rule"></span>
       <p class="brand-line" data-i18n="brandLine">اطلب من مطاعمك وأسواقك المفضلة، ويوصلك الطلب لباب البيت.</p>
     </aside>

@@ -24,6 +24,7 @@ import { useAction } from '../lib/useLoad'
 import { CountrySwitch } from './CountrySwitch'
 import { LanguageSwitch } from './LanguageSwitch'
 import { Button, ErrorNote, Modal, TextField, useToast } from './ui'
+import { Logo } from './Logo'
 
 export const SECTIONS: { area: Area; path: string; label: StringKey; icon: ReactNode; group: StringKey }[] = [
   { area: 'overview', path: '', label: 'nav_overview', icon: <Gauge weight="light" />, group: 'group_operate' },
@@ -69,7 +70,7 @@ export function Shell({
     <div className={`shell ${menuOpen ? 'menu-open' : ''}`}>
       <aside className="sidebar" aria-label={t('app_name')}>
         <div className="sidebar-brand">
-          <span className="wordmark small">واصل</span>
+          <Logo className="wordmark small" />
           <span className="sidebar-tag">{t('app_name')}</span>
           <button
             type="button"

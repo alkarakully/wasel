@@ -6,6 +6,7 @@ import { useI18n } from '../lib/i18n'
 import { InviteList } from './Invites'
 import { LanguageSwitch } from './LanguageSwitch'
 import { StoreForm } from './StoreForm'
+import { Logo } from './Logo'
 
 interface ShellProps {
   setLang: (lang: Lang) => void
@@ -22,7 +23,7 @@ function Shell({ setLang, onLogout, wide, children }: ShellProps) {
       <aside className="login-brand glaze on-glaze">
         <p className="eyebrow">{t('portalTag')}</p>
         <div className="brand-copy" aria-hidden="true">
-          <p className="wordmark">واصل</p>
+          <Logo className="wordmark" />
           <span className="gold-rule" />
           <p>{t('joinBrandLine')}</p>
         </div>

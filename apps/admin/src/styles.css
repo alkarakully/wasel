@@ -156,6 +156,25 @@ button:disabled {
   color: var(--accent);
 }
 
+/* The wordmark (WASEL ◆ واصل) drawn as SVG; height sets its size. */
+.logo {
+  display: block;
+  min-width: 0;
+  height: auto;
+}
+
+.logo.wordmark {
+  width: min(100%, clamp(15rem, 34vw, 28rem));
+  --logo-ink: var(--gold-400);
+  --logo-latin: var(--lapis-100);
+}
+
+.logo.wordmark.small {
+  width: 8.5rem;
+  --logo-ink: var(--accent);
+  --logo-latin: var(--accent);
+}
+
 /* A thin gold line with a small diamond. */
 .gold-rule {
   position: relative;
@@ -798,12 +817,15 @@ fieldset:disabled select {
 
 .sidebar-brand {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
   padding: 4px 10px 18px;
 }
 
 .sidebar-tag {
+  order: 2;
+  flex-basis: 100%;
   font-size: 0.8125rem;
   color: var(--muted);
 }

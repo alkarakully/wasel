@@ -206,7 +206,9 @@ class _LoginScreenState extends State<LoginScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Reveal(child: Wordmark(size: wordmark)),
+        Reveal(
+          child: Wordmark(size: wordmark, latinColor: Lapis.c100),
+        ),
         const SizedBox(height: 10),
         const GoldRule(),
         const SizedBox(height: 14),

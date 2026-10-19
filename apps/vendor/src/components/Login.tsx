@@ -7,6 +7,7 @@ import { nextStep, type Step } from '../lib/onboarding'
 import { codeDigits, displayPhone, isRtl } from '../lib/strings'
 import { CountryPicker, savedPhoneCountry } from './CountryPicker'
 import { LanguageSwitch } from './LanguageSwitch'
+import { Logo } from './Logo'
 
 interface Props {
   api: Api
@@ -77,7 +78,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
       <aside className="login-brand glaze on-glaze">
         <p className="eyebrow">{t('portalTag')}</p>
         <div className="brand-copy" aria-hidden="true">
-          <p className="wordmark">واصل</p>
+          <Logo className="wordmark" />
           <span className="gold-rule" />
           <p>{t('brandLine')}</p>
         </div>
