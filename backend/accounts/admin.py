@@ -5,18 +5,19 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm
 
 from .models import PhoneOTP, User, WalletTransaction
-from .phone import InvalidPhone, normalize_iraqi_phone, other_phone
+from .phone import InvalidPhone, normalize_phone, other_phone
 
 
 def clean_phone_field(form, staff=False):
     """
     Store numbers the way login looks them up (+9647XXXXXXXXX), whatever was
-    typed. App accounts sign in with a code sent to an Iraqi number, so they
-    need one; staff sign in to the admin with a password and may use any number.
+    typed. Local numbers are read as Iraqi; other countries need their + code.
+    App accounts sign in with a code sent to a mobile, so they need one; staff
+    sign in to the admin with a password and may use any number.
     """
     raw = form.cleaned_data.get("phone")
     try:
-        return normalize_iraqi_phone(raw)
+        return normalize_phone(raw)
     except InvalidPhone as error:
         other = other_phone(raw)
         if staff and other:

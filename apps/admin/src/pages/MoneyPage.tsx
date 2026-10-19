@@ -18,7 +18,7 @@ import {
   useToast,
 } from '../components/ui'
 import { api, query, type Page, type Statement, type WalletRow } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate, useRoute } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useAction, useLoad } from '../lib/useLoad'
@@ -49,8 +49,9 @@ function Payouts({ canWrite }: { canWrite: boolean }) {
   const toast = useToast()
   const [status, setStatus] = useState<'due' | 'paid'>('due')
   const [page, setPage] = useState(1)
-  const { data, error, loading, reload } = useLoad<Page<Statement> & { due_total: number; due_count: number }>(
-    `payouts/${query({ status, page })}`,
+  const { country } = useCountry()
+  const { data, error, loading, reload } = useLoad<Page<Statement> & { due_total: string; due_count: number }>(
+    `payouts/${query({ status, page, country })}`,
   )
   const [paying, setPaying] = useState<Statement | null>(null)
   const close = useAction()
@@ -128,11 +129,13 @@ function Payouts({ canWrite }: { canWrite: boolean }) {
                       </td>
                       <td className="num">{num(s.orders_count)}</td>
                       <td className="num">
-                        {money(s.food_sales)}
-                        {s.store_discounts > 0 && <span className="sub">−{money(s.store_discounts)}</span>}
+                        {money(s.food_sales, s.currency)}
+                        {Number(s.store_discounts) > 0 && (
+                          <span className="sub">−{money(s.store_discounts, s.currency)}</span>
+                        )}
                       </td>
-                      <td className="num">{money(s.commission)}</td>
-                      <td className="num strong">{money(s.payout)}</td>
+                      <td className="num">{money(s.commission, s.currency)}</td>
+                      <td className="num strong">{money(s.payout, s.currency)}</td>
                       <td>
                         {s.status === 'paid' ? (
                           <Badge tone="good">{s.paid_reference || t('paid')}</Badge>
@@ -177,7 +180,11 @@ function PayDialog({ statement, onClose, onDone }: { statement: Statement; onClo
     if (await run(() => api(`payouts/${statement.id}/paid/`, { method: 'POST', body: { reference } }))) onDone()
   }
   return (
-    <Modal title={`${t('mark_paid')} · ${statement.store_name}`} lead={money(statement.payout)} onClose={onClose}>
+    <Modal
+      title={`${t('mark_paid')} · ${statement.store_name}`}
+      lead={money(statement.payout, statement.currency)}
+      onClose={onClose}
+    >
       <form className="stack" onSubmit={submit}>
         <TextField
           label={t('reference')}
@@ -205,8 +212,9 @@ function Ledger() {
   const [type, setType] = useState('')
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
-  const { data, error, loading, reload } = useLoad<Page<WalletRow> & { totals: Record<string, number> }>(
-    `wallet/${query({ type, q, page })}`,
+  const { country } = useCountry()
+  const { data, error, loading, reload } = useLoad<Page<WalletRow> & { totals: Record<string, string> }>(
+    `wallet/${query({ type, q, page, country })}`,
   )
   return (
     <>
@@ -257,7 +265,7 @@ function Ledger() {
                       <td>{t(`tx_${w.type}` as StringKey)}</td>
                       <td>{w.order ? `#${w.order}` : '—'}</td>
                       <td className="muted">{when(w.created_at)}</td>
-                      <td className={`num ${w.amount < 0 ? 'neg' : 'pos'}`}>{money(w.amount)}</td>
+                      <td className={`num ${Number(w.amount) < 0 ? 'neg' : 'pos'}`}>{money(w.amount, w.currency)}</td>
                     </tr>
                   ))}
                 </tbody>

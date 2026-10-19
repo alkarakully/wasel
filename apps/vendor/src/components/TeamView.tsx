@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { Api, ApiError, type Team, type TeamInvite, type TeamMember } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { displayPhone } from '../lib/strings'
+import { CountryPicker, savedPhoneCountry } from './CountryPicker'
 
 interface Props {
   api: Api
@@ -18,6 +20,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
   const { t, error: errorMessage } = useI18n()
   const [team, setTeam] = useState<Team | null>(null)
   const [phone, setPhone] = useState('')
+  const [country, setCountry] = useState(savedPhoneCountry)
   const [name, setName] = useState('')
   const [role, setRole] = useState<Role>('cashier')
   const [problem, setProblem] = useState<string | null>(null)
@@ -35,7 +38,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
     setProblem(null)
     setSentTo(null)
     try {
-      const invite = await api.addMember(storeId, { phone, name, role })
+      const invite = await api.addMember(storeId, { phone, name, role, country })
       setSentTo(invite.phone)
       setPhone('')
       setName('')
@@ -84,9 +87,9 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
             <li>
               <UserCircle size={36} weight="light" aria-hidden="true" />
               <span className="grow">
-                <strong>{team.owner.name || team.owner.phone}</strong>
+                <strong>{team.owner.name || displayPhone(team.owner.phone)}</strong>
                 <span className="muted" dir="ltr">
-                  {team.owner.phone}
+                  {displayPhone(team.owner.phone)}
                 </span>
               </span>
               <span className="role-chip owner">
@@ -99,13 +102,13 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
             <li key={member.id}>
               <UserCircle size={36} weight="light" aria-hidden="true" />
               <span className="grow">
-                <strong>{member.name || member.phone}</strong>
+                <strong>{member.name || displayPhone(member.phone)}</strong>
                 <span className="muted" dir="ltr">
-                  {member.phone}
+                  {displayPhone(member.phone)}
                 </span>
               </span>
               <select
-                aria-label={`${t('role')} ${member.name || member.phone}`}
+                aria-label={`${t('role')} ${member.name || displayPhone(member.phone)}`}
                 value={member.role}
                 onChange={(e) => changeRole(member, e.target.value as Role)}
               >
@@ -120,7 +123,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
               >
                 <Trash size={18} weight="light" aria-hidden="true" />
                 <span className="sr-only">
-                  {t('removeMember')} {member.name || member.phone}
+                  {t('removeMember')} {member.name || displayPhone(member.phone)}
                 </span>
               </button>
             </li>
@@ -129,14 +132,12 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
             <li key={`invite-${invite.id}`} className="invited">
               <EnvelopeSimple size={36} weight="light" aria-hidden="true" />
               <span className="grow">
-                <strong>{invite.name || invite.phone}</strong>
+                <strong>{invite.name || displayPhone(invite.phone)}</strong>
                 <span className="muted" dir="ltr">
-                  {invite.phone}
+                  {displayPhone(invite.phone)}
                 </span>
               </span>
-              <span className="role-chip invited-chip">
-                {t('invitedChip', { role: t(invite.role) })}
-              </span>
+              <span className="role-chip invited-chip">{t('invitedChip', { role: t(invite.role) })}</span>
               <button
                 type="button"
                 className="icon-button danger-icon"
@@ -145,7 +146,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
               >
                 <X size={18} weight="light" aria-hidden="true" />
                 <span className="sr-only">
-                  {t('cancelInvite')} {invite.name || invite.phone}
+                  {t('cancelInvite')} {invite.name || displayPhone(invite.phone)}
                 </span>
               </button>
             </li>
@@ -156,14 +157,15 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
       <form className="plate-card add-person" onSubmit={add}>
         <h2>{t('addPersonTitle')}</h2>
         <div className="form-grid">
-          <label>
-            {t('phone')}
+          {/* Not a <label>: it would hand clicks on the caption to the country button. */}
+          <div className="field-group">
+            <span id="invite-phone-label">{t('phone')}</span>
             <div className="phone-input" dir="ltr">
-              <span>+964</span>
+              <CountryPicker value={country} onChange={(code) => (setCountry(code), setProblem(null))} />
               <input
                 inputMode="tel"
-                aria-label={t('phone')}
-                placeholder="0780 000 0000"
+                aria-labelledby="invite-phone-label"
+                placeholder={country === 'IQ' ? '0780 000 0000' : ''}
                 required
                 value={phone}
                 onChange={(e) => {
@@ -172,7 +174,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
                 }}
               />
             </div>
-          </label>
+          </div>
           <label>
             {t('personName')}
             <input className="text-input" value={name} onChange={(e) => setName(e.target.value)} />
@@ -197,7 +199,7 @@ export function TeamView({ api, storeId, myUserId, onError }: Props) {
         )}
         {sentTo && (
           <p className="note success-note" role="status">
-            {t('inviteSent', { phone: '\u2066' + sentTo + '\u2069' })}
+            {t('inviteSent', { phone: '\u2066' + displayPhone(sentTo) + '\u2069' })}
           </p>
         )}
         <div className="actions">

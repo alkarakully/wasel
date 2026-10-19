@@ -193,14 +193,14 @@ class ReportTests(StoreTestCase):
         self.assertEqual(report["orders"], 3)
         self.assertEqual(report["delivered"], 2)
         self.assertEqual(report["cancelled"], 1)
-        self.assertEqual(report["food_sales"], 30000)
-        self.assertEqual(report["commission"], 4500)
-        self.assertEqual(report["payout"], 25500)
-        self.assertEqual(report["average_order"], 15000)
+        self.assertEqual(report["food_sales"], "30000")
+        self.assertEqual(report["commission"], "4500")
+        self.assertEqual(report["payout"], "25500")
+        self.assertEqual(report["average_order"], "15000")
         self.assertEqual(len(report["days"]), 7)
-        self.assertEqual(report["days"][-1], {"date": today.isoformat(), "orders": 1, "sales": 10000})
+        self.assertEqual(report["days"][-1], {"date": today.isoformat(), "orders": 1, "sales": "10000"})
         self.assertEqual(report["top_items"][0]["name"]["en"], "Kebab")
-        self.assertEqual(report["top_items"][0]["sales"], 30000)
+        self.assertEqual(report["top_items"][0]["sales"], "30000")
 
     def test_bad_ranges(self):
         response = self.client.get(f"/api/vendors/{self.store.pk}/report/?from=2026-05-02&to=2026-05-01")
@@ -239,11 +239,11 @@ class StatementTests(StoreTestCase):
         self.assertEqual(close_week(start), [])  # safe to run again
 
         billing = self.client.get(f"/api/vendors/{self.store.pk}/billing/").data
-        self.assertEqual(billing["due_total"], 24650)
+        self.assertEqual(billing["due_total"], "24650")
         self.assertEqual(billing["statements"][0]["status"], "due")
 
         detail = self.client.get(f"/api/vendors/{self.store.pk}/statements/{statement.pk}/").data
-        self.assertEqual([line["payout"] for line in detail["orders"]], [7650, 17000])
+        self.assertEqual([line["payout"] for line in detail["orders"]], ["7650", "17000"])
         csv = self.client.get(f"/api/vendors/{self.store.pk}/statements/{statement.pk}/?download=csv")
         self.assertIn("Tigris Grill", csv.content.decode("utf-8-sig"))
 
@@ -252,7 +252,7 @@ class StatementTests(StoreTestCase):
         web = self.client
         web.force_login(staff)
         due = web.get("/api/ops/payouts/?status=due").json()
-        self.assertEqual(due["due_total"], 24650)
+        self.assertEqual(due["due_total"], "24650")
         web.post(f"/api/ops/payouts/{statement.pk}/paid/", {"reference": "TRF-1001"}, content_type="application/json")
         statement.refresh_from_db()
         self.assertEqual((statement.status, statement.paid_reference), ("paid", "TRF-1001"))
@@ -261,4 +261,4 @@ class StatementTests(StoreTestCase):
         self.order(timezone.now(), subtotal=12000, commission=1800)
         current = self.client.get(f"/api/vendors/{self.store.pk}/billing/").data["current_week"]
         self.assertEqual(current["orders_count"], 1)
-        self.assertEqual(current["payout"], 10200)
+        self.assertEqual(current["payout"], "10200")

@@ -2,7 +2,9 @@ import { PencilSimple, Plus, Trash, X } from '@phosphor-icons/react'
 import { useState, type CSSProperties, type FormEvent } from 'react'
 
 import { Api, type Product, type ProductInput, type Store } from '../lib/api'
+import { regionForCurrency } from '../lib/countries'
 import { useI18n } from '../lib/i18n'
+import { amountInput } from '../lib/strings'
 
 interface Props {
   api: Api
@@ -63,6 +65,7 @@ export function MenuView({ api, store, onChanged, onError, canEdit = false, onRe
             <ItemForm
               api={api}
               storeId={store.id}
+              currency={store.currency}
               sections={[...sections.keys()].filter(Boolean)}
               onSaved={saved}
               onCancel={() => setEditing(null)}
@@ -88,6 +91,7 @@ export function MenuView({ api, store, onChanged, onError, canEdit = false, onRe
                     <ItemForm
                       api={api}
                       storeId={store.id}
+                      currency={store.currency}
                       product={product}
                       sections={[...sections.keys()].filter(Boolean)}
                       onSaved={saved}
@@ -105,7 +109,7 @@ export function MenuView({ api, store, onChanged, onError, canEdit = false, onRe
                 >
                   <span className="product-name">{label}</span>
                   <span className="price">
-                    {money(product.price)}
+                    {money(product.price, store.currency)}
                     {product.unit_type === 'kg' && <span className="muted"> / kg</span>}
                   </span>
                   <label className="switch">
@@ -157,6 +161,8 @@ export function MenuView({ api, store, onChanged, onError, canEdit = false, onRe
 interface FormProps {
   api: Api
   storeId: number
+  /** The store's currency: prices may use its decimals (none for IQD, 3 for KWD). */
+  currency: string
   product?: Product
   sections: string[]
   onSaved: () => void
@@ -165,8 +171,9 @@ interface FormProps {
 }
 
 /** Add or edit one item: names in three languages, section, price, sold per item or per kg. */
-function ItemForm({ api, storeId, product, sections, onSaved, onCancel, onError }: FormProps) {
+function ItemForm({ api, storeId, currency, product, sections, onSaved, onCancel, onError }: FormProps) {
   const { t } = useI18n()
+  const decimals = regionForCurrency(currency).decimals
   const [values, setValues] = useState<ProductInput>(
     product
       ? {
@@ -174,7 +181,7 @@ function ItemForm({ api, storeId, product, sections, onSaved, onCancel, onError 
           name_ku: product.name_ku,
           name_en: product.name_en,
           menu_section: product.menu_section,
-          price: String(Math.round(Number(product.price))),
+          price: product.price,
           unit_type: product.unit_type,
         }
       : EMPTY,
@@ -252,14 +259,14 @@ function ItemForm({ api, storeId, product, sections, onSaved, onCancel, onError 
           </datalist>
         </label>
         <label>
-          {t('price')}
+          {t('price')} · {currency}
           <input
             className="text-input"
             dir="ltr"
-            inputMode="numeric"
+            inputMode={decimals ? 'decimal' : 'numeric'}
             required
             value={values.price}
-            onChange={(e) => set('price')(e.target.value.replace(/[^\d]/g, ''))}
+            onChange={(e) => set('price')(amountInput(e.target.value, decimals))}
           />
         </label>
         <fieldset className="unit">

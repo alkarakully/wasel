@@ -11,6 +11,8 @@ from rest_framework.response import Response
 
 from accounts.models import User, WalletTransaction
 from orders.models import Order
+from regions.regions import region
+from regions.serializers import check_amount
 from subscriptions.models import WaselPlusSubscription
 from vendors.models import StoreMember, Vendor
 
@@ -20,9 +22,6 @@ from .common import iso, money, paged
 from .models import AuditEntry, StaffProfile
 from .staff import active_admins, create_staff
 
-MAX_ADJUSTMENT = 1_000_000
-
-
 def user_row(u):
     return {
         "id": u.pk,
@@ -31,7 +30,9 @@ def user_row(u):
         "role": u.role,
         "is_active": u.is_active,
         "is_staff": u.is_staff,
-        "wallet_balance": money(u.wallet_balance),
+        "country": u.country,
+        "wallet_currency": u.wallet_currency,
+        "wallet_balance": money(u.wallet_balance, u.wallet_currency),
         "orders": getattr(u, "order_count", None),
         "joined": u.date_joined.isoformat(),
     }
@@ -69,7 +70,9 @@ class UserView(ConsoleView):
     def get(self, request, pk):
         u = _user(pk)
         orders = Order.objects.filter(customer=u)
-        spent = orders.filter(status=Order.Status.DELIVERED).aggregate(t=Sum("total_amount"))["t"]
+        spent = (
+            orders.filter(status=Order.Status.DELIVERED, currency=u.wallet_currency).aggregate(t=Sum("total_amount"))["t"]
+        )
         deliveries = Order.objects.filter(captain=u, status=Order.Status.DELIVERED)
         plus = WaselPlusSubscription.objects.filter(user=u).first()
         stores = [
@@ -84,18 +87,32 @@ class UserView(ConsoleView):
                 "language": u.language_pref,
                 "last_login": iso(u.last_login),
                 "orders_count": orders.count(),
-                "delivered_spend": money(spent),
+                "delivered_spend": money(spent, u.wallet_currency),
                 "deliveries": deliveries.count(),
                 "stores": stores,
                 "plus": {"status": plus.status, "renews_at": iso(plus.renews_at), "trial_end": iso(plus.trial_end_date)}
                 if plus
                 else None,
                 "recent_orders": [
-                    {"id": o.pk, "status": o.status, "store": o.vendor.name, "total": money(o.total_amount), "created_at": o.created_at.isoformat()}
+                    {
+                        "id": o.pk,
+                        "status": o.status,
+                        "store": o.vendor.name,
+                        "currency": o.currency,
+                        "total": money(o.total_amount, o.currency),
+                        "created_at": o.created_at.isoformat(),
+                    }
                     for o in Order.objects.filter(Q(customer=u) | Q(captain=u)).select_related("vendor").order_by("-created_at")[:10]
                 ],
                 "wallet": [
-                    {"id": t.pk, "type": t.type, "amount": money(t.amount), "order": t.order_id, "created_at": t.created_at.isoformat()}
+                    {
+                        "id": t.pk,
+                        "type": t.type,
+                        "currency": t.currency,
+                        "amount": money(t.amount, t.currency),
+                        "order": t.order_id,
+                        "created_at": t.created_at.isoformat(),
+                    }
                     for t in u.wallet_transactions.all()[:20]
                 ],
             }
@@ -129,13 +146,18 @@ class UserActiveView(ConsoleView):
 
 
 class AdjustInput(serializers.Serializer):
-    amount = serializers.IntegerField(min_value=-MAX_ADJUSTMENT, max_value=MAX_ADJUSTMENT)
+    """An amount in the wallet's currency; the limit and decimals follow its country."""
+
+    amount = serializers.DecimalField(max_digits=15, decimal_places=3)
     reason = serializers.CharField(max_length=255)
 
     def validate_amount(self, value):
         if value == 0:
             raise serializers.ValidationError("Enter an amount other than zero.")
-        return value
+        r = region(self.context["country"])
+        if abs(value) > r.max_wallet_adjustment:
+            raise serializers.ValidationError(f"At most {r.max_wallet_adjustment:,} {r.currency} at a time.")
+        return check_amount(value, r.currency)
 
     def validate_reason(self, value):
         if not value.strip():
@@ -149,27 +171,40 @@ class WalletAdjustView(ConsoleView):
     area = "money"
 
     def post(self, request, pk):
-        data = AdjustInput(data=request.data)
-        data.is_valid(raise_exception=True)
-        amount, reason = data.validated_data["amount"], data.validated_data["reason"]
         with transaction.atomic():
             u = get_object_or_404(User.objects.select_for_update().filter(is_staff=False), pk=pk)
+            data = AdjustInput(data=request.data, context={"country": u.country})
+            data.is_valid(raise_exception=True)
+            amount, reason = data.validated_data["amount"], data.validated_data["reason"]
+            currency = u.wallet_currency
             if u.wallet_balance + amount < 0:
                 return Response(
-                    {"error": "insufficient_balance", "detail": f"The wallet only has {money(u.wallet_balance)} IQD."},
+                    {
+                        "error": "insufficient_balance",
+                        "detail": f"The wallet only has {money(u.wallet_balance, currency)} {currency}.",
+                    },
                     status=400,
                 )
-            entry = WalletTransaction.objects.create(user=u, type=WalletTransaction.Type.ADJUSTMENT, amount=amount)
+            entry = WalletTransaction.objects.create(
+                user=u, type=WalletTransaction.Type.ADJUSTMENT, currency=currency, amount=amount
+            )
             User.objects.filter(pk=u.pk).update(wallet_balance=F("wallet_balance") + amount)
             u.refresh_from_db(fields=["wallet_balance"])
+            shown = money(abs(amount), currency)
             record(
                 request,
                 "wallet.adjust",
-                f"{'Added' if amount > 0 else 'Took'} {abs(amount):,} IQD {'to' if amount > 0 else 'from'} {u.phone}",
+                f"{'Added' if amount > 0 else 'Took'} {shown} {currency} {'to' if amount > 0 else 'from'} {u.phone}",
                 entry,
-                {"user": u.pk, "amount": amount, "reason": reason, "balance": money(u.wallet_balance)},
+                {
+                    "user": u.pk,
+                    "amount": money(amount, currency),
+                    "currency": currency,
+                    "reason": reason,
+                    "balance": money(u.wallet_balance, currency),
+                },
             )
-        return Response({"id": entry.pk, "wallet_balance": money(u.wallet_balance)}, status=201)
+        return Response({"id": entry.pk, "wallet_balance": money(u.wallet_balance, currency), "currency": currency}, status=201)
 
 
 # --- Wasel staff ------------------------------------------------------------------

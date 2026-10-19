@@ -34,11 +34,16 @@
         <div class="field">
           <label for="phone" data-i18n="phoneLabel">رقم الهاتف</label>
           <div class="phone-input" dir="ltr">
-            <span class="prefix">+964</span>
+            <label class="prefix">
+              <span class="prefix-shown" id="prefix-shown" aria-hidden="true">🇮🇶 +964</span>
+              <select id="country" name="country" aria-label="Country" data-i18n-label="countryLabel">
+                <option value="IQ" data-dial="964">🇮🇶 +964 العراق</option>
+              </select>
+            </label>
             <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel-national"
                    placeholder="0770 123 4567" aria-describedby="phone-help phone-error" required>
           </div>
-          <p class="help" id="phone-help" data-i18n="phoneHelp">رقم عراقي يبدأ بـ 07</p>
+          <p class="help" id="phone-help" data-i18n="phoneHelp">اختر الدولة ثم اكتب رقمك</p>
           <p class="error" id="phone-error" role="alert" hidden></p>
         </div>
 

@@ -1,6 +1,7 @@
-/// Data from the Wasel API. Money comes as whole-dinar strings, e.g. "18000".
-int _money(dynamic value) =>
-    value == null ? 0 : int.parse(value.toString().split('.').first);
+/// Data from the Wasel API. Money comes as strings with exactly its currency's
+/// decimals ("18000" dinars, "12.50" riyals, "0.750" Kuwaiti dinars), next to a
+/// currency code. Kept as numbers for showing; totals always come from the server.
+num _money(dynamic value) => value == null ? 0 : num.parse(value.toString());
 
 double? _double(dynamic value) =>
     value == null ? null : (value as num).toDouble();
@@ -32,6 +33,7 @@ class User {
     required this.name,
     required this.role,
     required this.languagePref,
+    this.country = 'IQ',
   });
   final int id;
   final String phone;
@@ -39,12 +41,16 @@ class User {
   final String role;
   final String languagePref;
 
+  /// The account's country (its phone's); the wallet is in its currency.
+  final String country;
+
   factory User.fromJson(Map<String, dynamic> json) => User(
     id: json['id'],
     phone: json['phone'],
     name: json['name'] ?? '',
     role: json['role'],
     languagePref: json['language_pref'] ?? 'ar',
+    country: json['country'] ?? 'IQ',
   );
 }
 
@@ -57,14 +63,20 @@ class Vendor {
     required this.isOpen,
     this.distanceKm,
     this.deliveryFee,
+    this.country = 'IQ',
+    this.currency = 'IQD',
   });
   final int id;
   final String name;
   final String type;
   final String cuisine;
   final bool isOpen;
+
+  /// Where the store trades; its prices and fees are in [currency].
+  final String country;
+  final String currency;
   final double? distanceKm;
-  final int? deliveryFee;
+  final num? deliveryFee;
 
   factory Vendor.fromJson(Map<String, dynamic> json) => Vendor(
     id: json['id'],
@@ -76,6 +88,8 @@ class Vendor {
     deliveryFee: json['delivery_fee'] == null
         ? null
         : _money(json['delivery_fee']),
+    country: json['country'] ?? 'IQ',
+    currency: json['currency'] ?? 'IQD',
   );
 }
 
@@ -94,7 +108,7 @@ class Modifier {
   final String nameAr;
   final String nameKu;
   final String nameEn;
-  final int priceDelta;
+  final num priceDelta;
   final bool isRequired;
 
   String name(String lang) => localizedName(lang, nameAr, nameKu, nameEn);
@@ -127,7 +141,7 @@ class Product {
   final String nameKu;
   final String nameEn;
   final String menuSection;
-  final int price;
+  final num price;
   final String unitType;
   final bool isAvailable;
   final List<Modifier> modifiers;
@@ -164,6 +178,8 @@ class VendorDetail extends Vendor {
     required super.type,
     required super.cuisine,
     required super.isOpen,
+    super.country,
+    super.currency,
     required this.products,
   });
   final List<Product> products;
@@ -174,6 +190,8 @@ class VendorDetail extends Vendor {
     type: json['type'],
     cuisine: json['cuisine'] ?? '',
     isOpen: json['is_open'] ?? false,
+    country: json['country'] ?? 'IQ',
+    currency: json['currency'] ?? 'IQD',
     products: [for (final p in json['products'] ?? []) Product.fromJson(p)],
   );
 }
@@ -207,13 +225,15 @@ class Quote {
     required this.tip,
     required this.total,
     required this.waselPlus,
+    this.currency = 'IQD',
   });
-  final int subtotal;
-  final int deliveryFee;
-  final int serviceFee;
-  final int discount;
-  final int tip;
-  final int total;
+  final String currency;
+  final num subtotal;
+  final num deliveryFee;
+  final num serviceFee;
+  final num discount;
+  final num tip;
+  final num total;
   final bool waselPlus;
 
   factory Quote.fromJson(Map<String, dynamic> json) => Quote(
@@ -224,6 +244,7 @@ class Quote {
     tip: _money(json['tip']),
     total: _money(json['total_amount']),
     waselPlus: json['wasel_plus'] ?? false,
+    currency: json['currency'] ?? 'IQD',
   );
 }
 
@@ -259,13 +280,17 @@ class Order {
     this.vendorId,
     this.items = const [],
     this.estimatedReadyAt,
+    this.currency = 'IQD',
   });
   final int id;
+
+  /// Every amount on the order is in this currency (the store's when it was placed).
+  final String currency;
   final int? vendorId;
   final String vendorName;
   final String status;
   final int? captainId;
-  final int total;
+  final num total;
   final String? deliveryPin;
   final GeoPoint? vendorLocation;
   final GeoPoint? deliveryLocation;
@@ -285,7 +310,7 @@ class Order {
   final DateTime? estimatedReadyAt;
 
   /// Cash the captain collects at the door (0 when paid in the app).
-  int get cashToCollect => paymentType == 'cod' ? total : 0;
+  num get cashToCollect => paymentType == 'cod' ? total : 0;
 
   static const steps = [
     'received',
@@ -321,6 +346,7 @@ class Order {
     estimatedReadyAt: json['estimated_ready_at'] == null
         ? null
         : DateTime.parse(json['estimated_ready_at']),
+    currency: json['currency'] ?? 'IQD',
   );
 }
 

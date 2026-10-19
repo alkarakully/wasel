@@ -85,7 +85,7 @@ class MenuView extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              s.money(product.price),
+                              s.money(product.price, store.currency),
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: scheme.primary,

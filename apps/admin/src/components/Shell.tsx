@@ -21,6 +21,7 @@ import { useI18n } from '../lib/i18n'
 import { navigate } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useAction } from '../lib/useLoad'
+import { CountrySwitch } from './CountrySwitch'
 import { LanguageSwitch } from './LanguageSwitch'
 import { Button, ErrorNote, Modal, TextField, useToast } from './ui'
 
@@ -142,6 +143,7 @@ export function Shell({
           <button type="button" className="icon-btn menu-open-btn" onClick={() => setMenuOpen(true)} aria-label="Menu">
             <List weight="light" size={20} />
           </button>
+          <CountrySwitch />
           <span className="topbar-spacer" />
           <LanguageSwitch setLang={setLang} />
         </div>

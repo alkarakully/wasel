@@ -301,4 +301,16 @@ class Ph {
     fontPackage: _package,
     matchTextDirection: false,
   );
+  static const caretDown = IconData(
+    0xe136,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const magnifyingGlass = IconData(
+    0xe30c,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
 }

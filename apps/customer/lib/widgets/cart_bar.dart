@@ -99,7 +99,7 @@ class CartBar extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    s.money(cart.subtotal),
+                    s.money(cart.subtotal, cart.currency),
                     style: const TextStyle(
                       color: Gold.c300,
                       fontSize: 16,

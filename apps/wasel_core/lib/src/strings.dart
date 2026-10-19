@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
+import 'countries.dart';
 import 'session.dart';
 
 /// App text in Arabic, Kurdish (Sorani) and English.
@@ -33,17 +34,35 @@ class S {
     return text;
   }
 
-  /// Formats whole dinars with thousands separators, e.g. "18,000 د.ع".
-  String money(int amount) {
-    final digits = amount.abs().toString();
+  /// An amount in its currency, with that currency's decimals and
+  /// thousands separators: "18,000 د.ع", "12.50 SAR", "3.150 د.ك".
+  String money(num amount, [String currency = 'IQD']) {
+    final decimals = currencyDecimals(currency);
+    final fixed = amount.abs().toStringAsFixed(decimals);
+    final whole = fixed.split('.').first;
     final buffer = StringBuffer();
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buffer.write(',');
-      buffer.write(digits[i]);
+    for (var i = 0; i < whole.length; i++) {
+      if (i > 0 && (whole.length - i) % 3 == 0) buffer.write(',');
+      buffer.write(whole[i]);
     }
+    if (decimals > 0) buffer.write('.${fixed.split('.').last}');
     final sign = amount < 0 ? '-' : '';
-    return '$sign$buffer ${t('currency')}';
+    final symbol = lang == 'en'
+        ? currency
+        : (currencySymbols[currency] ?? currency);
+    return '$sign$buffer $symbol';
   }
+
+  /// Arabic-script symbols, used in Arabic and Kurdish.
+  static const currencySymbols = {
+    'IQD': 'د.ع',
+    'SAR': 'ر.س',
+    'AED': 'د.إ',
+    'QAR': 'ر.ق',
+    'KWD': 'د.ك',
+    'BHD': 'د.ب',
+    'OMR': 'ر.ع',
+  };
 
   static const _core = <String, Map<String, String>>{
     'ar': {
@@ -53,7 +72,11 @@ class S {
       'loginTitle': 'سجّل دخولك',
       'loginLead': 'أدخل رقم هاتفك وسنرسل لك رمز الدخول.',
       'phone': 'رقم الهاتف',
-      'phoneHelp': 'رقم عراقي يبدأ بـ 07',
+      'phoneHelp': 'اختر الدولة ثم اكتب رقمك',
+      'phoneCountry': 'دولة الرقم',
+      'searchCountries': 'ابحث عن دولة',
+      'allCountries': 'كل الدول',
+      'err_wallet_currency_mismatch': 'محفظتك بعملة أخرى. اختر الدفع نقداً.',
       'sendBy': 'أرسل الرمز عبر',
       'whatsapp': 'واتساب',
       'sms': 'رسالة نصية',
@@ -83,8 +106,7 @@ class S {
       'step_delivered': 'توصيل',
       'pin': 'رمز التسليم',
       'orderNumber': 'طلب #{id}',
-      'err_invalid_phone':
-          'رقم الهاتف غير صحيح. أدخل رقماً عراقياً يبدأ بـ 07.',
+      'err_invalid_phone': 'رقم الهاتف غير صحيح. تأكد من الدولة والرقم.',
       'err_invalid_code': 'الرمز غير صحيح أو انتهت صلاحيته.',
       'err_too_soon': 'انتظر قليلاً قبل طلب رمز جديد.',
       'err_too_many_requests': 'طلبات كثيرة لهذا الرقم. حاول بعد ساعة.',
@@ -105,7 +127,12 @@ class S {
       'loginTitle': 'چوونەژوورەوە',
       'loginLead': 'ژمارەی مۆبایلەکەت بنووسە و کۆدی چوونەژوورەوەت بۆ دەنێرین.',
       'phone': 'ژمارەی مۆبایل',
-      'phoneHelp': 'ژمارەیەکی عێراقی کە بە 07 دەست پێدەکات',
+      'phoneHelp': 'وڵات هەڵبژێرە و ژمارەکەت بنووسە',
+      'phoneCountry': 'وڵاتی ژمارەکە',
+      'searchCountries': 'گەڕان بۆ وڵات',
+      'allCountries': 'هەموو وڵاتەکان',
+      'err_wallet_currency_mismatch':
+          'جزدانەکەت بە دراوێکی ترە. پارەدانی کاش هەڵبژێرە.',
       'sendBy': 'کۆدەکە بنێرە لە ڕێگەی',
       'whatsapp': 'واتساپ',
       'sms': 'نامەی دەقی',
@@ -135,8 +162,7 @@ class S {
       'step_delivered': 'گەیاندن',
       'pin': 'کۆدی وەرگرتن',
       'orderNumber': 'داواکاری #{id}',
-      'err_invalid_phone':
-          'ژمارەکە هەڵەیە. ژمارەیەکی عێراقی بنووسە کە بە 07 دەست پێدەکات.',
+      'err_invalid_phone': 'ژمارەکە هەڵەیە. وڵات و ژمارەکە بپشکنە.',
       'err_invalid_code': 'کۆدەکە هەڵەیە یان بەسەرچووە.',
       'err_too_soon': 'کەمێک چاوەڕێ بکە پێش داواکردنی کۆدێکی نوێ.',
       'err_too_many_requests':
@@ -161,7 +187,12 @@ class S {
       'loginTitle': 'Log in',
       'loginLead': "Enter your phone number and we'll send you a login code.",
       'phone': 'Phone number',
-      'phoneHelp': 'An Iraqi number starting with 07',
+      'phoneHelp': 'Pick the country, then type your number',
+      'phoneCountry': 'Phone country',
+      'searchCountries': 'Search countries',
+      'allCountries': 'All countries',
+      'err_wallet_currency_mismatch':
+          'Your wallet is in another currency. Pay cash instead.',
       'sendBy': 'Send the code by',
       'whatsapp': 'WhatsApp',
       'sms': 'Text message',
@@ -192,7 +223,7 @@ class S {
       'pin': 'Delivery PIN',
       'orderNumber': 'Order #{id}',
       'err_invalid_phone':
-          "That number isn't valid. Enter an Iraqi number starting with 07.",
+          "That number isn't valid. Check the country and the number.",
       'err_invalid_code': 'The code is wrong or has expired.',
       'err_too_soon': 'Wait a moment before asking for a new code.',
       'err_too_many_requests':

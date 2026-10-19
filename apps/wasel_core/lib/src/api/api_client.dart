@@ -90,14 +90,16 @@ class ApiClient {
   // --- Auth ------------------------------------------------------------------
 
   /// Returns the normalized phone, the channel used and seconds until resend.
+  /// [country] says how to read a local number (a +code number says it itself).
   Future<({String phone, String channel, int resendIn})> requestCode(
     String phone,
-    String channel,
-  ) async {
+    String channel, {
+    String country = 'IQ',
+  }) async {
     final data = await _send(
       'POST',
       '/api/auth/otp/request/',
-      body: {'phone': phone, 'channel': channel},
+      body: {'phone': phone, 'channel': channel, 'country': country},
     );
     return (
       phone: data['phone'] as String,
@@ -108,12 +110,13 @@ class ApiClient {
 
   Future<({String token, User user})> verifyCode(
     String phone,
-    String code,
-  ) async {
+    String code, {
+    String country = 'IQ',
+  }) async {
     final data = await _send(
       'POST',
       '/api/auth/otp/verify/',
-      body: {'phone': phone, 'code': code},
+      body: {'phone': phone, 'code': code, 'country': country},
     );
     return (token: data['token'] as String, user: User.fromJson(data['user']));
   }

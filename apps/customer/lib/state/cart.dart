@@ -12,9 +12,11 @@ class CartLine {
   double quantity;
   final List<Modifier> modifiers;
 
-  int get unitPrice =>
-      product.price + modifiers.fold(0, (sum, m) => sum + m.priceDelta);
-  int get lineTotal => (unitPrice * quantity).round();
+  num get unitPrice =>
+      product.price + modifiers.fold<num>(0, (sum, m) => sum + m.priceDelta);
+
+  /// An estimate for the cart; the quote from the server has the exact price.
+  num get lineTotal => unitPrice * quantity;
 
   /// Same product with the same options adds to one line.
   bool sameChoiceAs(CartLine other) {
@@ -37,6 +39,9 @@ class CartLine {
 class Cart extends ChangeNotifier {
   int? vendorId;
   String vendorName = '';
+
+  /// The store's currency; every price in the cart is in it.
+  String currency = 'IQD';
   final List<CartLine> lines = [];
 
   bool get isEmpty => lines.isEmpty;
@@ -44,7 +49,7 @@ class Cart extends ChangeNotifier {
     0,
     (sum, l) => sum + (l.product.soldByKg ? 1 : l.quantity.round()),
   );
-  int get subtotal => lines.fold(0, (sum, l) => sum + l.lineTotal);
+  num get subtotal => lines.fold<num>(0, (sum, l) => sum + l.lineTotal);
 
   bool belongsToOtherStore(int storeId) =>
       vendorId != null && vendorId != storeId && lines.isNotEmpty;
@@ -53,6 +58,7 @@ class Cart extends ChangeNotifier {
     if (belongsToOtherStore(store.id)) clear(notify: false);
     vendorId = store.id;
     vendorName = store.name;
+    currency = store.currency;
     final existing = lines.where((l) => l.sameChoiceAs(line)).firstOrNull;
     if (existing != null) {
       existing.quantity += line.quantity;

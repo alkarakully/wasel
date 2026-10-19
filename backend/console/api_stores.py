@@ -11,15 +11,20 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 from accounts.models import User
-from accounts.phone import InvalidPhone, normalize_iraqi_phone
+from accounts.phone import InvalidPhone, normalize_phone
+from accounts.serializers import CountryField
 from orders.models import Order
 from notifications.push import notify
+from regions.serializers import check_amount
+from regions.regions import CODES as REGION_CODES
+from regions.regions import region as region_for
+from regions.regions import where
 from vendors.models import Product, StoreMember, Vendor
 from vendors.onboarding import make_store_account, store_account_problem
 
 from .access import ConsoleView
 from .audit import diff, record
-from .common import money, start_of
+from .common import country_param, local_today, money, start_of
 
 def store_row(v, orders_today=None, sales_today=None):
     row = {
@@ -29,13 +34,15 @@ def store_row(v, orders_today=None, sales_today=None):
         "cuisine": v.cuisine,
         "is_open": v.is_open,
         "status": v.status,
+        "country": v.country,
+        "currency": v.currency,
         "owner": {"id": v.owner_id, "phone": v.owner.phone, "name": v.owner.name},
         "commission_rate": str(v.commission_rate.normalize()),
         "created_at": v.created_at.isoformat(),
     }
     if orders_today is not None:
         row["orders_today"] = orders_today
-        row["sales_today"] = money(sales_today)
+        row["sales_today"] = money(sales_today, v.currency)
     return row
 
 
@@ -48,15 +55,16 @@ def store_detail(v):
         "delivery_radius_km": str(v.delivery_radius_km.normalize()),
         "commission_free_until": v.commission_free_until.isoformat() if v.commission_free_until else None,
         "opening_hours": v.opening_hours,
+        "time_zone": v.region.time_zone,
         "rejection_reason": v.rejection_reason,
         "reviewed_at": v.reviewed_at.isoformat() if v.reviewed_at else None,
     }
 
 
-def _owner_for(phone, name=""):
+def _owner_for(phone, name="", country="IQ"):
     """A store account for this phone: an existing one, a fresh customer account turned into one, or a new one."""
     try:
-        phone = normalize_iraqi_phone(phone)
+        phone = normalize_phone(phone, country)
     except InvalidPhone as error:
         raise serializers.ValidationError({"owner_phone": [str(error)]}) from error
     user = User.objects.filter(phone=phone).first()
@@ -79,8 +87,12 @@ class StoreInput(serializers.Serializer):
     commission_rate = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, min_value=Decimal("0"), max_value=Decimal("50"))
     commission_free_until = serializers.DateTimeField(required=False, allow_null=True)
     is_open = serializers.BooleanField(required=False)
+    # Where the store trades (currency, clock, fees). Guessed from the map spot when left out.
+    country = serializers.ChoiceField(choices=REGION_CODES, required=False)
     owner_phone = serializers.CharField(required=False)
     owner_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    # The owner phone's country; local numbers are read in it.
+    owner_country = CountryField()
 
 
 EDITABLE = [
@@ -94,9 +106,11 @@ class StoresView(ConsoleView):
     area = "stores"
 
     def get(self, request):
-        since = start_of(timezone.localdate())
+        # One country at a time: "today" and the sales sums follow its clock and currency.
+        country = country_param(request)
+        since = start_of(local_today(country), country)
         today = Q(orders__created_at__gte=since) & ~Q(orders__status=Order.Status.CANCELLED)
-        stores = Vendor.objects.select_related("owner").annotate(
+        stores = Vendor.objects.filter(country=country).select_related("owner").annotate(
             orders_today=Count("orders", filter=today), sales_today=Sum("orders__total_amount", filter=today)
         )
         status = request.query_params.get("status")
@@ -104,7 +118,9 @@ class StoresView(ConsoleView):
             stores = stores.filter(status=status)
         if q := (request.query_params.get("q") or "").strip():
             stores = stores.filter(Q(name__icontains=q) | Q(owner__phone__icontains=q.lstrip("0")) | Q(owner__name__icontains=q))
-        counts = dict(Vendor.objects.values_list("status").annotate(n=Count("id")).values_list("status", "n"))
+        counts = dict(
+            Vendor.objects.filter(country=country).values_list("status").annotate(n=Count("id")).values_list("status", "n")
+        )
         return Response(
             {
                 "counts": {st: counts.get(st, 0) for st in Vendor.Status.values},
@@ -119,8 +135,13 @@ class StoresView(ConsoleView):
         missing = [f for f in ("name", "latitude", "longitude", "owner_phone") if f not in d]
         if missing:
             return Response({f: ["This field is required."] for f in missing}, status=400)
+        country = d.get("country") or where(d["latitude"], d["longitude"])
+        if country is None:
+            return Response({"country": ["Wasel doesn't run stores in this area yet. Choose the country."]}, status=400)
+        if not region_for(country).contains(d["latitude"], d["longitude"]):
+            return Response({"latitude": [f"This spot isn't in {country}."]}, status=400)
         with transaction.atomic():
-            owner = _owner_for(d["owner_phone"], d.get("owner_name", ""))
+            owner = _owner_for(d["owner_phone"], d.get("owner_name", ""), d.get("owner_country", "IQ"))
             store = Vendor.objects.create(
                 owner=owner,
                 name=d["name"],
@@ -131,6 +152,7 @@ class StoresView(ConsoleView):
                 commission_rate=d.get("commission_rate", Decimal("15")),
                 commission_free_until=d.get("commission_free_until"),
                 address=d.get("address", ""),
+                country=country,
                 status=Vendor.Status.APPROVED,
                 reviewed_at=timezone.now(),
                 reviewed_by=request.user,
@@ -151,8 +173,14 @@ class StoreView(ConsoleView):
         data = StoreInput(data=request.data, partial=True)
         data.is_valid(raise_exception=True)
         d = data.validated_data
-        changes = diff(store, d, EDITABLE)
+        if "country" in d and d["country"] != store.country:
+            # Its orders, statements and offers are in the old currency.
+            if store.orders.exists():
+                return Response({"country": ["A store that has taken orders can't change country."]}, status=400)
+        changes = diff(store, d, EDITABLE + ["country"])
         with transaction.atomic():
+            if "country" in d:
+                store.country = d["country"]
             for field in EDITABLE:
                 if field in d:
                     setattr(store, field, d[field])
@@ -162,7 +190,7 @@ class StoreView(ConsoleView):
                 changes["location"] = [f"{store.location.y},{store.location.x}", f"{lat},{lng}"]
                 store.location = Point(lng, lat, srid=4326)
             if "owner_phone" in d:
-                owner = _owner_for(d["owner_phone"], d.get("owner_name", ""))
+                owner = _owner_for(d["owner_phone"], d.get("owner_name", ""), d.get("owner_country", "IQ"))
                 if owner.pk != store.owner_id:
                     changes["owner"] = [store.owner.phone, owner.phone]
                     store.owner = owner
@@ -227,17 +255,19 @@ class ProductInput(serializers.ModelSerializer):
     def validate_price(self, value):
         if value <= 0:
             raise serializers.ValidationError("Enter a price above zero.")
-        return value
+        currency = self.context.get("currency") or self.instance.vendor.currency
+        return check_amount(value, currency)
 
 
-def product_row(p):
+def product_row(p, currency):
     return {
         "id": p.pk,
         "name_ar": p.name_ar,
         "name_ku": p.name_ku,
         "name_en": p.name_en,
         "menu_section": p.menu_section,
-        "price": int(p.price),
+        "price": money(p.price, currency),
+        "currency": currency,
         "unit_type": p.unit_type,
         "is_available": p.is_available,
     }
@@ -248,15 +278,15 @@ class StoreMenuView(ConsoleView):
 
     def get(self, request, pk):
         store = get_object_or_404(Vendor, pk=pk)
-        return Response([product_row(p) for p in store.products.filter(is_archived=False)])
+        return Response([product_row(p, store.currency) for p in store.products.filter(is_archived=False)])
 
     def post(self, request, pk):
         store = get_object_or_404(Vendor, pk=pk)
-        data = ProductInput(data=request.data)
+        data = ProductInput(data=request.data, context={"currency": store.currency})
         data.is_valid(raise_exception=True)
         product = data.save(vendor=store)
         record(request, "menu.add", f"Added {product.name_ar} to {store.name}", product)
-        return Response(product_row(product), status=201)
+        return Response(product_row(product, store.currency), status=201)
 
 
 class ProductView(ConsoleView):
@@ -270,7 +300,7 @@ class ProductView(ConsoleView):
         data.save()
         if changes:
             record(request, "menu.update", f"Edited {product.name_ar} at {product.vendor.name}", product, changes)
-        return Response(product_row(product))
+        return Response(product_row(product, product.vendor.currency))
 
     def delete(self, request, pk):
         product = get_object_or_404(Product.objects.select_related("vendor"), pk=pk, is_archived=False)
@@ -288,6 +318,7 @@ class ProductView(ConsoleView):
 
 class MemberInput(serializers.Serializer):
     phone = serializers.CharField()
+    country = CountryField()
     name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     role = serializers.ChoiceField(choices=StoreMember.Role.choices, default=StoreMember.Role.CASHIER)
 
@@ -320,7 +351,7 @@ class StoreTeamView(ConsoleView):
         data.is_valid(raise_exception=True)
         d = data.validated_data
         try:
-            user = _owner_for(d["phone"], d.get("name", ""))
+            user = _owner_for(d["phone"], d.get("name", ""), d.get("country", "IQ"))
         except serializers.ValidationError as error:
             return Response({"phone": error.detail["owner_phone"]}, status=400)
         if user.pk == store.owner_id or store.members.filter(user=user).exists():

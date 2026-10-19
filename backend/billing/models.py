@@ -1,12 +1,13 @@
 from django.conf import settings
 from django.db import models
 
-from accounts.models import money_field
+from accounts.models import currency_field, money_field
 
 
 class Statement(models.Model):
     """
-    One store's week (Saturday to Friday, Baghdad time). Wasel collects every
+    One store's week, on its country's calendar (Saturday to Friday in Iraq,
+    Sunday to Saturday in Saudi Arabia, ...). Wasel collects every
     payment (cash through captains, card and wallet in the app) and pays the
     store its food sales minus the store's own discounts and Wasel's
     commission. Made after the week ends; staff mark it paid.
@@ -17,9 +18,10 @@ class Statement(models.Model):
         PAID = "paid", "Paid"
 
     vendor = models.ForeignKey("vendors.Vendor", on_delete=models.PROTECT, related_name="statements")
-    period_start = models.DateField(help_text="Saturday")
-    period_end = models.DateField(help_text="Friday, included")
+    period_start = models.DateField(help_text="First day of the store's week")
+    period_end = models.DateField(help_text="Last day, included")
     orders_count = models.PositiveIntegerField(default=0)
+    currency = currency_field()
     food_sales = money_field(default=0)
     store_discounts = money_field(default=0)
     commission = money_field(default=0)

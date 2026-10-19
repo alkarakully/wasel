@@ -27,7 +27,7 @@ import {
   type OrderStatus,
   type Page,
 } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate, useRoute } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useAction, useLoad } from '../lib/useLoad'
@@ -42,7 +42,8 @@ export function OrdersPage({ id, canWrite }: { id: string; canWrite: boolean }) 
     ['live', 'all', 'alerts', 'captains'].includes(search.get('tab') ?? '') ? search.get('tab') : 'live'
   ) as Tab
   const setTab = (next: Tab) => navigate(`/orders${next === 'live' ? '' : `?tab=${next}`}`)
-  const alerts = useLoad<Alert[]>('alerts/', 20_000)
+  const { country } = useCountry()
+  const alerts = useLoad<Alert[]>(`alerts/?country=${country}`, 20_000)
 
   return (
     <>
@@ -79,11 +80,12 @@ export function OrdersPage({ id, canWrite }: { id: string; canWrite: boolean }) 
 
 function OrdersTable({ scope }: { scope: 'live' | 'all' }) {
   const { t, money, num, when } = useI18n()
+  const { country } = useCountry()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(1)
   const { data, error, loading, reload } = useLoad<Page<OrderRow>>(
-    `orders/${query({ scope, q, status: scope === 'all' ? status : '', page })}`,
+    `orders/${query({ scope, q, status: scope === 'all' ? status : '', page, country })}`,
     scope === 'live' ? 15_000 : undefined,
   )
   const open = (orderId: number) => navigate(`/orders/${orderId}${scope === 'all' ? '?tab=all' : ''}`)
@@ -154,7 +156,7 @@ function OrdersTable({ scope }: { scope: 'live' | 'all' }) {
                       )}
                     </td>
                     <td className="num">
-                      {money(o.total)}
+                      {money(o.total, o.currency)}
                       <span className="sub">{t(`pay_${o.payment_type}` as StringKey)}</span>
                     </td>
                     <td className={scope === 'live' && o.minutes >= 30 ? 'late' : 'muted'}>
@@ -218,7 +220,8 @@ function AlertsList({ alerts, canWrite }: { alerts: ReturnType<typeof useLoad<Al
 
 function CaptainsList() {
   const { t, num } = useI18n()
-  const { data, error, reload } = useLoad<{ captains: CaptainPin[] }>('map/', 20_000)
+  const { country } = useCountry()
+  const { data, error, reload } = useLoad<{ captains: CaptainPin[] }>(`map/?country=${country}`, 20_000)
   const ago = (s: number) =>
     s < 90
       ? `${num(s)}s`
@@ -383,42 +386,42 @@ function OrderDrawer({
                     {item.name}
                     {item.options.length > 0 && <span className="sub">{item.options.join('، ')}</span>}
                   </span>
-                  <span className="num">{money(item.price)}</span>
+                  <span className="num">{money(item.price, data.currency)}</span>
                 </li>
               ))}
             </ul>
             <dl className="totals">
               <div>
                 <dt>{t('subtotal')}</dt>
-                <dd>{money(data.subtotal)}</dd>
+                <dd>{money(data.subtotal, data.currency)}</dd>
               </div>
               <div>
                 <dt>{t('delivery_fee')}</dt>
-                <dd>{money(data.delivery_fee)}</dd>
+                <dd>{money(data.delivery_fee, data.currency)}</dd>
               </div>
               <div>
                 <dt>{t('service_fee')}</dt>
-                <dd>{money(data.service_fee)}</dd>
+                <dd>{money(data.service_fee, data.currency)}</dd>
               </div>
-              {data.tip > 0 && (
+              {Number(data.tip) > 0 && (
                 <div>
                   <dt>{t('tip')}</dt>
-                  <dd>{money(data.tip)}</dd>
+                  <dd>{money(data.tip, data.currency)}</dd>
                 </div>
               )}
-              {data.discount > 0 && (
+              {Number(data.discount) > 0 && (
                 <div>
                   <dt>{t('discount')}</dt>
-                  <dd>−{money(data.discount)}</dd>
+                  <dd>−{money(data.discount, data.currency)}</dd>
                 </div>
               )}
               <div className="grand">
                 <dt>{t('total')}</dt>
-                <dd>{money(data.total)}</dd>
+                <dd>{money(data.total, data.currency)}</dd>
               </div>
               <div className="muted">
                 <dt>{t('commission')}</dt>
-                <dd>{money(data.commission)}</dd>
+                <dd>{money(data.commission, data.currency)}</dd>
               </div>
             </dl>
           </section>
@@ -429,7 +432,7 @@ function OrderDrawer({
               {data.timeline.map((step) => (
                 <li key={step.step} className={`tl-${step.step}`}>
                   <span>{t(`tl_${step.step}` as StringKey)}</span>
-                  <time className="muted">{when(step.at)}</time>
+                  <time className="muted">{when(step.at, true, data.time_zone)}</time>
                 </li>
               ))}
             </ol>
@@ -442,7 +445,7 @@ function OrderDrawer({
                 {data.alerts.map((a) => (
                   <li key={a.id}>
                     <Badge tone={a.resolved_at ? 'neutral' : 'warn'}>{t(`alert_${a.reason}` as StringKey)}</Badge>{' '}
-                    <span className="muted">{when(a.created_at)}</span>
+                    <span className="muted">{when(a.created_at, true, data.time_zone)}</span>
                   </li>
                 ))}
               </ul>

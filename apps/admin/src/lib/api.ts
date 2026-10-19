@@ -87,6 +87,9 @@ export function query(params: Record<string, string | number | undefined | null>
 
 // --- Shapes ----------------------------------------------------------------
 
+/** Money from the API: a string with exactly its currency's decimals ("18000", "12.50", "0.750"). */
+export type Money = string
+
 export interface Person {
   id: number
   name: string
@@ -101,7 +104,8 @@ export interface OrderRow {
   store: { id: number; name: string; phone?: string }
   customer: Person
   captain: Person | null
-  total: number
+  total: Money
+  currency: string
   payment_type: 'cod' | 'card' | 'wallet'
   payment_status: 'pending' | 'paid' | 'refunded'
   created_at: string
@@ -111,17 +115,18 @@ export interface OrderRow {
 
 export interface OrderDetail extends Omit<OrderRow, 'alerts'> {
   delivery_address: string
-  subtotal: number
-  delivery_fee: number
-  service_fee: number
-  tip: number
-  discount: number
-  commission: number
+  subtotal: Money
+  delivery_fee: Money
+  service_fee: Money
+  tip: Money
+  discount: Money
+  commission: Money
   estimated_ready_at: string | null
+  time_zone: string
   cancelled_by: string
   cancel_reason: string
   timeline: { step: string; at: string }[]
-  items: { name: string; name_en: string; quantity: string; price: number; options: string[] }[]
+  items: { name: string; name_en: string; quantity: string; price: Money; options: string[] }[]
   alerts: { id: number; reason: string; created_at: string; resolved_at: string | null }[]
   offers: { captain: Person; status: string; distance_m: number; created_at: string }[]
   can_cancel: boolean
@@ -138,6 +143,8 @@ export interface StoreRow {
   cuisine: string
   is_open: boolean
   status: StoreStatus
+  country: string
+  currency: string
   owner: Person
   commission_rate: string
   created_at: string
@@ -152,6 +159,7 @@ export interface StoreDetail extends StoreRow {
   delivery_radius_km: string
   commission_free_until: string | null
   opening_hours: Record<string, [string, string] | null>
+  time_zone: string
   rejection_reason: string
   reviewed_at: string | null
 }
@@ -162,7 +170,8 @@ export interface Product {
   name_ku: string
   name_en: string
   menu_section: string
-  price: number
+  price: Money
+  currency: string
   unit_type: string
   is_available: boolean
 }
@@ -179,7 +188,9 @@ export interface UserRow {
   name: string
   role: 'customer' | 'captain' | 'vendor'
   is_active: boolean
-  wallet_balance: number
+  country: string
+  wallet_currency: string
+  wallet_balance: Money
   orders: number | null
   joined: string
 }
@@ -188,12 +199,19 @@ export interface UserDetail extends UserRow {
   language: string
   last_login: string | null
   orders_count: number
-  delivered_spend: number
+  delivered_spend: Money
   deliveries: number
   stores: { id: number; name: string; role: string; status: string }[]
   plus: { status: string; renews_at: string | null; trial_end: string | null } | null
-  recent_orders: { id: number; status: OrderStatus; store: string; total: number; created_at: string }[]
-  wallet: { id: number; type: string; amount: number; order: number | null; created_at: string }[]
+  recent_orders: {
+    id: number
+    status: OrderStatus
+    store: string
+    currency: string
+    total: Money
+    created_at: string
+  }[]
+  wallet: { id: number; type: string; currency: string; amount: Money; order: number | null; created_at: string }[]
 }
 
 export interface StaffRow {
@@ -228,10 +246,11 @@ export interface Statement {
   period_start: string
   period_end: string
   orders_count: number
-  food_sales: number
-  store_discounts: number
-  commission: number
-  payout: number
+  currency: string
+  food_sales: Money
+  store_discounts: Money
+  commission: Money
+  payout: Money
   status: 'due' | 'paid'
   paid_at: string | null
   paid_reference: string
@@ -241,7 +260,8 @@ export interface WalletRow {
   id: number
   user: Person
   type: string
-  amount: number
+  currency: string
+  amount: Money
   order: number | null
   created_at: string
 }
@@ -249,10 +269,12 @@ export interface WalletRow {
 export interface Offer {
   id: number
   store: { id: number; name: string } | null
+  country: string
+  currency: string
   title: string
   type: 'percent' | 'fixed' | 'free_delivery' | 'bundle'
   value: string
-  min_order: number
+  min_order: Money
   starts_at: string
   ends_at: string
   is_banner: boolean
@@ -273,15 +295,18 @@ export interface Figures {
   orders: number
   delivered: number
   cancelled: number
-  sales: number
-  commission: number
-  service_fees: number
-  delivery_fees: number
-  discounts: number
+  sales: Money
+  commission: Money
+  service_fees: Money
+  delivery_fees: Money
+  discounts: Money
   avg_delivery_minutes: number | null
 }
 
 export interface Overview {
+  country: string
+  currency: string
+  time_zone: string
   today: Figures
   month: Figures
   live: {
@@ -295,18 +320,21 @@ export interface Overview {
     plus_members: number
   }
   by_status: Record<string, number>
-  days: { day: string; orders: number; sales: number }[]
-  top_stores: { id: number; name: string; orders: number; sales: number }[]
+  days: { day: string; orders: number; sales: Money }[]
+  top_stores: { id: number; name: string; orders: number; sales: Money }[]
 }
 
 export interface Report {
   from: string
   to: string
+  country: string
+  currency: string
+  time_zone: string
   totals: Figures
   customers: number
-  days: { day: string; orders: number; sales: number; commission: number }[]
-  stores: { id: number; name: string; orders: number; sales: number; commission: number }[]
-  payments: Record<string, { orders: number; sales: number }>
+  days: { day: string; orders: number; sales: Money; commission: Money }[]
+  stores: { id: number; name: string; orders: number; sales: Money; commission: Money }[]
+  payments: Record<string, { orders: number; sales: Money }>
   cancelled_by: Record<string, number>
 }
 

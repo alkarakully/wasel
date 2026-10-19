@@ -92,7 +92,7 @@ export function OrderCard({ api, order, showStore, onChanged, onError, onPrint, 
           )}
           {order.payment_type === 'cod' ? t('cash') : t('paid')}
         </span>
-        <span className="amount">{money(order.total_amount)}</span>
+        <span className="amount">{money(order.total_amount, order.currency)}</span>
       </p>
 
       {order.status === 'received' && (

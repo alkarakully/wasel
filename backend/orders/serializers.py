@@ -1,16 +1,19 @@
 from rest_framework import serializers
 
+from regions.regions import as_api
+from regions.serializers import MoneyMixin
 from vendors import access
 
 from .models import TRACKED_STATUSES, CaptainLocation, Order, OrderItem, OrderItemModifier
-from .pricing import round_dinars
 
 
 def names(obj):
     return {"ar": obj.name_ar, "ku": obj.name_ku, "en": obj.name_en}
 
 
-class OrderItemModifierSerializer(serializers.ModelSerializer):
+class OrderItemModifierSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("price_delta",)
+
     name = serializers.SerializerMethodField()
     group_name = serializers.CharField(source="modifier.group_name", read_only=True)
 
@@ -18,11 +21,16 @@ class OrderItemModifierSerializer(serializers.ModelSerializer):
         model = OrderItemModifier
         fields = ["modifier", "group_name", "name", "price_delta"]
 
+    def currency_for(self, item_modifier):
+        return item_modifier.order_item.order.currency
+
     def get_name(self, item_modifier):
         return names(item_modifier.modifier)
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
+class OrderItemSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("unit_price", "line_total")
+
     modifiers = OrderItemModifierSerializer(many=True, read_only=True)
     # Names travel with the order so stores and captains see what to prepare.
     name = serializers.SerializerMethodField()
@@ -31,6 +39,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ["id", "product", "name", "unit_type", "quantity", "unit_price", "line_total", "modifiers"]
+
+    def currency_for(self, item):
+        return item.order.currency
 
     def get_name(self, item):
         return names(item.product)
@@ -49,7 +60,8 @@ def location_payload(location):
     }
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class OrderSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("subtotal", "delivery_fee", "service_fee", "discount", "tip", "total_amount")
     items = OrderItemSerializer(many=True, read_only=True)
     delivery_pin = serializers.SerializerMethodField()
     vendor_name = serializers.CharField(source="vendor.name", read_only=True)
@@ -73,6 +85,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "payment_status",
             "delivery_address",
             "delivery_location",
+            "currency",
             "subtotal",
             "delivery_fee",
             "service_fee",
@@ -144,7 +157,8 @@ class CartSerializer(serializers.Serializer):
     delivery_latitude = serializers.FloatField(min_value=-90, max_value=90)
     delivery_longitude = serializers.FloatField(min_value=-180, max_value=180)
     offer = serializers.IntegerField(required=False, allow_null=True)
-    tip = serializers.IntegerField(min_value=0, default=0)
+    # In the store's currency; build_quote checks the country's limit and decimals.
+    tip = serializers.DecimalField(max_digits=12, decimal_places=3, min_value=0, default=0)
 
 
 class PlaceOrderSerializer(CartSerializer):
@@ -175,14 +189,16 @@ class LocationSerializer(serializers.Serializer):
     speed = serializers.FloatField(min_value=0, max_value=100, required=False, allow_null=True, default=None)
 
 
-def _money(amount):
-    # Same format as the order serializer: whole dinars as a string.
-    return str(round_dinars(amount))
-
-
 def quote_to_dict(quote):
+    currency = quote.vendor.currency
+
+    def _money(amount):
+        # Same format as the order serializer.
+        return as_api(amount, currency)
+
     return {
         "vendor": quote.vendor.pk,
+        "currency": currency,
         "items": [
             {
                 "product": line.product.pk,

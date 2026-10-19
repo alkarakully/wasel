@@ -5,7 +5,7 @@ from django.contrib.gis.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
-from accounts.models import money_field
+from accounts.models import currency_field, money_field
 
 
 class Order(models.Model):
@@ -50,6 +50,8 @@ class Order(models.Model):
     delivery_address = models.CharField(max_length=255)
     delivery_location = models.PointField(geography=True)
 
+    # The store's currency when the order was placed; every amount below is in it.
+    currency = currency_field()
     subtotal = money_field(default=0)
     delivery_fee = money_field(default=0)
     service_fee = money_field(default=0)

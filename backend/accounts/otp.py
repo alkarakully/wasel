@@ -25,6 +25,7 @@ from django.utils.module_loading import import_string
 from subscriptions.services import start_wasel_plus_trial
 
 from .models import PhoneOTP, User
+from .phone import country_of
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +146,7 @@ class SentCode:
     resend_in: int
 
 
-def request_code(phone, channel=PhoneOTP.Channel.WHATSAPP):
+def request_code(phone, channel=PhoneOTP.Channel.WHATSAPP, country=None):
     """Create and send a login code. `phone` must already be normalized."""
     config = settings.OTP
     now = timezone.now()
@@ -180,7 +181,7 @@ def request_code(phone, channel=PhoneOTP.Channel.WHATSAPP):
     raise DeliveryFailed("We could not send a code to this number. Try again later.")
 
 
-def verify_code(phone, code):
+def verify_code(phone, code, country=None):
     """
     Check a code and return (user, created). Creates a customer account the
     first time a number logs in. Raises InvalidCode for any failure so callers
@@ -210,7 +211,8 @@ def verify_code(phone, code):
 
     user = User.objects.filter(phone=phone).first()
     if user is None:
-        user = User.objects.create_user(phone=phone)
+        # The account belongs to the number's country (its wallet currency).
+        user = User.objects.create_user(phone=phone, country=country_of(phone))
         start_wasel_plus_trial(user)
         return user, True
     if not user.is_active:

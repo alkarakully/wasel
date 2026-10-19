@@ -16,11 +16,12 @@ from orders import dispatch, realtime, workflow
 from orders.models import CaptainLocation, Order, StuckOrderAlert
 from subscriptions.models import WaselPlusSubscription
 from vendors import access as store_access
+from regions.regions import region
 from vendors.models import Vendor
 
 from .access import ConsoleView
 from .audit import record
-from .common import ACTIVE, figures, iso, money, paged, person, start_of
+from .common import ACTIVE, country_param, figures, iso, local_today, money, paged, person, start_of
 
 
 class OverviewView(ConsoleView):
@@ -29,11 +30,15 @@ class OverviewView(ConsoleView):
     area = "overview"
 
     def get(self, request):
-        today = timezone.localdate()
-        today_orders = Order.objects.filter(created_at__gte=start_of(today))
-        month_orders = Order.objects.filter(created_at__gte=start_of(today.replace(day=1)))
+        country = country_param(request)
+        r = region(country)
+        here = Order.objects.filter(vendor__country=country)
+        stores = Vendor.objects.filter(country=country)
+        today = local_today(country)
+        today_orders = here.filter(created_at__gte=start_of(today, country))
+        month_orders = here.filter(created_at__gte=start_of(today.replace(day=1), country))
         by_status = dict(
-            Order.objects.filter(status__in=ACTIVE).values_list("status").annotate(n=Count("id")).values_list("status", "n")
+            here.filter(status__in=ACTIVE).values_list("status").annotate(n=Count("id")).values_list("status", "n")
         )
         top = (
             today_orders.exclude(status=Order.Status.CANCELLED)
@@ -44,41 +49,47 @@ class OverviewView(ConsoleView):
         first = today - timedelta(days=13)
         daily = {
             row["day"]: row
-            for row in Order.objects.filter(created_at__gte=start_of(first))
+            for row in here.filter(created_at__gte=start_of(first, country))
             .exclude(status=Order.Status.CANCELLED)
-            .annotate(day=TruncDate("created_at", tzinfo=timezone.get_current_timezone()))
+            .annotate(day=TruncDate("created_at", tzinfo=r.tz))
             .values("day")
             .annotate(orders=Count("id"), sales=Sum("total_amount"))
         }
         days = [first + timedelta(days=i) for i in range(14)]
         return Response(
             {
-                "today": figures(today_orders),
-                "month": figures(month_orders),
+                "country": country,
+                "currency": r.currency,
+                "time_zone": r.time_zone,
+                "today": figures(today_orders, r.currency),
+                "month": figures(month_orders, r.currency),
                 "live": {
                     "active_orders": sum(by_status.values()),
-                    "open_alerts": StuckOrderAlert.objects.filter(resolved_at__isnull=True).count(),
-                    "online_captains": CaptainLocation.objects.filter(is_online=True).count(),
-                    "open_stores": Vendor.objects.filter(status=Vendor.Status.APPROVED, is_open=True).count(),
-                    "stores": Vendor.objects.filter(status=Vendor.Status.APPROVED).count(),
-                    "applications": Vendor.objects.filter(status=Vendor.Status.PENDING).count(),
-                    "customers": User.objects.filter(role=User.Role.CUSTOMER).count(),
-                    "plus_members": WaselPlusSubscription.objects.exclude(
-                        status=WaselPlusSubscription.Status.EXPIRED
+                    "open_alerts": StuckOrderAlert.objects.filter(
+                        resolved_at__isnull=True, order__vendor__country=country
                     ).count(),
+                    # Captains aren't tied to a country; the map shows where they are.
+                    "online_captains": CaptainLocation.objects.filter(is_online=True).count(),
+                    "open_stores": stores.filter(status=Vendor.Status.APPROVED, is_open=True).count(),
+                    "stores": stores.filter(status=Vendor.Status.APPROVED).count(),
+                    "applications": stores.filter(status=Vendor.Status.PENDING).count(),
+                    "customers": User.objects.filter(role=User.Role.CUSTOMER, country=country).count(),
+                    "plus_members": WaselPlusSubscription.objects.filter(user__country=country)
+                    .exclude(status=WaselPlusSubscription.Status.EXPIRED)
+                    .count(),
                 },
                 "by_status": {s: by_status.get(s, 0) for s in ACTIVE},
                 "days": [
                     {
                         "day": d.isoformat(),
                         "orders": daily.get(d, {}).get("orders", 0),
-                        "sales": money(daily.get(d, {}).get("sales")),
+                        "sales": money(daily.get(d, {}).get("sales"), r.currency),
                     }
                     for d in days
                 ],
                 "top_stores": [
-                    {"id": r["vendor_id"], "name": r["vendor__name"], "orders": r["orders"], "sales": money(r["sales"])}
-                    for r in top
+                    {"id": t["vendor_id"], "name": t["vendor__name"], "orders": t["orders"], "sales": money(t["sales"], r.currency)}
+                    for t in top
                 ],
             }
         )
@@ -92,7 +103,8 @@ def order_row(o, now=None):
         "store": {"id": o.vendor_id, "name": o.vendor.name},
         "customer": person(o.customer),
         "captain": person(o.captain),
-        "total": money(o.total_amount),
+        "currency": o.currency,
+        "total": money(o.total_amount, o.currency),
         "payment_type": o.payment_type,
         "payment_status": o.payment_status,
         "created_at": o.created_at.isoformat(),
@@ -116,6 +128,8 @@ class OrdersView(ConsoleView):
             orders = orders.order_by("-created_at")
         if p.get("status") in Order.Status.values:
             orders = orders.filter(status=p["status"])
+        if p.get("country"):
+            orders = orders.filter(vendor__country=country_param(request))
         if (store := p.get("store", "")).isdigit():
             orders = orders.filter(vendor_id=store)
         if (customer := p.get("customer", "")).isdigit():
@@ -153,12 +167,13 @@ def order_detail(o):
         "delivery_address": o.delivery_address,
         "delivery": {"lat": o.delivery_location.y, "lng": o.delivery_location.x},
         "store_location": {"lat": o.vendor.location.y, "lng": o.vendor.location.x},
-        "subtotal": money(o.subtotal),
-        "delivery_fee": money(o.delivery_fee),
-        "service_fee": money(o.service_fee),
-        "tip": money(o.tip),
-        "discount": money(o.discount),
-        "commission": money(o.commission_amount),
+        "subtotal": money(o.subtotal, o.currency),
+        "delivery_fee": money(o.delivery_fee, o.currency),
+        "service_fee": money(o.service_fee, o.currency),
+        "tip": money(o.tip, o.currency),
+        "discount": money(o.discount, o.currency),
+        "commission": money(o.commission_amount, o.currency),
+        "time_zone": o.vendor.region.time_zone,
         "estimated_ready_at": iso(o.estimated_ready_at),
         "cancelled_by": o.cancelled_by,
         "cancel_reason": o.cancel_reason,
@@ -168,7 +183,7 @@ def order_detail(o):
                 "name": i.product.name_ar,
                 "name_en": i.product.name_en,
                 "quantity": str(i.quantity.normalize()),
-                "price": money(i.unit_price),
+                "price": money(i.unit_price, o.currency),
                 "options": [m.modifier.name_ar for m in i.modifiers.all()],
             }
             for i in o.items.all()
@@ -235,7 +250,6 @@ class CancelOrderView(ConsoleView):
             if order.status in (Order.Status.DELIVERED, Order.Status.CANCELLED):
                 return Response({"error": "invalid_transition", "detail": f"Order #{order.pk} is {order.status}."}, status=409)
             was_available = order.in_open_pool()
-            captain_id = order.captain_id
             workflow._cancel(order, Order.CancelledBy.SUPPORT, reason)
             dispatch.withdraw(order.pk, "cancelled")
             _resolve_alerts(order.pk)
@@ -303,6 +317,8 @@ class AlertsView(ConsoleView):
     def get(self, request):
         now = timezone.now()
         alerts = StuckOrderAlert.objects.filter(resolved_at__isnull=True).select_related("order__vendor")
+        if request.query_params.get("country"):
+            alerts = alerts.filter(order__vendor__country=country_param(request))
         return Response(
             [
                 {
@@ -346,6 +362,8 @@ class CaptainsMapView(ConsoleView):
             .order_by("-is_online", "-updated_at")
         )
         stores = Vendor.objects.filter(status=Vendor.Status.APPROVED)
+        if request.query_params.get("country"):
+            stores = stores.filter(country=country_param(request))
         return Response(
             {
                 "captains": [

@@ -331,7 +331,7 @@ class OrderTests(ConsoleCase):
         detail = self.client.get(f"/api/console/orders/{order.pk}/").json()
         self.assertEqual([t["step"] for t in detail["timeline"]], ["received", "delivered"])
         overview = self.client.get("/api/console/overview/").json()
-        self.assertEqual(overview["today"]["sales"], 10000)
+        self.assertEqual(overview["today"]["sales"], "10000")
         self.assertEqual(len(overview["days"]), 14)
         self.assertEqual(overview["days"][-1]["orders"], 1)
 
@@ -353,7 +353,7 @@ class PeopleTests(ConsoleCase):
     def test_wallet_adjustments(self):
         url = f"/api/console/users/{self.customer.pk}/wallet/"
         self.assertEqual(self.post(url, {"amount": 5000}).status_code, 400)  # no reason
-        self.assertEqual(self.post(url, {"amount": 5000, "reason": "Late order"}).json()["wallet_balance"], 5000)
+        self.assertEqual(self.post(url, {"amount": 5000, "reason": "Late order"}).json()["wallet_balance"], "5000")
         self.assertEqual(self.post(url, {"amount": -6000, "reason": "Typo"}).json()["error"], "insufficient_balance")
         self.assertEqual(WalletTransaction.objects.get().type, "adjustment")
         self.assertEqual(AuditEntry.objects.get(action="wallet.adjust").changes["reason"], "Late order")
@@ -409,7 +409,7 @@ class MoneyTests(ConsoleCase):
             vendor=self.store, period_start=today - timedelta(days=13), period_end=today - timedelta(days=7), payout=50000
         )
         data = self.client.get("/api/console/payouts/?status=due").json()
-        self.assertEqual((data["due_total"], data["count"]), (50000, 1))
+        self.assertEqual((data["due_total"], data["count"]), ("50000", 1))
         self.post(f"/api/console/payouts/{statement.pk}/paid/", {"reference": "TRX-9"})
         statement.refresh_from_db()
         self.assertEqual((statement.status, statement.paid_reference), ("paid", "TRX-9"))
@@ -420,7 +420,7 @@ class MoneyTests(ConsoleCase):
         self.order(Order.Status.CANCELLED, cancelled_by="vendor")
         data = self.client.get("/api/console/reports/").json()
         self.assertEqual(len(data["days"]), 30)
-        self.assertEqual(data["totals"]["sales"], 10000)
+        self.assertEqual(data["totals"]["sales"], "10000")
         self.assertEqual(data["stores"][0]["name"], "Tigris Grill")
         self.assertEqual(data["cancelled_by"], {"vendor": 1})
 

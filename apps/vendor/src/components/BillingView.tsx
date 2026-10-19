@@ -15,8 +15,10 @@ interface Props {
  * Friday) with every order, and payout history. Owners only.
  */
 export function BillingView({ api, storeId, onError }: Props) {
-  const { t, money } = useI18n()
+  const { t, money: format } = useI18n()
   const [billing, setBilling] = useState<Billing | null>(null)
+  // Amounts are in the store's own currency.
+  const money = (amount: string | number) => format(amount, billing?.currency)
   const [open, setOpen] = useState<Statement | null>(null)
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export function BillingView({ api, storeId, onError }: Props) {
           <dl className="breakdown">
             <dt>{t('foodSales')}</dt>
             <dd>{money(week.food_sales)}</dd>
-            {week.store_discounts > 0 && (
+            {Number(week.store_discounts) > 0 && (
               <>
                 <dt>{t('storeDiscounts')}</dt>
                 <dd>−{money(week.store_discounts)}</dd>
@@ -148,7 +150,8 @@ interface DialogProps {
 }
 
 function StatementDialog({ api, storeId, statement, onClose, onError }: DialogProps) {
-  const { t, money } = useI18n()
+  const { t, money: format } = useI18n()
+  const money = (amount: string | number) => format(amount, statement.currency)
   const dialog = useRef<HTMLDialogElement>(null)
   const [lines, setLines] = useState<StatementLine[] | null>(null)
 
@@ -185,7 +188,7 @@ function StatementDialog({ api, storeId, statement, onClose, onError }: DialogPr
                 <td className="num">#{line.order}</td>
                 <td>{payment(line.payment_type)}</td>
                 <td className="num">{money(line.food_sales)}</td>
-                <td className="num">−{money(line.commission + line.store_discount)}</td>
+                <td className="num">−{money(Number(line.commission) + Number(line.store_discount))}</td>
                 <td className="num">{money(line.payout)}</td>
               </tr>
             ))}
@@ -194,7 +197,7 @@ function StatementDialog({ api, storeId, statement, onClose, onError }: DialogPr
             <tr>
               <td colSpan={2}>{t('total')}</td>
               <td className="num">{money(statement.food_sales)}</td>
-              <td className="num">−{money(statement.commission + statement.store_discounts)}</td>
+              <td className="num">−{money(Number(statement.commission) + Number(statement.store_discounts))}</td>
               <td className="num">
                 <strong>{money(statement.payout)}</strong>
               </td>

@@ -4,7 +4,8 @@ import { Shell, SECTIONS } from './components/Shell'
 import { SignIn } from './components/SignIn'
 import { ToastHost } from './components/ui'
 import { api, whenSignedOut, type Lang, type Me } from './lib/api'
-import { LangContext } from './lib/i18n'
+import { CountryContext, LangContext } from './lib/i18n'
+import { REGIONS } from './lib/countries'
 import { navigate, useRoute } from './lib/router'
 import { AuditPage } from './pages/AuditPage'
 import { MarketingPage } from './pages/MarketingPage'
@@ -24,8 +25,26 @@ function savedLang(): Lang {
   }
 }
 
+function savedCountry() {
+  try {
+    const code = localStorage.getItem('wasel-admin-country') ?? 'IQ'
+    return REGIONS.some((r) => r.country === code) ? code : 'IQ'
+  } catch {
+    return 'IQ'
+  }
+}
+
 export default function App() {
   const [lang, setLangState] = useState<Lang>(savedLang)
+  const [country, setCountryState] = useState(savedCountry)
+  const setCountry = useCallback((code: string) => {
+    setCountryState(code)
+    try {
+      localStorage.setItem('wasel-admin-country', code)
+    } catch {
+      /* private mode */
+    }
+  }, [])
   const [me, setMe] = useState<Me | null | undefined>(undefined)
   const route = useRoute()
 
@@ -84,7 +103,9 @@ export default function App() {
 
   return (
     <LangContext.Provider value={lang}>
-      <ToastHost>{body}</ToastHost>
+      <CountryContext.Provider value={{ country, setCountry }}>
+        <ToastHost>{body}</ToastHost>
+      </CountryContext.Provider>
     </LangContext.Provider>
   )
 }

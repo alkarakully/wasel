@@ -21,6 +21,7 @@ function json(status: number, body: unknown) {
 beforeEach(() => {
   calls = []
   localStorage.setItem('wasel-admin-lang', 'en')
+  localStorage.removeItem('wasel-admin-country')
   window.history.replaceState(null, '', import.meta.env.BASE_URL)
   vi.stubGlobal('fetch', (url: string, init: RequestInit = {}) => {
     const path = url.replace('/api/console/', '')
@@ -214,5 +215,85 @@ describe('orders', () => {
       expect(calls.find((c) => c.path === 'orders/7/cancel/')?.body).toEqual({ reason: 'Store closed' }),
     )
     expect(await screen.findByText('Cancelled by Wasel support')).toBeInTheDocument()
+  })
+})
+
+describe('other countries', () => {
+  it('formats each currency with its own decimals', async () => {
+    const { money } = await import('../lib/strings')
+    expect(money('en', '3.15', 'KWD')).toBe('3.150 KWD')
+    expect(money('en', '12.5', 'SAR')).toBe('12.50 SAR')
+    expect(money('en', '18000', 'IQD')).toBe('18,000 IQD')
+    expect(money('ar', '3.15', 'KWD')).toContain('د.ك')
+  })
+
+  it('the country switch reloads the overview for that country', async () => {
+    routes = {
+      'GET auth/session/': () => [200, { user: admin }],
+      'GET overview/': () => [200, overview],
+    }
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Overview' })
+    expect(calls.some((c) => c.path === 'overview/?country=IQ')).toBe(true)
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Country' }), 'KW')
+    await waitFor(() => expect(calls.some((c) => c.path === 'overview/?country=KW')).toBe(true))
+  })
+
+  it('adds a store team member with a Saudi number', async () => {
+    window.history.replaceState(null, '', `${import.meta.env.BASE_URL}stores/4`)
+    const store = {
+      id: 4,
+      name: 'Riyadh Grill',
+      type: 'restaurant',
+      cuisine: '',
+      is_open: true,
+      status: 'approved',
+      country: 'SA',
+      currency: 'SAR',
+      owner: { id: 9, name: 'Owner', phone: '+966501112233' },
+      commission_rate: '15',
+      created_at: '2026-10-18T10:00:00Z',
+      address: '',
+      latitude: 24.7,
+      longitude: 46.6,
+      delivery_radius_km: '5',
+      commission_free_until: null,
+      opening_hours: {},
+      time_zone: 'Asia/Riyadh',
+      rejection_reason: '',
+      reviewed_at: null,
+    }
+    routes = {
+      'GET auth/session/': () => [200, { user: admin }],
+      'GET stores/': () => [200, { counts: { approved: 1, pending: 0, rejected: 0 }, results: [] }],
+      'GET stores/4/': () => [200, store],
+      'GET stores/4/team/': () => [200, { owner: store.owner, members: [], invites: [] }],
+      'POST stores/4/team/': () => [201, { id: 1 }],
+    }
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(await screen.findByRole('tab', { name: 'Team' }))
+    // Role queries are slow with the long country lists, so find the picker by its label.
+    await user.click(await screen.findByLabelText(/Phone country: Iraq/))
+    const list = screen.getByRole('listbox', { name: 'Phone country' })
+    // Iraq first, then the Gulf.
+    expect(
+      within(list)
+        .getAllByRole('option')
+        .slice(0, 3)
+        .map((o) => o.textContent),
+    ).toEqual(['🇮🇶Iraq+964', '🇸🇦Saudi Arabia+966', '🇦🇪United Arab Emirates+971'])
+    await user.click(within(list).getByRole('option', { name: /Saudi Arabia/ }))
+    await user.type(screen.getByLabelText('Phone'), '050 123 4567')
+    await user.click(screen.getByRole('button', { name: 'Add to team' }))
+    await waitFor(() =>
+      expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+        phone: '050 123 4567',
+        country: 'SA',
+        role: 'cashier',
+      }),
+    )
+    expect(screen.getByText('+966 501112233')).toBeInTheDocument()
   })
 })

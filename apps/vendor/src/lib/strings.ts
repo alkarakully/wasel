@@ -1,4 +1,5 @@
 import type { Lang, Names } from './api'
+import { COUNTRIES, regionForCurrency } from './countries'
 
 // Vendor portal text. Kurdish (Sorani) should be reviewed by a native speaker.
 const strings = {
@@ -22,7 +23,10 @@ const strings = {
     loginTitle: 'دخول المتجر',
     loginLead: 'أدخل رقم هاتفك (صاحب المتجر أو أحد موظفيه) وسنرسل لك رمز الدخول.',
     phone: 'رقم الهاتف',
-    phoneHelp: 'رقم عراقي يبدأ بـ 07',
+    phoneHelp: 'اختر الدولة ثم اكتب رقمك',
+    phoneCountry: 'دولة الرقم',
+    searchCountries: 'ابحث عن دولة',
+    allCountries: 'كل الدول',
     sendCode: 'أرسل الرمز',
     codeTitle: 'أدخل الرمز',
     codeLead: 'أرسلنا رمزاً من 6 أرقام إلى {phone}.',
@@ -68,7 +72,7 @@ const strings = {
     outOfStock: 'نفذت الكمية',
     noStores: 'لا يوجد متجر مرتبط بهذا الحساب.',
     currency: 'د.ع',
-    err_invalid_phone: 'رقم الهاتف غير صحيح. أدخل رقماً عراقياً يبدأ بـ 07.',
+    err_invalid_phone: 'رقم الهاتف غير صحيح. تأكد من الدولة والرقم.',
     err_invalid_code: 'الرمز غير صحيح أو انتهت صلاحيته.',
     err_too_soon: 'انتظر قليلاً قبل طلب رمز جديد.',
     err_too_many_requests: 'طلبات كثيرة لهذا الرقم. حاول بعد ساعة.',
@@ -264,7 +268,10 @@ const strings = {
     loginTitle: 'چوونەژوورەوەی دووکان',
     loginLead: 'ژمارەی مۆبایلەکەت بنووسە (خاوەن یان کارمەندی دووکان) و کۆدی چوونەژوورەوەت بۆ دەنێرین.',
     phone: 'ژمارەی مۆبایل',
-    phoneHelp: 'ژمارەیەکی عێراقی کە بە 07 دەست پێدەکات',
+    phoneHelp: 'وڵات هەڵبژێرە و ژمارەکەت بنووسە',
+    phoneCountry: 'وڵاتی ژمارەکە',
+    searchCountries: 'گەڕان بۆ وڵات',
+    allCountries: 'هەموو وڵاتەکان',
     sendCode: 'کۆدەکە بنێرە',
     codeTitle: 'کۆدەکە بنووسە',
     codeLead: 'کۆدێکی 6 ژمارەییمان نارد بۆ {phone}.',
@@ -310,7 +317,7 @@ const strings = {
     outOfStock: 'نەماوە',
     noStores: 'هیچ دووکانێک بەم هەژمارەوە نەبەستراوە.',
     currency: 'د.ع',
-    err_invalid_phone: 'ژمارەکە هەڵەیە. ژمارەیەکی عێراقی بنووسە کە بە 07 دەست پێدەکات.',
+    err_invalid_phone: 'ژمارەکە هەڵەیە. وڵات و ژمارەکە بپشکنە.',
     err_invalid_code: 'کۆدەکە هەڵەیە یان بەسەرچووە.',
     err_too_soon: 'کەمێک چاوەڕێ بکە پێش داواکردنی کۆدێکی نوێ.',
     err_too_many_requests: 'داواکاری زۆر بۆ ئەم ژمارەیە. دوای کاتژمێرێک هەوڵ بدەرەوە.',
@@ -400,7 +407,8 @@ const strings = {
     payment: 'پارەدان',
     card: 'کارت',
     wallet: 'جزدان',
-    teamHelp: 'کارمەندەکانت بە ژمارەی مۆبایلیان بانگهێشت بکە. کاتێک لە یەکەم چوونەژوورەوەیان بانگهێشتەکە قبوڵ دەکەن، دەبنە ئەندام.',
+    teamHelp:
+      'کارمەندەکانت بە ژمارەی مۆبایلیان بانگهێشت بکە. کاتێک لە یەکەم چوونەژوورەوەیان بانگهێشتەکە قبوڵ دەکەن، دەبنە ئەندام.',
     owner: 'خاوەن',
     manager: 'بەڕێوەبەر',
     cashier: 'کاشێر',
@@ -417,7 +425,8 @@ const strings = {
     err_invalid_hours: 'کاتەکان بپشکنە.',
     err_not_allowed: 'دەسەڵاتت بۆ ئەمە نییە.',
     joinTitle: 'بەشداری واصل بکە',
-    joinLead: 'دووکانەکەت تۆمار بکە بۆ گەیشتن بە کڕیاری نوێ. سەرەتا ژمارەکەت پشتڕاست بکەرەوە، پاشان باسی دووکانەکەتمان بۆ بکە.',
+    joinLead:
+      'دووکانەکەت تۆمار بکە بۆ گەیشتن بە کڕیاری نوێ. سەرەتا ژمارەکەت پشتڕاست بکەرەوە، پاشان باسی دووکانەکەتمان بۆ بکە.',
     newToWasel: 'دووکانەکەت هێشتا لە واصل نییە؟',
     joinAsStore: 'وەک دووکان بەشداری واصل بکە',
     haveStore: 'هەژماری دووکانت هەیە؟',
@@ -429,7 +438,8 @@ const strings = {
     acceptInvite: 'قبوڵکردن',
     decline: 'ڕەتکردنەوە',
     applyTitle: 'باسی دووکانەکەتمان بۆ بکە',
-    applyLead: 'تیمی واصل هەموو دووکانێکی نوێ پێش دەرکەوتنی بۆ کڕیاران پێداچوونەوەی بۆ دەکات، زۆربەی کات لە ماوەی ڕۆژێکی کاردا.',
+    applyLead:
+      'تیمی واصل هەموو دووکانێکی نوێ پێش دەرکەوتنی بۆ کڕیاران پێداچوونەوەی بۆ دەکات، زۆربەی کات لە ماوەی ڕۆژێکی کاردا.',
     yourName: 'ناوت',
     storeName: 'ناوی دووکان',
     storeNameHint: 'وەک کڕیاران دەیبینن',
@@ -461,7 +471,8 @@ const strings = {
     sendApplication: 'ناردن بۆ پەسەندکردن',
     sendBranch: 'ناردنی لق بۆ پەسەندکردن',
     waitingTitle: 'چاوەڕێی پەسەندکردن',
-    waitingLead: 'داواکارییەکەتمان وەرگرت و تیمی واصل ئێستا پێداچوونەوەی بۆ دەکات. ئەگەر شتێکمان پێویست بوو پەیوەندی بە {phone} دەکەین، ئەنجامەکەش لێرە دەردەکەوێت.',
+    waitingLead:
+      'داواکارییەکەتمان وەرگرت و تیمی واصل ئێستا پێداچوونەوەی بۆ دەکات. ئەگەر شتێکمان پێویست بوو پەیوەندی بە {phone} دەکەین، ئەنجامەکەش لێرە دەردەکەوێت.',
     rejectedTitle: 'دووکانەکەت پەسەند نەکرا',
     rejectedLead: 'هۆکارەکە لە خوارەوە بخوێنەوە؛ دەتوانیت داواکارییەکە چاک بکەیت و دووبارە بینێریت.',
     rejectedBecause: 'هۆکار: {reason}',
@@ -506,7 +517,10 @@ const strings = {
     loginTitle: 'Store login',
     loginLead: "Enter your phone number (store owner or staff) and we'll send a login code.",
     phone: 'Phone number',
-    phoneHelp: 'An Iraqi number starting with 07',
+    phoneHelp: 'Pick the country, then type your number',
+    phoneCountry: 'Phone country',
+    searchCountries: 'Search countries',
+    allCountries: 'All countries',
     sendCode: 'Send code',
     codeTitle: 'Enter the code',
     codeLead: 'We sent a 6-digit code to {phone}.',
@@ -552,7 +566,7 @@ const strings = {
     outOfStock: 'Out of stock',
     noStores: 'No store is linked to this account.',
     currency: 'IQD',
-    err_invalid_phone: "That number isn't valid. Enter an Iraqi number starting with 07.",
+    err_invalid_phone: "That number isn't valid. Check the country and the number.",
     err_invalid_code: 'The code is wrong or has expired.',
     err_too_soon: 'Wait a moment before asking for a new code.',
     err_too_many_requests: 'Too many codes for this number. Try again in an hour.',
@@ -642,7 +656,8 @@ const strings = {
     payment: 'Payment',
     card: 'Card',
     wallet: 'Wallet',
-    teamHelp: 'Invite your staff by phone number. They join when they accept the invite the next time they sign in to the portal or the store app.',
+    teamHelp:
+      'Invite your staff by phone number. They join when they accept the invite the next time they sign in to the portal or the store app.',
     owner: 'Owner',
     manager: 'Manager',
     cashier: 'Cashier',
@@ -659,7 +674,8 @@ const strings = {
     err_invalid_hours: 'Check the times.',
     err_not_allowed: "You don't have access to this.",
     joinTitle: 'Join Wasel',
-    joinLead: 'Sign your store up to reach new customers. Confirm your phone number first, then tell us about your store.',
+    joinLead:
+      'Sign your store up to reach new customers. Confirm your phone number first, then tell us about your store.',
     newToWasel: 'Not on Wasel yet?',
     joinAsStore: 'Join Wasel as a store',
     haveStore: 'Already have a store account?',
@@ -703,7 +719,8 @@ const strings = {
     sendApplication: 'Send for approval',
     sendBranch: 'Send branch for approval',
     waitingTitle: 'Waiting for approval',
-    waitingLead: "We've got your application and the Wasel team is reviewing it. We'll call you on {phone} if we need anything, and the result will show up here.",
+    waitingLead:
+      "We've got your application and the Wasel team is reviewing it. We'll call you on {phone} if we need anything, and the result will show up here.",
     rejectedTitle: "Your store wasn't approved",
     rejectedLead: 'Read the reason below. You can fix your application and send it again.',
     rejectedBecause: 'Reason: {reason}',
@@ -726,7 +743,8 @@ const strings = {
     err_application_pending: 'Your store is still waiting for approval.',
     err_too_many_applications: 'You have new branches waiting for review. Wait until they are approved first.',
     err_already_invited: 'This number already has an invite waiting for an answer.',
-    err_join_phone_in_use: 'This number belongs to a customer or captain account. Sign your store up with another number.',
+    err_join_phone_in_use:
+      'This number belongs to a customer or captain account. Sign your store up with another number.',
   },
 } satisfies Record<Lang, Record<string, string>>
 
@@ -748,9 +766,46 @@ export function pickName(lang: Lang, names: Names): string {
   return (lang !== 'ar' && names[lang]) || names.ar
 }
 
-export function money(lang: Lang, amount: string | number): string {
-  const whole = Math.round(Number(amount))
-  return `${whole.toLocaleString('en-US')} ${translate(lang, 'currency')}`
+const SYMBOLS: Record<string, string> = {
+  IQD: 'د.ع',
+  SAR: 'ر.س',
+  AED: 'د.إ',
+  QAR: 'ر.ق',
+  KWD: 'د.ك',
+  BHD: 'د.ب',
+  OMR: 'ر.ع',
+}
+
+/** An amount in its currency with that currency's decimals: "18,000 د.ع", "12.50 SAR", "3.150 KWD". */
+export function money(lang: Lang, amount: string | number, currency = 'IQD'): string {
+  const decimals = regionForCurrency(currency).decimals
+  const number = Number(amount).toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+  return `${number} ${lang === 'en' ? currency : (SYMBOLS[currency] ?? currency)}`
+}
+
+/**
+ * What a price field keeps of the typing: digits (Arabic-Indic ones too) and,
+ * when the currency has them, one decimal point with at most that many decimals.
+ */
+export function amountInput(text: string, decimals: number): string {
+  const western = text
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[٫,]/g, '.')
+  if (!decimals) return western.replace(/\D/g, '')
+  const [whole, ...rest] = western.replace(/[^\d.]/g, '').split('.')
+  return rest.length ? `${whole}.${rest.join('').slice(0, decimals)}` : whole
+}
+
+/** Phone numbers to show: Iraqi ones the local way (0770 123 4567), others with their + code. */
+export function displayPhone(e164: string): string {
+  if (e164.startsWith('+964')) return `0${e164.slice(4)}`.replace(/^(\d{4})(\d{3})(\d{4})$/, '$1 $2 $3')
+  if (!e164.startsWith('+')) return e164
+  const dial = [3, 2, 1].map((n) => e164.slice(1, 1 + n)).find((d) => COUNTRIES.some((c) => c.dial === d))
+  return dial ? `+${dial} ${e164.slice(1 + dial.length)}` : e164
 }
 
 export const LANGUAGES: { code: Lang; label: string }[] = [

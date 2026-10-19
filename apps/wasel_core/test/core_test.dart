@@ -77,6 +77,50 @@ void main() {
     expect(S('en').money(-2325), '-2,325 IQD');
   });
 
+  test('each currency keeps its own decimals', () {
+    expect(S('en').money(3.15, 'KWD'), '3.150 KWD');
+    expect(S('ar').money(3.15, 'KWD'), '3.150 د.ك');
+    expect(S('en').money(12.5, 'SAR'), '12.50 SAR');
+    expect(S('en').money(1500, 'IQD'), '1,500 IQD');
+    expect(displayPhone('+9647701234567'), '+964 770 123 4567');
+    expect(displayPhone('+966501234567'), '+966 501234567');
+    expect(countries.take(7).map((c) => c.code), [
+      'IQ',
+      'SA',
+      'AE',
+      'KW',
+      'QA',
+      'BH',
+      'OM',
+    ]);
+  });
+
+  testWidgets('a Saudi number signs in after picking the country', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.tap(find.byKey(const Key('phone-country')));
+    await tester.pumpAndSettle();
+    // Iraq on top, then the Gulf.
+    expect(find.byKey(const Key('country-IQ')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('country-SA')));
+    await tester.pumpAndSettle();
+    expect(find.text('+966'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('phone')), '050 123 4567');
+    await tester.tap(find.byKey(const Key('send-code')));
+    await tester.pumpAndSettle();
+    expect(log.first, contains('"country":"SA"'));
+    expect(log.first, contains('"phone":"050 123 4567"'));
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('wasel_phone_country'), 'SA');
+    await tester.pumpWidget(const SizedBox()); // stop the resend countdown
+  });
+
   test('app strings override shared ones and fall back to English', () {
     S.addStrings({
       'en': {'only_en': 'English only'},

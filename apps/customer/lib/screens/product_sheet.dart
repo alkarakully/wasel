@@ -6,8 +6,11 @@ import '../state/cart.dart';
 /// Choose options and quantity, then add to the cart.
 /// Required groups are pick-one; optional groups allow several.
 class ProductSheet extends StatefulWidget {
-  const ProductSheet({super.key, required this.product});
+  const ProductSheet({super.key, required this.product, this.currency = 'IQD'});
   final Product product;
+
+  /// The store's currency.
+  final String currency;
 
   @override
   State<ProductSheet> createState() => _ProductSheetState();
@@ -62,7 +65,7 @@ class _ProductSheetState extends State<ProductSheet> {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: s.money(product.price),
+                    text: s.money(product.price, widget.currency),
                     style: TextStyle(
                       color: scheme.primary,
                       fontWeight: FontWeight.w700,
@@ -213,7 +216,9 @@ class _ProductSheetState extends State<ProductSheet> {
               key: const Key('add-to-cart'),
               onPressed: _complete ? () => Navigator.pop(context, _line) : null,
               child: Text(
-                s.t('addToCart', {'price': s.money(_line.lineTotal)}),
+                s.t('addToCart', {
+                  'price': s.money(_line.lineTotal, widget.currency),
+                }),
               ),
             ),
           ],
@@ -225,7 +230,7 @@ class _ProductSheetState extends State<ProductSheet> {
   Widget? _price(S s, Modifier modifier) => modifier.priceDelta == 0
       ? null
       : Text(
-          '+${s.money(modifier.priceDelta)}',
+          '+${s.money(modifier.priceDelta, widget.currency)}',
           style: const TextStyle(fontSize: 14),
         );
 }

@@ -1,7 +1,15 @@
 import type { Lang } from './api'
+import { regionForCurrency } from './countries'
 
 const en = {
   app_name: 'Platform admin',
+  country: 'Country',
+  phone_country: 'Phone country',
+  search_countries: 'Search countries',
+  all_countries: 'All countries',
+  store_country: 'Country (currency, clock, fees)',
+  wallet_in: 'Wallet in {c}',
+  times_in: 'Times in {tz}',
   // Sign in
   sign_in_title: 'Sign in to Wasel',
   sign_in_lead: 'For the Wasel team. Stores sign in to the store portal.',
@@ -315,6 +323,13 @@ export type StringKey = keyof typeof en
 
 const ar: Record<StringKey, string> = {
   app_name: 'إدارة المنصة',
+  country: 'الدولة',
+  phone_country: 'دولة الرقم',
+  search_countries: 'ابحث عن دولة',
+  all_countries: 'كل الدول',
+  store_country: 'الدولة (العملة والتوقيت والرسوم)',
+  wallet_in: 'المحفظة بـ {c}',
+  times_in: 'الأوقات بتوقيت {tz}',
   sign_in_title: 'تسجيل الدخول إلى واصل',
   sign_in_lead: 'لفريق واصل. المتاجر تدخل من بوابة المتاجر.',
   email: 'بريد العمل',
@@ -619,22 +634,37 @@ export function translate(lang: Lang, key: StringKey, vars?: Record<string, stri
   return text
 }
 
-/** Iraqi dinars, whole numbers, with the right digits for the language. */
-export function money(lang: Lang, amount: number) {
-  const number = new Intl.NumberFormat(lang === 'ar' ? 'ar-IQ' : 'en-US', { maximumFractionDigits: 0 }).format(amount)
-  return lang === 'ar' ? `${number} د.ع` : `${number} IQD`
+const SYMBOLS: Record<string, string> = {
+  IQD: 'د.ع',
+  SAR: 'ر.س',
+  AED: 'د.إ',
+  QAR: 'ر.ق',
+  KWD: 'د.ك',
+  BHD: 'د.ب',
+  OMR: 'ر.ع',
+}
+
+/** An amount in its currency, with that currency's decimals (0 for IQD, 2 for SAR, 3 for KWD). */
+export function money(lang: Lang, amount: number | string, currency = 'IQD') {
+  const decimals = regionForCurrency(currency).decimals
+  const number = new Intl.NumberFormat(lang === 'ar' ? 'ar-IQ' : 'en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(Number(amount))
+  return lang === 'ar' ? `${number} ${SYMBOLS[currency] ?? currency}` : `${number} ${currency}`
 }
 
 export function number(lang: Lang, value: number) {
   return new Intl.NumberFormat(lang === 'ar' ? 'ar-IQ' : 'en-US').format(value)
 }
 
-export function dateTime(lang: Lang, iso: string | null, withTime = true) {
+/** A moment, on the clock of the country it belongs to (Baghdad by default). */
+export function dateTime(lang: Lang, iso: string | null, withTime = true, timeZone = 'Asia/Baghdad') {
   if (!iso) return '—'
   return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-IQ' : 'en-GB', {
     dateStyle: 'medium',
     ...(withTime ? { timeStyle: 'short' } : {}),
-    timeZone: 'Asia/Baghdad',
+    timeZone,
   }).format(new Date(iso))
 }
 

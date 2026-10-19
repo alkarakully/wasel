@@ -224,7 +224,10 @@ class _OfferSheetState extends State<OfferSheet> {
                     child: Text(
                       cash
                           ? s.t('collectCash', {
-                              'amount': s.money(order.cashToCollect),
+                              'amount': s.money(
+                                order.cashToCollect,
+                                order.currency,
+                              ),
                             })
                           : s.t('paidInApp'),
                       style: TextStyle(

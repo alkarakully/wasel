@@ -14,31 +14,38 @@ from billing.api import _row as statement_row
 from billing.models import Statement
 from billing.weeks import close_finished_weeks
 from orders.models import Order
+from regions.regions import quantize, region
+from regions.serializers import check_amount
 from subscriptions.models import WaselPlusSubscription
 from vendors.models import Offer, Vendor
 
 from .access import ConsoleView
 from .audit import diff, record
-from .common import figures, iso, money, paged, person, start_of
+from .common import country_param, figures, iso, local_today, money, paged, person, start_of
 
 # --- Payouts ------------------------------------------------------------------------
 
 
 class PayoutsView(ConsoleView):
-    """GET ?status=due|paid&store=&page=: weekly store statements."""
+    """GET ?country=&status=due|paid&store=&page=: one country's weekly store statements."""
 
     area = "money"
 
     def get(self, request):
         p = request.query_params
-        statements = Statement.objects.select_related("vendor")
+        country = country_param(request)
+        currency = region(country).currency
+        statements = Statement.objects.select_related("vendor").filter(vendor__country=country)
         if p.get("status") in Statement.Status.values:
             statements = statements.filter(status=p["status"])
         if (store := p.get("store", "")).isdigit():
             statements = statements.filter(vendor_id=store)
-        due = Statement.objects.filter(status=Statement.Status.DUE).aggregate(t=Sum("payout"), n=Count("id"))
+        due = Statement.objects.filter(status=Statement.Status.DUE, vendor__country=country).aggregate(
+            t=Sum("payout"), n=Count("id")
+        )
         response = paged(self, request, statements, statement_row)
-        response.data["due_total"] = money(due["t"])
+        response.data["currency"] = currency
+        response.data["due_total"] = money(due["t"], currency)
         response.data["due_count"] = due["n"]
         return response
 
@@ -66,7 +73,8 @@ class PayoutPaidView(ConsoleView):
         record(
             request,
             "payout.paid",
-            f"Paid {statement.vendor.name} {money(statement.payout):,} IQD for the week of {statement.period_start}",
+            f"Paid {statement.vendor.name} {money(statement.payout, statement.currency)} {statement.currency}"
+            f" for the week of {statement.period_start}",
             statement,
             {"reference": statement.paid_reference},
         )
@@ -86,19 +94,23 @@ class CloseWeeksView(ConsoleView):
 
 
 class WalletView(ConsoleView):
-    """GET ?type=&q=&page=: every wallet movement, newest first."""
+    """GET ?country=&type=&q=&page=: wallet movements in one country's currency, newest first."""
 
     area = "money"
 
     def get(self, request):
         p = request.query_params
-        entries = WalletTransaction.objects.select_related("user")
+        currency = region(country_param(request)).currency
+        entries = WalletTransaction.objects.select_related("user").filter(currency=currency)
         if p.get("type") in WalletTransaction.Type.values:
             entries = entries.filter(type=p["type"])
         if q := p.get("q", "").strip():
             entries = entries.filter(Q(user__phone__icontains=q.lstrip("0")) | Q(user__name__icontains=q))
         totals = dict(
-            WalletTransaction.objects.values_list("type").annotate(t=Sum("amount")).values_list("type", "t")
+            WalletTransaction.objects.filter(currency=currency)
+            .values_list("type")
+            .annotate(t=Sum("amount"))
+            .values_list("type", "t")
         )
         response = paged(
             self,
@@ -108,12 +120,14 @@ class WalletView(ConsoleView):
                 "id": t.pk,
                 "user": person(t.user),
                 "type": t.type,
-                "amount": money(t.amount),
+                "currency": t.currency,
+                "amount": money(t.amount, t.currency),
                 "order": t.order_id,
                 "created_at": t.created_at.isoformat(),
             },
         )
-        response.data["totals"] = {k: money(totals.get(k)) for k in WalletTransaction.Type.values}
+        response.data["currency"] = currency
+        response.data["totals"] = {k: money(totals.get(k), currency) for k in WalletTransaction.Type.values}
         return response
 
 
@@ -128,22 +142,28 @@ def _day(value, fallback):
 
 
 class ReportsView(ConsoleView):
-    """GET ?from=YYYY-MM-DD&to=YYYY-MM-DD (to included, at most a year): the platform's numbers."""
+    """GET ?country=&from=YYYY-MM-DD&to=YYYY-MM-DD (to included, at most a year): one country's numbers."""
 
     area = "reports"
 
     def get(self, request):
-        today = timezone.localdate()
+        country = country_param(request)
+        r = region(country)
+        today = local_today(country)
         end = _day(request.query_params.get("to"), today)
         start = _day(request.query_params.get("from"), end - timedelta(days=29))
         if start > end:
             start, end = end, start
         start = max(start, end - timedelta(days=365))
-        orders = Order.objects.filter(created_at__gte=start_of(start), created_at__lt=start_of(end + timedelta(days=1)))
+        orders = Order.objects.filter(
+            vendor__country=country,
+            created_at__gte=start_of(start, country),
+            created_at__lt=start_of(end + timedelta(days=1), country),
+        )
         earning = orders.exclude(status=Order.Status.CANCELLED)
         daily = {
-            r["day"]: r
-            for r in earning.annotate(day=TruncDate("created_at", tzinfo=timezone.get_current_timezone()))
+            row["day"]: row
+            for row in earning.annotate(day=TruncDate("created_at", tzinfo=r.tz))
             .values("day")
             .annotate(orders=Count("id"), sales=Sum("total_amount"), commission=Sum("commission_amount"))
         }
@@ -159,29 +179,35 @@ class ReportsView(ConsoleView):
             {
                 "from": start.isoformat(),
                 "to": end.isoformat(),
-                "totals": figures(orders),
+                "country": country,
+                "currency": r.currency,
+                "time_zone": r.time_zone,
+                "totals": figures(orders, r.currency),
                 "customers": orders.values("customer_id").distinct().count(),
                 "days": [
                     {
                         "day": d.isoformat(),
                         "orders": daily.get(d, {}).get("orders", 0),
-                        "sales": money(daily.get(d, {}).get("sales")),
-                        "commission": money(daily.get(d, {}).get("commission")),
+                        "sales": money(daily.get(d, {}).get("sales"), r.currency),
+                        "commission": money(daily.get(d, {}).get("commission"), r.currency),
                     }
                     for d in days
                 ],
                 "stores": [
                     {
-                        "id": r["vendor_id"],
-                        "name": r["vendor__name"],
-                        "orders": r["orders"],
-                        "sales": money(r["sales"]),
-                        "commission": money(r["commission"]),
+                        "id": row["vendor_id"],
+                        "name": row["vendor__name"],
+                        "orders": row["orders"],
+                        "sales": money(row["sales"], r.currency),
+                        "commission": money(row["commission"], r.currency),
                     }
-                    for r in stores
+                    for row in stores
                 ],
-                "payments": {r["payment_type"]: {"orders": r["orders"], "sales": money(r["sales"])} for r in payments},
-                "cancelled_by": {r["cancelled_by"] or "unknown": r["n"] for r in cancelled},
+                "payments": {
+                    row["payment_type"]: {"orders": row["orders"], "sales": money(row["sales"], r.currency)}
+                    for row in payments
+                },
+                "cancelled_by": {row["cancelled_by"] or "unknown": row["n"] for row in cancelled},
             }
         )
 
@@ -192,10 +218,15 @@ class ReportsView(ConsoleView):
 class OfferInput(serializers.ModelSerializer):
     class Meta:
         model = Offer
-        fields = ["vendor", "title", "type", "value", "min_order", "starts_at", "ends_at", "is_banner"]
-        extra_kwargs = {"vendor": {"required": False, "allow_null": True}}
+        fields = ["vendor", "country", "title", "type", "value", "min_order", "starts_at", "ends_at", "is_banner"]
+        extra_kwargs = {"vendor": {"required": False, "allow_null": True}, "country": {"required": False}}
 
     def validate(self, data):
+        # A store's offer is in its store's country and currency; a platform-wide one names its country.
+        vendor = data.get("vendor", getattr(self.instance, "vendor", None))
+        country = vendor.country if vendor else data.get("country", getattr(self.instance, "country", "IQ"))
+        data["country"] = country
+        currency = region(country).currency
         starts = data.get("starts_at", getattr(self.instance, "starts_at", None))
         ends = data.get("ends_at", getattr(self.instance, "ends_at", None))
         if starts and ends and ends <= starts:
@@ -206,6 +237,13 @@ class OfferInput(serializers.ModelSerializer):
             raise serializers.ValidationError({"value": "A percentage from 1 to 100."})
         if kind == Offer.Type.FIXED and value <= 0:
             raise serializers.ValidationError({"value": "Enter an amount above zero."})
+        try:
+            if kind == Offer.Type.FIXED:
+                check_amount(value, currency)
+            check_amount(data.get("min_order", getattr(self.instance, "min_order", 0)), currency)
+        except serializers.ValidationError as error:
+            field = "value" if kind == Offer.Type.FIXED and value != quantize(value, currency) else "min_order"
+            raise serializers.ValidationError({field: error.detail}) from error
         return data
 
 
@@ -217,8 +255,10 @@ def offer_row(o, now=None):
         "store": {"id": o.vendor_id, "name": o.vendor.name} if o.vendor_id else None,
         "title": o.title,
         "type": o.type,
-        "value": str(o.value.normalize()),
-        "min_order": money(o.min_order),
+        "country": o.country,
+        "currency": o.currency,
+        "value": money(o.value, o.currency) if o.type == Offer.Type.FIXED else f"{o.value.normalize():f}",
+        "min_order": money(o.min_order, o.currency),
         "starts_at": o.starts_at.isoformat(),
         "ends_at": o.ends_at.isoformat(),
         "is_banner": o.is_banner,
@@ -242,6 +282,8 @@ class OffersView(ConsoleView):
             offers = offers.filter(starts_at__gt=now)
         elif state == "ended":
             offers = offers.filter(ends_at__lte=now)
+        if p.get("country"):
+            offers = offers.filter(country=country_param(request))
         if p.get("scope") == "platform":
             offers = offers.filter(vendor__isnull=True)
         elif p.get("scope") == "store":
@@ -323,4 +365,7 @@ class StoreChoicesView(ConsoleView):
     area = None
 
     def get(self, request):
-        return Response(list(Vendor.objects.filter(status=Vendor.Status.APPROVED).order_by("name").values("id", "name")))
+        stores = Vendor.objects.filter(status=Vendor.Status.APPROVED).order_by("name")
+        if request.query_params.get("country"):
+            stores = stores.filter(country=country_param(request))
+        return Response(list(stores.values("id", "name", "country")))

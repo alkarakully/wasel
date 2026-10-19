@@ -595,7 +595,10 @@ class _OrderCard extends StatelessWidget {
                       child: Text(
                         cash
                             ? s.t('collectCash', {
-                                'amount': s.money(order.cashToCollect),
+                                'amount': s.money(
+                                  order.cashToCollect,
+                                  order.currency,
+                                ),
                               })
                             : s.t('paidInApp'),
                         style: TextStyle(

@@ -20,6 +20,7 @@ import {
   useToast,
 } from '../components/ui'
 import { api, query, type Page, type UserDetail, type UserRow } from '../lib/api'
+import { regionForCurrency } from '../lib/countries'
 import { useI18n } from '../lib/i18n'
 import { navigate, useRoute } from '../lib/router'
 import type { StringKey } from '../lib/strings'
@@ -92,7 +93,7 @@ export function PeoplePage({ id, canWrite, canMoney }: { id: string; canWrite: b
                         <Phone value={u.phone} />
                       </td>
                       <td className="num">{num(u.orders ?? 0)}</td>
-                      <td className="num">{money(u.wallet_balance)}</td>
+                      <td className="num">{money(u.wallet_balance, u.wallet_currency)}</td>
                       <td className="muted">{when(u.joined, false)}</td>
                       <td>
                         {u.is_active ? (
@@ -208,7 +209,7 @@ function PersonDrawer({
             </div>
             <div>
               <dt>{t('balance')}</dt>
-              <dd>{money(data.wallet_balance)}</dd>
+              <dd>{money(data.wallet_balance, data.wallet_currency)}</dd>
             </div>
             <div>
               <dt>{data.role === 'captain' ? t('deliveries') : t('orders_count')}</dt>
@@ -216,7 +217,7 @@ function PersonDrawer({
             </div>
             <div>
               <dt>{t('spend')}</dt>
-              <dd>{money(data.delivered_spend)}</dd>
+              <dd>{money(data.delivered_spend, data.wallet_currency)}</dd>
             </div>
             <div>
               <dt>{t('joined')}</dt>
@@ -255,7 +256,7 @@ function PersonDrawer({
                     </button>
                     <span>{o.store}</span>
                     <StatusBadge status={o.status} />
-                    <span className="num">{money(o.total)}</span>
+                    <span className="num">{money(o.total, o.currency)}</span>
                   </li>
                 ))}
               </ul>
@@ -269,7 +270,7 @@ function PersonDrawer({
                   <li key={w.id}>
                     <span>{t(`tx_${w.type}` as StringKey)}</span>
                     <span className="muted">{when(w.created_at)}</span>
-                    <span className={`num ${w.amount < 0 ? 'neg' : 'pos'}`}>{money(w.amount)}</span>
+                    <span className={`num ${Number(w.amount) < 0 ? 'neg' : 'pos'}`}>{money(w.amount, w.currency)}</span>
                   </li>
                 ))}
               </ul>
@@ -292,6 +293,7 @@ function PersonDrawer({
       {dialog === 'wallet' && data && (
         <WalletDialog
           userId={id}
+          currency={data.wallet_currency}
           onClose={() => setDialog(null)}
           onDone={(balance) => {
             setDialog(null)
@@ -307,23 +309,27 @@ function PersonDrawer({
 
 function WalletDialog({
   userId,
+  currency,
   onClose,
   onDone,
 }: {
   userId: number
+  currency: string
   onClose: () => void
-  onDone: (balance: number) => void
+  onDone: (balance: string) => void
 }) {
   const { t } = useI18n()
+  const decimals = regionForCurrency(currency).decimals
   const { busy, error, run } = useAction()
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   async function submit(e: FormEvent) {
     e.preventDefault()
     const result = await run(() =>
-      api<{ wallet_balance: number }>(`users/${userId}/wallet/`, {
+      api<{ wallet_balance: string }>(`users/${userId}/wallet/`, {
         method: 'POST',
-        body: { amount: Number(amount), reason },
+        // Sent as typed, so 0.750 KWD stays exact.
+        body: { amount: amount.trim(), reason },
       }),
     )
     if (result) onDone(result.wallet_balance)
@@ -332,10 +338,10 @@ function WalletDialog({
     <Modal title={t('adjust_wallet')} lead={t('adjust_lead')} onClose={onClose}>
       <form onSubmit={submit} className="stack">
         <TextField
-          label={t('amount')}
+          label={`${t('amount')} · ${currency}`}
           dir="ltr"
-          inputMode="numeric"
-          pattern="-?[0-9]+"
+          inputMode={decimals ? 'decimal' : 'numeric'}
+          pattern={decimals ? `-?[0-9]+([.][0-9]{1,${decimals}})?` : '-?[0-9]+'}
           required
           autoFocus
           value={amount}

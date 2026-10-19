@@ -9,7 +9,7 @@ from rest_framework.test import APIClient
 
 from . import otp
 from .models import PhoneOTP, User
-from .phone import InvalidPhone, normalize_iraqi_phone
+from .phone import InvalidPhone, country_of, normalize_iraqi_phone, normalize_phone
 
 PHONE = "+9647701234567"
 
@@ -66,9 +66,28 @@ class PhoneNormalizationTests(TestCase):
                 self.assertEqual(normalize_iraqi_phone(raw), PHONE)
 
     def test_rejects_non_mobile_or_wrong_length(self):
-        for raw in ["", "0123", "07012345678", "077012345678", "+44 7700 900123", "abc"]:
+        for raw in ["", "0123", "07012345678", "077012345678", "abc"]:
             with self.subTest(raw=raw), self.assertRaises(InvalidPhone):
                 normalize_iraqi_phone(raw)
+
+    def test_other_countries(self):
+        cases = [
+            ("050 123 4567", "SA", "+966501234567"),
+            ("+966 50 123 4567", "IQ", "+966501234567"),  # the + code wins over the picked country
+            ("0501234567", "AE", "+971501234567"),
+            ("5512 3456", "KW", "+96555123456"),
+            ("07700 900123", "GB", "+447700900123"),
+            ("00447700900123", "IQ", "+447700900123"),
+            ("+1 415 555 0100", "CA", "+14155550100"),
+        ]
+        for raw, country, expected in cases:
+            with self.subTest(raw=raw, country=country):
+                self.assertEqual(normalize_phone(raw, country), expected)
+        for raw, country in [("0701234567", "SA"), ("12345", "AE"), ("+999 123", "IQ"), ("0501234567", "ZZ")]:
+            with self.subTest(raw=raw, country=country), self.assertRaises(InvalidPhone):
+                normalize_phone(raw, country)
+        self.assertEqual(country_of("+966501234567"), "SA")
+        self.assertEqual(country_of("+9647701234567"), "IQ")
 
 
 @override_settings(OTP=TEST_OTP)

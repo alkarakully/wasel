@@ -19,6 +19,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from notifications.push import notify
 from orders.models import CaptainLocation, Order, StuckOrderAlert
+from regions.regions import CODES, as_api, region
 from vendors.models import Vendor
 
 ACTIVE = [Order.Status.RECEIVED, Order.Status.PREPARING, Order.Status.READY, Order.Status.OUT_FOR_DELIVERY]
@@ -29,16 +30,22 @@ class StaffView(APIView):
     permission_classes = [permissions.IsAdminUser]
 
 
-def _since(day):
-    """Start of a local calendar day, as an aware datetime."""
-    return timezone.make_aware(datetime.combine(day, time.min))
+def _country(request):
+    """The operating country these numbers are for (?country=, Iraq by default): one currency, one clock."""
+    code = (request.query_params.get("country") or "IQ").upper()
+    return code if code in CODES else "IQ"
 
 
-def _money(value):
-    return int(value or 0)
+def _since(day, country="IQ"):
+    """Start of a calendar day in the country, as an aware datetime."""
+    return timezone.make_aware(datetime.combine(day, time.min), region(country).tz)
 
 
-def _figures(orders):
+def _money(value, country="IQ"):
+    return as_api(value, region(country).currency)
+
+
+def _figures(orders, country="IQ"):
     """Order counts and money for a set of orders (cancelled ones earn nothing)."""
     earning = orders.exclude(status=Order.Status.CANCELLED)
     sums = earning.aggregate(
@@ -55,10 +62,10 @@ def _figures(orders):
         "orders": orders.count(),
         "delivered": delivered.count(),
         "cancelled": orders.filter(status=Order.Status.CANCELLED).count(),
-        "sales": _money(sums["sales"]),
-        "commission": _money(sums["commission"]),
-        "service_fees": _money(sums["service_fees"]),
-        "delivery_fees": _money(sums["delivery_fees"]),
+        "sales": _money(sums["sales"], country),
+        "commission": _money(sums["commission"], country),
+        "service_fees": _money(sums["service_fees"], country),
+        "delivery_fees": _money(sums["delivery_fees"], country),
         "avg_delivery_minutes": round(avg.total_seconds() / 60) if avg else None,
     }
 
@@ -67,11 +74,14 @@ class OverviewView(StaffView):
     """GET: today and this month in numbers, plus what's happening right now."""
 
     def get(self, request):
-        today = timezone.localdate()
-        today_orders = Order.objects.filter(created_at__gte=_since(today))
-        month_orders = Order.objects.filter(created_at__gte=_since(today.replace(day=1)))
+        country = _country(request)
+        today = timezone.localdate(timezone=region(country).tz)
+        here = Order.objects.filter(vendor__country=country)
+        stores = Vendor.objects.filter(country=country)
+        today_orders = here.filter(created_at__gte=_since(today, country))
+        month_orders = here.filter(created_at__gte=_since(today.replace(day=1), country))
         by_status = dict(
-            Order.objects.filter(status__in=ACTIVE).values_list("status").annotate(n=Count("id")).values_list("status", "n")
+            here.filter(status__in=ACTIVE).values_list("status").annotate(n=Count("id")).values_list("status", "n")
         )
         top = (
             today_orders.exclude(status=Order.Status.CANCELLED)
@@ -81,19 +91,28 @@ class OverviewView(StaffView):
         )
         return Response(
             {
-                "today": _figures(today_orders),
-                "month": _figures(month_orders),
+                "country": country,
+                "currency": region(country).currency,
+                "today": _figures(today_orders, country),
+                "month": _figures(month_orders, country),
                 "live": {
                     "active_orders": sum(by_status.values()),
-                    "open_alerts": StuckOrderAlert.objects.filter(resolved_at__isnull=True).count(),
+                    "open_alerts": StuckOrderAlert.objects.filter(
+                        resolved_at__isnull=True, order__vendor__country=country
+                    ).count(),
                     "online_captains": CaptainLocation.objects.filter(is_online=True).count(),
-                    "open_stores": Vendor.objects.filter(status=Vendor.Status.APPROVED, is_open=True).count(),
-                    "stores": Vendor.objects.filter(status=Vendor.Status.APPROVED).count(),
-                    "applications": Vendor.objects.filter(status=Vendor.Status.PENDING).count(),
+                    "open_stores": stores.filter(status=Vendor.Status.APPROVED, is_open=True).count(),
+                    "stores": stores.filter(status=Vendor.Status.APPROVED).count(),
+                    "applications": stores.filter(status=Vendor.Status.PENDING).count(),
                 },
                 "by_status": {status: by_status.get(status, 0) for status in ACTIVE},
                 "top_stores": [
-                    {"id": row["vendor_id"], "name": row["vendor__name"], "orders": row["orders"], "sales": _money(row["sales"])}
+                    {
+                        "id": row["vendor_id"],
+                        "name": row["vendor__name"],
+                        "orders": row["orders"],
+                        "sales": _money(row["sales"], country),
+                    }
                     for row in top
                 ],
             }
@@ -119,7 +138,8 @@ class OrdersView(StaffView):
                     "store": o.vendor.name,
                     "customer": o.customer.name or o.customer.phone,
                     "captain": (o.captain.name or o.captain.phone) if o.captain else None,
-                    "total": _money(o.total_amount),
+                    "total": as_api(o.total_amount, o.currency),
+                    "currency": o.currency,
                     "payment_type": o.payment_type,
                     "minutes": int((now - o.created_at).total_seconds() // 60),
                     "alerts": [a.reason for a in o.stuck_alerts.all() if a.resolved_at is None],
@@ -194,10 +214,11 @@ class StoresView(StaffView):
     """GET: every approved store with today's orders and sales (applications are listed separately)."""
 
     def get(self, request):
-        since = _since(timezone.localdate())
+        country = _country(request)
+        since = _since(timezone.localdate(timezone=region(country).tz), country)
         today = Q(orders__created_at__gte=since) & ~Q(orders__status=Order.Status.CANCELLED)
         stores = (
-            Vendor.objects.filter(status=Vendor.Status.APPROVED)
+            Vendor.objects.filter(status=Vendor.Status.APPROVED, country=country)
             .select_related("owner")
             .annotate(orders_today=Count("orders", filter=today), sales_today=Sum("orders__total_amount", filter=today))
             .order_by("-is_open", "name")
@@ -213,7 +234,8 @@ class StoresView(StaffView):
                     "commission_rate": str(v.commission_rate.normalize()),
                     "owner": v.owner.name or v.owner.phone,
                     "orders_today": v.orders_today,
-                    "sales_today": _money(v.sales_today),
+                    "sales_today": _money(v.sales_today, country),
+                    "currency": v.currency,
                 }
                 for v in stores
             ]

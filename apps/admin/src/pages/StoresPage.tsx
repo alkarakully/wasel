@@ -2,6 +2,7 @@ import { CheckCircle, ForkKnife, Plus, Storefront, Trash, UserPlus, XCircle } fr
 import { useState, type FormEvent } from 'react'
 
 import { Phone, Who } from '../components/bits'
+import { PhoneField } from '../components/PhoneField'
 import { ReasonDialog } from '../components/ReasonDialog'
 import {
   Badge,
@@ -20,7 +21,8 @@ import {
 } from '../components/ui'
 import { api, type Product, type StoreDetail, type StoreRow, type StoreStatus, type Team } from '../lib/api'
 import { query } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { country as countryInfo, region as regionOf, regionForCurrency, REGIONS } from '../lib/countries'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate, useRoute } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useAction, useLoad } from '../lib/useLoad'
@@ -34,8 +36,9 @@ export function StoresPage({ id, canWrite }: { id: string; canWrite: boolean }) 
     ['approved', 'pending', 'rejected'].includes(search.get('status') ?? '') ? search.get('status') : 'approved'
   ) as StoreStatus
   const [q, setQ] = useState('')
+  const { country } = useCountry()
   const { data, error, loading, reload } = useLoad<{ counts: Record<StoreStatus, number>; results: StoreRow[] }>(
-    `stores/${query({ status, q })}`,
+    `stores/${query({ status, q, country })}`,
   )
   const back = `/stores${status === 'approved' ? '' : `?status=${status}`}`
 
@@ -118,7 +121,7 @@ export function StoresPage({ id, canWrite }: { id: string; canWrite: boolean }) 
                       {status === 'approved' && (
                         <td className="num">
                           {num(s.orders_today ?? 0)}
-                          <span className="sub">{money(s.sales_today ?? 0)}</span>
+                          <span className="sub">{money(s.sales_today ?? 0, s.currency)}</span>
                         </td>
                       )}
                       <td>
@@ -156,20 +159,36 @@ function CreatedAt({ iso }: { iso: string }) {
 // --- New store -----------------------------------------------------------------
 
 function NewStoreDrawer({ onClose, onCreated }: { onClose: () => void; onCreated: (s: StoreDetail) => void }) {
-  const { t } = useI18n()
+  const { t, lang } = useI18n()
   const toast = useToast()
   const { busy, error, run } = useAction()
+  const here = useCountry().region
   const [form, setForm] = useState({
     name: '',
     type: 'restaurant',
     cuisine: '',
     address: '',
-    latitude: '33.3152',
-    longitude: '44.3661',
+    country: here.country,
+    latitude: String(here.center.lat),
+    longitude: String(here.center.lng),
     owner_phone: '',
+    owner_country: here.country,
     owner_name: '',
     commission_rate: '15',
   })
+  // A new country moves the map spot to its capital, unless one was typed.
+  const setCountry = (code: string) =>
+    setForm((f) => {
+      const old = regionOf(f.country).center
+      const moved = f.latitude === String(old.lat) && f.longitude === String(old.lng)
+      const c = regionOf(code).center
+      return {
+        ...f,
+        country: code,
+        owner_country: f.owner_phone ? f.owner_country : code,
+        ...(moved ? { latitude: String(c.lat), longitude: String(c.lng) } : {}),
+      }
+    })
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
   const fieldErrors = error?.fields ?? {}
@@ -215,6 +234,16 @@ function NewStoreDrawer({ onClose, onCreated }: { onClose: () => void; onCreated
             ]}
           />
         </div>
+        <SelectField
+          label={t('store_country')}
+          value={form.country}
+          onChange={(e) => setCountry(e.target.value)}
+          errors={fieldErrors.country}
+          options={REGIONS.map((r) => ({
+            value: r.country,
+            label: `${countryInfo(r.country)![lang === 'ar' ? 'ar' : 'en']} · ${r.currency}`,
+          }))}
+        />
         <TextField label={t('address')} value={form.address} onChange={set('address')} errors={fieldErrors.address} />
         <div className="grid-2">
           <TextField
@@ -237,14 +266,13 @@ function NewStoreDrawer({ onClose, onCreated }: { onClose: () => void; onCreated
           />
         </div>
         <div className="grid-2">
-          <TextField
+          <PhoneField
             label={t('owner_phone')}
-            type="tel"
-            dir="ltr"
             required
-            placeholder="07xx xxx xxxx"
-            value={form.owner_phone}
-            onChange={set('owner_phone')}
+            phone={form.owner_phone}
+            country={form.owner_country}
+            onPhone={(v) => setForm((f) => ({ ...f, owner_phone: v }))}
+            onCountry={(c) => setForm((f) => ({ ...f, owner_country: c }))}
             errors={fieldErrors.owner_phone}
           />
           <TextField label={t('owner_name')} value={form.owner_name} onChange={set('owner_name')} />
@@ -358,7 +386,7 @@ function StoreDrawer({
           {tab === 'details' && (
             <StoreDetails key={data.id} store={data} canWrite={canWrite} onSaved={(s) => (setData(s), onChanged())} />
           )}
-          {tab === 'menu' && <StoreMenu storeId={id} canWrite={canWrite} />}
+          {tab === 'menu' && <StoreMenu storeId={id} canWrite={canWrite} currency={data.currency} />}
           {tab === 'team' && <StoreTeam storeId={id} canWrite={canWrite} />}
         </>
       )}
@@ -400,7 +428,9 @@ function StoreDetails({
     delivery_radius_km: store.delivery_radius_km,
     commission_rate: store.commission_rate,
     commission_free_until: store.commission_free_until?.slice(0, 10) ?? '',
+    // Iraqi numbers the local way; others keep their + code, which the server reads whatever country is picked.
     owner_phone: store.owner.phone.startsWith('+964') ? `0${store.owner.phone.slice(4)}` : store.owner.phone,
+    owner_country: 'IQ',
     is_open: store.is_open,
   }
   const [form, setForm] = useState(initial)
@@ -420,6 +450,7 @@ function StoreDetails({
       } else if (key === 'commission_free_until') body[key] = value ? `${value}T00:00:00` : null
       else body[key] = value
     }
+    if (body.owner_phone) body.owner_country = form.owner_country
     const saved = await run(() => api<StoreDetail>(`stores/${store.id}/`, { method: 'PATCH', body }))
     if (saved) {
       toast(t('saved'))
@@ -499,12 +530,12 @@ function StoreDetails({
             errors={errors.commission_free_until}
           />
         </div>
-        <TextField
+        <PhoneField
           label={t('owner_phone')}
-          type="tel"
-          dir="ltr"
-          value={form.owner_phone}
-          onChange={set('owner_phone')}
+          phone={form.owner_phone}
+          country={form.owner_country}
+          onPhone={(v) => setForm((f) => ({ ...f, owner_phone: v }))}
+          onCountry={(c) => setForm((f) => ({ ...f, owner_country: c }))}
           errors={errors.owner_phone}
         />
       </fieldset>
@@ -520,8 +551,9 @@ function StoreDetails({
   )
 }
 
-function StoreMenu({ storeId, canWrite }: { storeId: number; canWrite: boolean }) {
+function StoreMenu({ storeId, canWrite, currency }: { storeId: number; canWrite: boolean; currency: string }) {
   const { t, money } = useI18n()
+  const decimals = regionForCurrency(currency).decimals
   const { data, error, reload, setData } = useLoad<Product[]>(`stores/${storeId}/menu/`)
   const action = useAction()
   const [draft, setDraft] = useState({ name_ar: '', name_en: '', menu_section: '', price: '' })
@@ -567,7 +599,7 @@ function StoreMenu({ storeId, canWrite }: { storeId: number; canWrite: boolean }
                       {p.name_en && <span className="sub">{p.name_en}</span>}
                     </span>
                     <span className="num">
-                      {money(p.price)}
+                      {money(p.price, currency)}
                       {p.unit_type === 'kg' && <span className="sub">{t('per_kg')}</span>}
                     </span>
                     <Toggle
@@ -614,9 +646,10 @@ function StoreMenu({ storeId, canWrite }: { storeId: number; canWrite: boolean }
               onChange={(e) => setDraft({ ...draft, menu_section: e.target.value })}
             />
             <TextField
-              label={t('price')}
+              label={`${t('price')} · ${currency}`}
               dir="ltr"
-              inputMode="numeric"
+              inputMode={decimals ? 'decimal' : 'numeric'}
+              pattern={decimals ? `[0-9]+([.][0-9]{1,${decimals}})?` : '[0-9]+'}
               required
               value={draft.price}
               onChange={(e) => setDraft({ ...draft, price: e.target.value })}
@@ -639,11 +672,14 @@ function StoreTeam({ storeId, canWrite }: { storeId: number; canWrite: boolean }
   const { data, error, reload } = useLoad<Team>(`stores/${storeId}/team/`)
   const action = useAction()
   const [phone, setPhone] = useState('')
+  const [phoneCountry, setPhoneCountry] = useState(useCountry().country)
   const [role, setRole] = useState('cashier')
 
   async function add(e: FormEvent) {
     e.preventDefault()
-    const ok = await action.run(() => api(`stores/${storeId}/team/`, { method: 'POST', body: { phone, role } }))
+    const ok = await action.run(() =>
+      api(`stores/${storeId}/team/`, { method: 'POST', body: { phone, country: phoneCountry, role } }),
+    )
     if (ok) {
       setPhone('')
       void reload()
@@ -704,14 +740,13 @@ function StoreTeam({ storeId, canWrite }: { storeId: number; canWrite: boolean }
         <form className="inline-form" onSubmit={add}>
           <h3>{t('add_member')}</h3>
           <div className="grid-2">
-            <TextField
+            <PhoneField
               label={t('phone')}
-              type="tel"
-              dir="ltr"
               required
-              placeholder="07xx xxx xxxx"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              phone={phone}
+              country={phoneCountry}
+              onPhone={setPhone}
+              onCountry={setPhoneCountry}
               errors={action.error?.fields.phone}
             />
             <SelectField

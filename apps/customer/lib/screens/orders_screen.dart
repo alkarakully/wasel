@@ -126,7 +126,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ),
                       ),
                       Text(
-                        s.money(order.total),
+                        s.money(order.total, order.currency),
                         style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                     ],

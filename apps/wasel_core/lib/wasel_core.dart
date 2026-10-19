@@ -3,6 +3,7 @@ library;
 
 export 'src/api/api_client.dart';
 export 'src/api/models.dart';
+export 'src/countries.dart';
 export 'src/live_updates.dart';
 export 'src/login_screen.dart';
 export 'src/push_service.dart';

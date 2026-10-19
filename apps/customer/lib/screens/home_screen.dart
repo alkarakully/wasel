@@ -149,7 +149,9 @@ class _Header extends StatelessWidget {
                 Text(
                   session.usingDeviceLocation
                       ? s.t('currentLocation')
-                      : s.t('baghdad'),
+                      : session.fallbackCountry == 'IQ'
+                      ? s.t('baghdad')
+                      : countryFor(session.fallbackCountry).name(s.lang),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -610,7 +612,10 @@ class _StoreCard extends StatelessWidget {
                             _Meta(
                               icon: Ph.moped,
                               text: s.t('deliveryFee', {
-                                'fee': s.money(store.deliveryFee!),
+                                'fee': s.money(
+                                  store.deliveryFee!,
+                                  store.currency,
+                                ),
                               }),
                             ),
                           if (store.distanceKm != null)

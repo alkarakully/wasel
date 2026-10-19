@@ -4,7 +4,8 @@ import { useState, type FormEvent } from 'react'
 import { Api, ApiError, type Lang, type User } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { nextStep, type Step } from '../lib/onboarding'
-import { codeDigits, isRtl } from '../lib/strings'
+import { codeDigits, displayPhone, isRtl } from '../lib/strings'
+import { CountryPicker, savedPhoneCountry } from './CountryPicker'
 import { LanguageSwitch } from './LanguageSwitch'
 
 interface Props {
@@ -23,6 +24,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
   const Forward = rtl ? ArrowLeft : ArrowRight
   const Back = rtl ? ArrowRight : ArrowLeft
   const [phone, setPhone] = useState('')
+  const [country, setCountry] = useState(savedPhoneCountry)
   const [code, setCode] = useState('')
   const [sentTo, setSentTo] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -37,7 +39,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const sent = await api.requestCode(phone, 'whatsapp')
+      const sent = await api.requestCode(phone, 'whatsapp', country)
       setSentTo(sent.phone)
       setCode('')
     } catch (e) {
@@ -53,7 +55,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
     setBusy(true)
     setError(null)
     try {
-      const result = await api.verifyCode(sentTo, value)
+      const result = await api.verifyCode(sentTo, value, country)
       const session = new Api(result.token)
       const step = await nextStep(session, result.user, joining)
       if (step.kind === 'refused') {
@@ -90,13 +92,13 @@ export function Login({ api, onSignedIn, setLang }: Props) {
                 <p className="lead">{t(joining ? 'joinLead' : 'loginLead')}</p>
                 <label htmlFor="phone">{t('phone')}</label>
                 <div className="phone-input" dir="ltr">
-                  <span>+964</span>
+                  <CountryPicker value={country} onChange={(code) => (setCountry(code), setError(null))} />
                   <input
                     id="phone"
                     type="tel"
                     inputMode="tel"
                     autoComplete="tel-national"
-                    placeholder="0780 000 0999"
+                    placeholder={country === 'IQ' ? '0780 000 0999' : ''}
                     value={phone}
                     aria-invalid={Boolean(error)}
                     aria-describedby="phone-help phone-error"
@@ -144,7 +146,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
                 <h1>{t('codeTitle')}</h1>
                 <p className="lead">
                   {before}
-                  <bdi dir="ltr">{sentTo}</bdi>
+                  <bdi dir="ltr">{displayPhone(sentTo)}</bdi>
                   {after}
                 </p>
                 <label htmlFor="code">{t('code')}</label>

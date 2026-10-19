@@ -91,7 +91,11 @@ def _notify_customer(order, kind, **context):
 def _refund_if_paid(order):
     if order.payment_type == Order.PaymentType.WALLET and order.payment_status == Order.PaymentStatus.PAID:
         WalletTransaction.objects.create(
-            user_id=order.customer_id, type=WalletTransaction.Type.REFUND, amount=order.total_amount, order=order
+            user_id=order.customer_id,
+            type=WalletTransaction.Type.REFUND,
+            currency=order.currency,
+            amount=order.total_amount,
+            order=order,
         )
         User.objects.filter(pk=order.customer_id).update(wallet_balance=F("wallet_balance") + order.total_amount)
         order.payment_status = Order.PaymentStatus.REFUNDED

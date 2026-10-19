@@ -25,7 +25,7 @@ class _StoreScreenState extends State<StoreScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => ProductSheet(product: product),
+      builder: (_) => ProductSheet(product: product, currency: store.currency),
     );
     if (line == null || !mounted) return;
 
@@ -149,6 +149,7 @@ class _StoreScreenState extends State<StoreScreen> {
                             index: i,
                             child: _ProductRow(
                               product: product,
+                              currency: store.currency,
                               enabled: store.isOpen && product.isAvailable,
                               onTap: () => _open(store, product),
                             ),
@@ -261,7 +262,10 @@ class _StoreHero extends StatelessWidget {
                                     if (store.deliveryFee != null)
                                       _HeroPill(
                                         icon: Ph.moped,
-                                        text: s.money(store.deliveryFee!),
+                                        text: s.money(
+                                          store.deliveryFee!,
+                                          store.currency,
+                                        ),
                                       ),
                                     if (store.distanceKm != null)
                                       _HeroPill(
@@ -375,10 +379,12 @@ class _HeroPill extends StatelessWidget {
 class _ProductRow extends StatelessWidget {
   const _ProductRow({
     required this.product,
+    required this.currency,
     required this.enabled,
     required this.onTap,
   });
   final Product product;
+  final String currency;
   final bool enabled;
   final VoidCallback onTap;
 
@@ -411,7 +417,7 @@ class _ProductRow extends StatelessWidget {
                       TextSpan(
                         children: [
                           TextSpan(
-                            text: s.money(product.price),
+                            text: s.money(product.price, currency),
                             style: TextStyle(
                               color: scheme.primary,
                               fontWeight: FontWeight.w700,

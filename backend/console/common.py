@@ -5,17 +5,32 @@ from django.utils import timezone
 from rest_framework.pagination import PageNumberPagination
 
 from orders.models import Order
+from regions.regions import CODES, as_api, region
 
 ACTIVE = [Order.Status.RECEIVED, Order.Status.PREPARING, Order.Status.READY, Order.Status.OUT_FOR_DELIVERY]
 
 
-def start_of(day):
-    """Start of a local calendar day, as an aware datetime."""
-    return timezone.make_aware(datetime.combine(day, time.min))
+def country_param(request):
+    """
+    The operating country platform numbers are for (?country=, Iraq by
+    default): sums stay in one currency and days follow one clock.
+    """
+    code = (request.query_params.get("country") or "IQ").upper()
+    return code if code in CODES else "IQ"
 
 
-def money(value):
-    return int(value or 0)
+def local_today(country="IQ"):
+    return timezone.localdate(timezone=region(country).tz)
+
+
+def start_of(day, country="IQ"):
+    """Start of a calendar day in the country, as an aware datetime."""
+    return timezone.make_aware(datetime.combine(day, time.min), region(country).tz)
+
+
+def money(value, currency="IQD"):
+    """An amount for JSON, with exactly its currency's decimals."""
+    return as_api(value, currency)
 
 
 def iso(value):
@@ -26,8 +41,8 @@ def person(user):
     return {"id": user.pk, "name": user.name, "phone": user.phone} if user else None
 
 
-def figures(orders):
-    """Order counts and money for a set of orders (cancelled ones earn nothing)."""
+def figures(orders, currency="IQD"):
+    """Order counts and money for a set of orders in one currency (cancelled ones earn nothing)."""
     earning = orders.exclude(status=Order.Status.CANCELLED)
     sums = earning.aggregate(
         sales=Sum("total_amount"),
@@ -44,11 +59,11 @@ def figures(orders):
         "orders": orders.count(),
         "delivered": delivered.count(),
         "cancelled": orders.filter(status=Order.Status.CANCELLED).count(),
-        "sales": money(sums["sales"]),
-        "commission": money(sums["commission"]),
-        "service_fees": money(sums["service_fees"]),
-        "delivery_fees": money(sums["delivery_fees"]),
-        "discounts": money(sums["discounts"]),
+        "sales": money(sums["sales"], currency),
+        "commission": money(sums["commission"], currency),
+        "service_fees": money(sums["service_fees"], currency),
+        "delivery_fees": money(sums["delivery_fees"], currency),
+        "discounts": money(sums["discounts"], currency),
         "avg_delivery_minutes": round(avg.total_seconds() / 60) if avg else None,
     }
 

@@ -1,13 +1,14 @@
 """
 GET /api/vendors/{id}/report/?from=YYYY-MM-DD&to=YYYY-MM-DD
 
-A store's numbers for a date range (Baghdad calendar days, both ends included;
+A store's numbers for a date range (calendar days where the store is, both ends included;
 the last 7 days by default): sales, orders, what they earned after Wasel's
 commission, a day-by-day series, top items, busiest hours, prep times and
 cancellations. For the owner and managers.
 """
 
 from datetime import date, datetime, time, timedelta
+from decimal import Decimal
 
 from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
 from django.db.models.functions import ExtractHour, TruncDate
@@ -18,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from orders.models import Order, OrderItem
+from regions.regions import as_api
 
 from . import access
 from .models import Vendor
@@ -33,11 +35,11 @@ def _day(value, default):
 
 
 def _money(value):
-    return int(value or 0)
+    return Decimal(value or 0)
 
 
 def store_payout(orders):
-    """Food sales, store-funded discounts, commission and what the store keeps."""
+    """Food sales, store-funded discounts, commission and what the store keeps (Decimals, in the store's currency)."""
     sums = orders.aggregate(
         food=Sum("subtotal"),
         commission=Sum("commission_amount"),
@@ -61,7 +63,8 @@ class ReportView(APIView):
         if not access.can(store, request.user, "reports"):
             return Response({"error": "not_allowed", "detail": "Only the owner or a manager can see reports."}, status=403)
 
-        today = timezone.localdate()
+        tz = store.tz
+        today = timezone.localdate(timezone=tz)
         end = _day(request.query_params.get("to"), today)
         start = _day(request.query_params.get("from"), (end or today) - timedelta(days=6))
         if start is None or end is None or start > end or (end - start).days >= MAX_DAYS:
@@ -70,12 +73,16 @@ class ReportView(APIView):
                 status=400,
             )
 
-        tz = timezone.get_current_timezone()
         since = timezone.make_aware(datetime.combine(start, time.min), tz)
         until = timezone.make_aware(datetime.combine(end + timedelta(days=1), time.min), tz)
         orders = Order.objects.filter(vendor=store, created_at__gte=since, created_at__lt=until)
         delivered = orders.filter(status=Order.Status.DELIVERED)
         cancelled = orders.filter(status=Order.Status.CANCELLED)
+
+        currency = store.currency
+
+        def fmt(amount):
+            return as_api(amount, currency)
 
         money = store_payout(delivered)
         delivered_count = delivered.count()
@@ -93,7 +100,7 @@ class ReportView(APIView):
         for offset in range((end - start).days + 1):
             day = start + timedelta(days=offset)
             row = by_day.get(day, {})
-            days.append({"date": day.isoformat(), "orders": row.get("orders", 0), "sales": _money(row.get("sales"))})
+            days.append({"date": day.isoformat(), "orders": row.get("orders", 0), "sales": fmt(_money(row.get("sales")))})
 
         hours = dict(
             orders.exclude(status=Order.Status.CANCELLED)
@@ -114,12 +121,13 @@ class ReportView(APIView):
             {
                 "from": start.isoformat(),
                 "to": end.isoformat(),
+                "currency": currency,
                 "orders": orders.count(),
                 "delivered": delivered_count,
                 "cancelled": cancelled.count(),
                 "cancelled_by": dict(cancelled.values_list("cancelled_by").annotate(n=Count("id")).values_list("cancelled_by", "n")),
-                **money,
-                "average_order": round(money["food_sales"] / delivered_count) if delivered_count else 0,
+                **{key: fmt(value) for key, value in money.items()},
+                "average_order": fmt(money["food_sales"] / delivered_count if delivered_count else 0),
                 "average_prep_minutes": round(prep.total_seconds() / 60) if prep else None,
                 "days": days,
                 "hours": [{"hour": h, "orders": hours.get(h, 0)} for h in range(24)],
@@ -129,7 +137,7 @@ class ReportView(APIView):
                         "name": {"ar": row["product__name_ar"], "ku": row["product__name_ku"], "en": row["product__name_en"]},
                         "quantity": str(row["quantity"].normalize()) if row["quantity"] is not None else "0",
                         "orders": row["orders"],
-                        "sales": _money(row["sales"]),
+                        "sales": fmt(_money(row["sales"])),
                     }
                     for row in top
                 ],

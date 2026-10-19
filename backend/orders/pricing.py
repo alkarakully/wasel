@@ -14,13 +14,14 @@ reduce the vendor's commission.
 
 import math
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.gis.db.models.functions import Distance
 from django.db.models import Q
 from django.utils import timezone
 
+from regions.regions import quantize, region
 from subscriptions.models import WaselPlusSubscription
 from vendors.models import Offer, Product, Vendor
 
@@ -61,19 +62,20 @@ def _config(key):
     return settings.ORDER_PRICING[key]
 
 
-def round_dinars(amount):
-    return Decimal(amount).quantize(Decimal(1), rounding=ROUND_HALF_UP)
+def _price(country, key):
+    """A fee or limit for the store's country, in its currency."""
+    return region(country).pricing[key]
 
 
 def _round_up(amount, step):
-    return Decimal(math.ceil(Decimal(amount) / step) * step)
+    return Decimal(math.ceil(Decimal(amount) / step)) * step
 
 
-def delivery_fee_for(distance_m):
-    """Base fee for the first few km, then a fee per started km, rounded up."""
-    extra_km = max(0, math.ceil(Decimal(distance_m) / 1000 - _config("DELIVERY_BASE_KM")))
-    fee = _config("DELIVERY_BASE_FEE") + extra_km * _config("DELIVERY_FEE_PER_KM")
-    return _round_up(fee, _config("FEE_ROUNDING"))
+def delivery_fee_for(distance_m, country="IQ"):
+    """Base fee for the first few km, then a fee per started km, rounded up to the country's step."""
+    extra_km = max(0, math.ceil(Decimal(distance_m) / 1000 - _price(country, "DELIVERY_BASE_KM")))
+    fee = _price(country, "DELIVERY_BASE_FEE") + extra_km * _price(country, "DELIVERY_FEE_PER_KM")
+    return quantize(_round_up(fee, _price(country, "FEE_ROUNDING")), region(country).currency)
 
 
 def has_wasel_plus(user, at):
@@ -92,9 +94,9 @@ def offer_discount(offer, subtotal, delivery_fee):
     if subtotal < offer.min_order:
         return None
     if offer.type == Offer.Type.PERCENT:
-        return min(round_dinars(subtotal * offer.value / 100), subtotal)
+        return min(quantize(subtotal * offer.value / 100, offer.currency), subtotal)
     if offer.type == Offer.Type.FIXED:
-        return min(round_dinars(offer.value), subtotal)
+        return min(quantize(offer.value, offer.currency), subtotal)
     if offer.type == Offer.Type.FREE_DELIVERY:
         return delivery_fee if delivery_fee > 0 else None
     # Bundle deals need a bundle definition, which isn't modelled yet.
@@ -149,14 +151,17 @@ def _price_lines(vendor, items):
                 quantity=quantity,
                 modifiers=chosen,
                 unit_price=unit_price,
-                line_total=round_dinars(unit_price * quantity),
+                line_total=quantize(unit_price * quantity, vendor.currency),
             )
         )
     return lines
 
 
 def _pick_offer(vendor, offer_id, subtotal, delivery_fee, at):
-    running = Offer.objects.filter(starts_at__lte=at, ends_at__gte=at).filter(Q(vendor=vendor) | Q(vendor__isnull=True))
+    # The store's own offers, and Wasel's offers for the store's country (in its currency).
+    running = Offer.objects.filter(starts_at__lte=at, ends_at__gte=at).filter(
+        Q(vendor=vendor) | Q(vendor__isnull=True, country=vendor.country)
+    )
 
     if offer_id is not None:
         offer = running.filter(pk=offer_id).first()
@@ -191,20 +196,21 @@ def build_quote(customer, vendor_id, items, delivery_point, offer_id=None, tip=0
     if distance_m > float(vendor.delivery_radius_km) * 1000:
         raise PricingError("out_of_delivery_area", f"{vendor} doesn't deliver to this location.")
 
+    country, currency = vendor.country, vendor.currency
     tip = Decimal(tip)
-    if not 0 <= tip <= _config("MAX_TIP"):
-        raise PricingError("invalid_tip", f"Tip must be between 0 and {_config('MAX_TIP')} IQD.")
+    if not 0 <= tip <= _price(country, "MAX_TIP"):
+        raise PricingError("invalid_tip", f"Tip must be between 0 and {_price(country, 'MAX_TIP')} {currency}.")
 
-    quote = Quote(vendor=vendor, distance_m=distance_m, tip=round_dinars(tip))
+    quote = Quote(vendor=vendor, distance_m=distance_m, tip=quantize(tip, currency))
     quote.lines = _price_lines(vendor, items)
     quote.subtotal = sum((line.line_total for line in quote.lines), Decimal(0))
 
     quote.wasel_plus = has_wasel_plus(customer, at)
-    if quote.wasel_plus and quote.subtotal >= _config("PLUS_FREE_DELIVERY_MIN"):
+    if quote.wasel_plus and quote.subtotal >= _price(country, "PLUS_FREE_DELIVERY_MIN"):
         quote.delivery_fee = Decimal(0)
     else:
-        quote.delivery_fee = delivery_fee_for(distance_m)
-    quote.service_fee = Decimal(_config("PLUS_SERVICE_FEE") if quote.wasel_plus else _config("SERVICE_FEE"))
+        quote.delivery_fee = delivery_fee_for(distance_m, country)
+    quote.service_fee = _price(country, "PLUS_SERVICE_FEE" if quote.wasel_plus else "SERVICE_FEE")
 
     quote.offer, quote.discount = _pick_offer(vendor, offer_id, quote.subtotal, quote.delivery_fee, at)
 

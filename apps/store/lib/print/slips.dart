@@ -89,7 +89,7 @@ class OrderSlips {
       itemsCount: s.t('itemsCount', {'n': count}),
       customer: name.isEmpty ? '' : '${s.t('customer')}: $name',
       payment: order.paymentType == 'cod'
-          ? s.t('collectCash', {'amount': s.money(order.total)})
+          ? s.t('collectCash', {'amount': s.money(order.total, order.currency)})
           : s.t('paidInApp'),
       checkItems: s.t('checkItems'),
       thanks: s.t('thanks', {'store': storeName}),

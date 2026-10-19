@@ -23,6 +23,8 @@ export interface Order {
   status: OrderStatus
   payment_type: 'cod' | 'card' | 'wallet'
   delivery_address: string
+  /** Every amount on the order is in this currency (the store's, when it was placed). */
+  currency: string
   total_amount: string
   subtotal?: string
   /** Shown to the store's team while the order is in progress. */
@@ -65,6 +67,9 @@ export interface Store {
   id: number
   name: string
   is_open: boolean
+  /** Where the store trades: its currency, clock and fees. */
+  country: string
+  currency: string
   products: Product[]
   my_role?: StoreRole
   commission_rate?: string
@@ -151,34 +156,39 @@ export interface ApplicationInput {
   delivery_radius_km: string
 }
 
+/** Money from the API: a string with exactly its currency's decimals ("18000", "12.50", "0.750"). */
+export type Money = string
+
 export interface Report {
   from: string
   to: string
+  currency: string
   orders: number
   delivered: number
   cancelled: number
   cancelled_by: Record<string, number>
-  food_sales: number
-  store_discounts: number
-  commission: number
-  payout: number
-  average_order: number
+  food_sales: Money
+  store_discounts: Money
+  commission: Money
+  payout: Money
+  average_order: Money
   average_prep_minutes: number | null
-  days: { date: string; orders: number; sales: number }[]
+  days: { date: string; orders: number; sales: Money }[]
   hours: { hour: number; orders: number }[]
-  top_items: { product: number; name: Names; quantity: string; orders: number; sales: number }[]
+  top_items: { product: number; name: Names; quantity: string; orders: number; sales: Money }[]
 }
 
 export interface WeekFigures {
   orders_count: number
-  food_sales: number
-  store_discounts: number
-  commission: number
-  payout: number
+  food_sales: Money
+  store_discounts: Money
+  commission: Money
+  payout: Money
 }
 
 export interface Statement extends WeekFigures {
   id: number
+  currency: string
   store_name: string
   period_start: string
   period_end: string
@@ -191,16 +201,17 @@ export interface StatementLine {
   order: number
   delivered_at: string
   payment_type: 'cod' | 'card' | 'wallet'
-  food_sales: number
-  store_discount: number
-  commission: number
-  payout: number
+  food_sales: Money
+  store_discount: Money
+  commission: Money
+  payout: Money
 }
 
 export interface Billing {
+  currency: string
   current_week: WeekFigures & { period_start: string; period_end: string }
-  due_total: number
-  paid_total: number
+  due_total: Money
+  paid_total: Money
   commission_rate: string
   statements: Statement[]
 }
@@ -288,13 +299,15 @@ export class Api {
   }
 
   // Auth
-  requestCode = (phone: string, channel: 'whatsapp' | 'sms') =>
+  /** `country` says how to read a local number (Iraq by default); numbers with a + code say it themselves. */
+  requestCode = (phone: string, channel: 'whatsapp' | 'sms', country = 'IQ') =>
     this.send<{ phone: string; channel: string; resend_in: number }>('POST', '/api/auth/otp/request/', {
       phone,
       channel,
+      country,
     })
-  verifyCode = (phone: string, code: string) =>
-    this.send<{ token: string; user: User }>('POST', '/api/auth/otp/verify/', { phone, code })
+  verifyCode = (phone: string, code: string, country = 'IQ') =>
+    this.send<{ token: string; user: User }>('POST', '/api/auth/otp/verify/', { phone, code, country })
   me = () => this.send<User>('GET', '/api/auth/me/')
   logout = () => this.send<null>('POST', '/api/auth/logout/')
 
@@ -317,8 +330,10 @@ export class Api {
   // Store team, menu, hours (owner and managers)
   team = (storeId: number) => this.send<Team>('GET', `/api/vendors/${storeId}/team/`)
   /** Invites someone by phone; they join when they accept. */
-  addMember = (storeId: number, member: { phone: string; name: string; role: 'manager' | 'cashier' }) =>
-    this.send<TeamInvite>('POST', `/api/vendors/${storeId}/team/`, member)
+  addMember = (
+    storeId: number,
+    member: { phone: string; name: string; role: 'manager' | 'cashier'; country?: string },
+  ) => this.send<TeamInvite>('POST', `/api/vendors/${storeId}/team/`, member)
   cancelInvite = (storeId: number, inviteId: number) =>
     this.send<null>('DELETE', `/api/vendors/${storeId}/team/invites/${inviteId}/`)
   setMemberRole = (storeId: number, memberId: number, role: 'manager' | 'cashier') =>

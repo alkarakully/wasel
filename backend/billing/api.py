@@ -20,14 +20,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ops.api import StaffView
+from regions.regions import as_api
 from vendors import access
 from vendors.models import Vendor
 
 from .models import Statement
-from .weeks import close_finished_weeks, week_figures, week_orders, week_start
+from .weeks import close_finished_weeks, local_today, week_figures, week_orders, week_start
 
 
 def _row(statement):
+    c = statement.currency
     return {
         "id": statement.pk,
         "store": statement.vendor_id,
@@ -35,10 +37,11 @@ def _row(statement):
         "period_start": statement.period_start.isoformat(),
         "period_end": statement.period_end.isoformat(),
         "orders_count": statement.orders_count,
-        "food_sales": int(statement.food_sales),
-        "store_discounts": int(statement.store_discounts),
-        "commission": int(statement.commission),
-        "payout": int(statement.payout),
+        "currency": c,
+        "food_sales": as_api(statement.food_sales, c),
+        "store_discounts": as_api(statement.store_discounts, c),
+        "commission": as_api(statement.commission, c),
+        "payout": as_api(statement.payout, c),
         "status": statement.status,
         "paid_at": statement.paid_at.isoformat() if statement.paid_at else None,
         "paid_reference": statement.paid_reference,
@@ -48,18 +51,19 @@ def _row(statement):
 def _lines(vendor, start):
     """Every delivered order of the week, with what the store keeps from it."""
     orders = week_orders(vendor, start).select_related("offer").order_by("delivered_at")
+    c = vendor.currency
     rows = []
     for o in orders:
-        store_discount = int(o.discount) if o.offer_id and o.offer.vendor_id else 0
+        store_discount = o.discount if o.offer_id and o.offer.vendor_id else 0
         rows.append(
             {
                 "order": o.pk,
-                "delivered_at": timezone.localtime(o.delivered_at).isoformat(),
+                "delivered_at": timezone.localtime(o.delivered_at, vendor.tz).isoformat(),
                 "payment_type": o.payment_type,
-                "food_sales": int(o.subtotal),
-                "store_discount": store_discount,
-                "commission": int(o.commission_amount),
-                "payout": int(o.subtotal) - store_discount - int(o.commission_amount),
+                "food_sales": as_api(o.subtotal, c),
+                "store_discount": as_api(store_discount, c),
+                "commission": as_api(o.commission_amount, c),
+                "payout": as_api(o.subtotal - store_discount - o.commission_amount, c),
             }
         )
     return rows
@@ -80,18 +84,22 @@ class BillingView(APIView):
         store = _owner_store(request, pk)
         if store is None:
             return Response(DENIED, status=403)
-        start = week_start(timezone.localdate())
+        c = store.currency
+        start = week_start(local_today(store.country), store.country)
         statements = Statement.objects.filter(vendor=store).select_related("vendor")
         totals = {
-            status: int(statements.filter(status=status).aggregate(t=Sum("payout"))["t"] or 0)
+            status: as_api(statements.filter(status=status).aggregate(t=Sum("payout"))["t"], c)
             for status in Statement.Status.values
         }
+        week = week_figures(store, start)
         return Response(
             {
+                "currency": c,
                 "current_week": {
                     "period_start": start.isoformat(),
                     "period_end": (start + timedelta(days=6)).isoformat(),
-                    **week_figures(store, start),
+                    "orders_count": week.pop("orders_count"),
+                    **{key: as_api(value, c) for key, value in week.items()},
                 },
                 "due_total": totals[Statement.Status.DUE],
                 "paid_total": totals[Statement.Status.PAID],
@@ -124,15 +132,18 @@ def _csv(statement, lines):
     writer.writerow(["Store", statement.vendor.name])
     writer.writerow(["Week", f"{statement.period_start} to {statement.period_end}"])
     writer.writerow([])
-    writer.writerow(["Order", "Delivered", "Payment", "Food sales (IQD)", "Store discount", "Wasel commission", "Payout"])
+    writer.writerow(
+        ["Order", "Delivered", "Payment", f"Food sales ({statement.currency})", "Store discount", "Wasel commission",
+         "Payout"]
+    )
     for line in lines:
         writer.writerow(
             [line["order"], line["delivered_at"], line["payment_type"], line["food_sales"], line["store_discount"],
              line["commission"], line["payout"]]
         )
     writer.writerow([])
-    writer.writerow(["Total", "", "", int(statement.food_sales), int(statement.store_discounts),
-                     int(statement.commission), int(statement.payout)])
+    row = _row(statement)
+    writer.writerow(["Total", "", "", row["food_sales"], row["store_discounts"], row["commission"], row["payout"]])
     writer.writerow(["Status", statement.get_status_display(), statement.paid_reference])
     return response
 
@@ -145,8 +156,20 @@ class PayoutsView(StaffView):
         statements = Statement.objects.select_related("vendor")
         if (status := request.query_params.get("status")) in Statement.Status.values:
             statements = statements.filter(status=status)
-        due = Statement.objects.filter(status=Statement.Status.DUE).aggregate(t=Sum("payout"))["t"]
-        return Response({"due_total": int(due or 0), "results": [_row(s) for s in statements[:200]]})
+        # Each currency is owed separately; due_total stays the Iraqi dinar figure.
+        due = dict(
+            Statement.objects.filter(status=Statement.Status.DUE)
+            .values_list("currency")
+            .annotate(t=Sum("payout"))
+            .values_list("currency", "t")
+        )
+        return Response(
+            {
+                "due_total": as_api(due.get("IQD"), "IQD"),
+                "due_totals": {c: as_api(t, c) for c, t in due.items()},
+                "results": [_row(s) for s in statements[:200]],
+            }
+        )
 
 
 class PaidSerializer(serializers.Serializer):

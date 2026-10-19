@@ -3,14 +3,15 @@ import type { ReactNode } from 'react'
 
 import { Bars, ErrorNote, PageHeader, Skeleton, Stat } from '../components/ui'
 import type { Overview } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useLoad } from '../lib/useLoad'
 
 export function OverviewPage() {
   const { t, money, num, day } = useI18n()
-  const { data, error, reload } = useLoad<Overview>('overview/', 30_000)
+  const { country } = useCountry()
+  const { data, error, reload } = useLoad<Overview>(`overview/?country=${country}`, 30_000)
 
   return (
     <>
@@ -87,7 +88,7 @@ export function OverviewPage() {
             <Bars
               label={t('last_14_days')}
               format={money}
-              data={data.days.map((d) => ({ key: d.day, value: d.sales, label: day(d.day) }))}
+              data={data.days.map((d) => ({ key: d.day, value: Number(d.sales), label: day(d.day) }))}
             />
           </section>
 

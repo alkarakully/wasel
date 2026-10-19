@@ -2,12 +2,20 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 from django.db import models
 from django.utils import timezone
 
-from .phone import InvalidPhone, normalize_iraqi_phone, other_phone
+from .phone import InvalidPhone, country_of, normalize_phone, other_phone
 
 
 def money_field(**kwargs):
-    """Amounts in whole Iraqi dinars (IQD has no fractional unit in use)."""
-    return models.DecimalField(max_digits=12, decimal_places=0, **kwargs)
+    """
+    An amount in the currency of its store, order or wallet: whole dinars in
+    Iraq, halalas or fils elsewhere (up to 3 decimals for KWD, BHD and OMR).
+    """
+    return models.DecimalField(max_digits=15, decimal_places=3, **kwargs)
+
+
+def currency_field(**kwargs):
+    kwargs.setdefault("default", "IQD")
+    return models.CharField(max_length=3, **kwargs)
 
 
 class UserManager(BaseUserManager):
@@ -17,9 +25,10 @@ class UserManager(BaseUserManager):
         if not phone:
             raise ValueError("Users must have a phone number")
         # Same form the login code flow uses, so the account can sign in.
-        # Staff (createsuperuser) may use a non-Iraqi number for the admin.
+        # Staff (createsuperuser) may use any number the admin can store.
         try:
-            phone = normalize_iraqi_phone(phone)
+            phone = normalize_phone(phone, extra_fields.get("country") or "IQ")
+            extra_fields.setdefault("country", country_of(phone))
         except InvalidPhone:
             other = other_phone(phone)
             if not (other and (password or extra_fields.get("is_staff"))):
@@ -54,9 +63,17 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CUSTOMER)
+    # Where the account is from: its phone's country. The wallet is in this country's currency.
+    country = models.CharField(max_length=2, default="IQ")
     language_pref = models.CharField(max_length=2, choices=Language.choices, default=Language.ARABIC)
     # Cached total; WalletTransaction rows are the source of truth.
     wallet_balance = money_field(default=0)
+
+    @property
+    def wallet_currency(self):
+        from regions.regions import region
+
+        return region(self.country).currency
 
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -104,6 +121,7 @@ class WalletTransaction(models.Model):
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="wallet_transactions")
     type = models.CharField(max_length=10, choices=Type.choices)
+    currency = currency_field()
     # Signed: positive adds to the balance, negative spends from it.
     amount = money_field()
     order = models.ForeignKey(
@@ -115,4 +133,4 @@ class WalletTransaction(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.get_type_display()} {self.amount} IQD for {self.user}"
+        return f"{self.get_type_display()} {self.amount} {self.currency} for {self.user}"

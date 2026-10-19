@@ -28,10 +28,12 @@ function rangeFor(preset: Exclude<Preset, 'custom'>, today = new Date()): [strin
 
 /** A store's numbers for a date range: earnings, orders, sales by day, busy hours, best sellers. */
 export function ReportsView({ api, storeId, onError }: Props) {
-  const { t, money, name } = useI18n()
+  const { t, money: format, name } = useI18n()
   const [preset, setPreset] = useState<Preset>('last7')
   const [[from, to], setRange] = useState(() => rangeFor('last7'))
   const [report, setReport] = useState<Report | null>(null)
+  // Amounts are in the store's own currency.
+  const money = (amount: string | number) => format(amount, report?.currency)
 
   useEffect(() => {
     let current = true
@@ -106,7 +108,7 @@ export function ReportsView({ api, storeId, onError }: Props) {
               <span className="gold-rule" />
               <p className="sub">
                 {t('sales')} {money(report.food_sales)} · {t('commissionLabel')} {money(report.commission)}
-                {report.store_discounts > 0 && ` · ${t('storeDiscounts')} ${money(report.store_discounts)}`}
+                {Number(report.store_discounts) > 0 && ` · ${t('storeDiscounts')} ${money(report.store_discounts)}`}
               </p>
             </article>
             <article className="tile">
@@ -177,7 +179,8 @@ export function ReportsView({ api, storeId, onError }: Props) {
                 </thead>
                 <tbody>
                   {report.top_items.map((item, i) => {
-                    const share = report.top_items[0].sales ? item.sales / report.top_items[0].sales : 0
+                    const top = Number(report.top_items[0].sales)
+                    const share = top ? Number(item.sales) / top : 0
                     return (
                       <tr key={item.product}>
                         <td className="rank">{i + 1}</td>
@@ -206,8 +209,8 @@ export function ReportsView({ api, storeId, onError }: Props) {
 }
 
 /** Bars for each day's food sales; time runs left to right in every language. */
-function DayChart({ days, money }: { days: Report['days']; money: (n: number) => string }) {
-  const max = Math.max(1, ...days.map((d) => d.sales))
+function DayChart({ days, money }: { days: Report['days']; money: (n: string | number) => string }) {
+  const max = Math.max(1, ...days.map((d) => Number(d.sales)))
   const step = days.length > 14 ? Math.ceil(days.length / 10) : 1
   return (
     <div
@@ -218,7 +221,10 @@ function DayChart({ days, money }: { days: Report['days']; money: (n: number) =>
     >
       {days.map((day, i) => (
         <div key={day.date} className="bar-col" title={`${day.date} · ${money(day.sales)} · ${day.orders}`}>
-          <div className="bar" style={{ height: `${(day.sales / max) * 100}%`, animationDelay: `${i * 25}ms` }} />
+          <div
+            className="bar"
+            style={{ height: `${(Number(day.sales) / max) * 100}%`, animationDelay: `${i * 25}ms` }}
+          />
           <span className="bar-label">{i % step === 0 ? day.date.slice(8) : ''}</span>
         </div>
       ))}

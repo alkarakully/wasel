@@ -26,6 +26,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
+from regions.regions import CODES as REGION_CODES
+from regions.regions import region, where
 from subscriptions.models import WaselPlusSubscription
 
 from . import access
@@ -77,6 +79,8 @@ def application_row(store):
         "latitude": store.location.y,
         "longitude": store.location.x,
         "delivery_radius_km": str(store.delivery_radius_km.normalize()),
+        "country": store.country,
+        "currency": store.currency,
         "status": store.status,
         "rejection_reason": store.rejection_reason,
         "created_at": store.created_at.isoformat(),
@@ -95,18 +99,28 @@ def apply_problem(user):
     return "application_pending" if pending else None
 
 
+OUTSIDE = "Wasel doesn't run in this area yet. Check the map spot."
+
+
 class ApplicationSerializer(serializers.Serializer):
     owner_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
     name = serializers.CharField(max_length=150)
     type = serializers.ChoiceField(choices=Vendor.Type.choices)
     cuisine = serializers.ChoiceField(choices=Vendor.Cuisine.choices, required=False, allow_blank=True)
     address = serializers.CharField(max_length=300)
-    # Roughly Iraq, so a slip of the map doesn't put the store abroad.
-    latitude = serializers.FloatField(min_value=29, max_value=38)
-    longitude = serializers.FloatField(min_value=38, max_value=49)
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    # Where the store trades; guessed from the map spot when left out.
+    country = serializers.ChoiceField(choices=REGION_CODES, required=False)
     delivery_radius_km = serializers.DecimalField(
         max_digits=4, decimal_places=1, min_value=Decimal("1"), max_value=Decimal("30"), default=Decimal("5")
     )
+
+    def validate_latitude(self, value):
+        # A quick first check, so it's reported alongside other mistakes; validate() checks the country.
+        if not any(region(code).bounds[0] <= value <= region(code).bounds[2] for code in REGION_CODES):
+            raise serializers.ValidationError(OUTSIDE)
+        return value
 
     def validate_name(self, value):
         if not value.strip():
@@ -121,6 +135,11 @@ class ApplicationSerializer(serializers.Serializer):
     def validate(self, data):
         if data["type"] == Vendor.Type.SUPERMARKET:
             data["cuisine"] = ""
+        # The spot must be in a country Wasel runs in, so a slip of the map doesn't put the store abroad.
+        country = data.get("country") or where(data["latitude"], data["longitude"])
+        if country is None or not region(country).contains(data["latitude"], data["longitude"]):
+            raise serializers.ValidationError({"latitude": OUTSIDE})
+        data["country"] = country
         if not (data.get("owner_name") or "").strip() and not self.context["user"].name:
             raise serializers.ValidationError({"owner_name": "Enter your name."})
         return data
@@ -158,6 +177,7 @@ class ApplicationsView(APIView):
                 address=values["address"],
                 location=Point(values["longitude"], values["latitude"], srid=4326),
                 delivery_radius_km=values["delivery_radius_km"],
+                country=values["country"],
                 status=Vendor.Status.PENDING,
             )
         return Response(application_row(store), status=201)

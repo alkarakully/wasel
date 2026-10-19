@@ -19,7 +19,7 @@ class CartScreen extends StatefulWidget {
 class _CartScreenState extends State<CartScreen> {
   final _address = TextEditingController();
   String _payment = 'cod';
-  int _tip = 0;
+  num _tip = 0;
   Quote? _quote;
   String? _error;
   bool _placing = false;
@@ -47,7 +47,7 @@ class _CartScreenState extends State<CartScreen> {
       'items': cart.itemsJson(),
       'delivery_latitude': at.lat,
       'delivery_longitude': at.lng,
-      'tip': _tip,
+      'tip': _tip.toString(),
     };
   }
 
@@ -156,7 +156,9 @@ class _CartScreenState extends State<CartScreen> {
           onPressed: quote == null ? null : _place,
           label: quote == null
               ? s.t('placeOrder', {'total': '...'})
-              : s.t('placeOrder', {'total': s.money(quote.total)}),
+              : s.t('placeOrder', {
+                  'total': s.money(quote.total, quote.currency),
+                }),
         ),
       ),
       body: ListView(
@@ -189,7 +191,11 @@ class _CartScreenState extends State<CartScreen> {
             icon: Ph.moped,
             child: Row(
               children: [
-                for (final (i, amount) in [0, 500, 1000, 2000].indexed) ...[
+                // Tip choices in the store's currency.
+                for (final (i, amount) in <num>[
+                  0,
+                  ...regionForCurrency(cart.currency).tips,
+                ].indexed) ...[
                   if (i > 0) const SizedBox(width: 8),
                   Expanded(
                     child: _Choice(
@@ -202,7 +208,9 @@ class _CartScreenState extends State<CartScreen> {
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          amount == 0 ? s.t('noTip') : s.money(amount),
+                          amount == 0
+                              ? s.t('noTip')
+                              : s.money(amount, cart.currency),
                           maxLines: 1,
                         ),
                       ),
@@ -433,7 +441,7 @@ class _LineRow extends StatelessWidget {
                   ),
                 const SizedBox(height: 2),
                 Text(
-                  s.money(line.lineTotal),
+                  s.money(line.lineTotal, cart.currency),
                   style: TextStyle(
                     color: scheme.primary,
                     fontWeight: FontWeight.w700,
@@ -501,20 +509,23 @@ class _Breakdown extends StatelessWidget {
     );
     return Column(
       children: [
-        row(s.t('subtotal'), s.money(quote.subtotal)),
+        row(s.t('subtotal'), s.money(quote.subtotal, quote.currency)),
         row(
           quote.waselPlus
               ? '${s.t('delivery')} (${s.t('waselPlus')})'
               : s.t('delivery'),
-          quote.deliveryFee == 0 ? s.t('free') : s.money(quote.deliveryFee),
+          quote.deliveryFee == 0
+              ? s.t('free')
+              : s.money(quote.deliveryFee, quote.currency),
         ),
-        row(s.t('serviceFee'), s.money(quote.serviceFee)),
-        if (quote.discount > 0) row(s.t('discount'), s.money(-quote.discount)),
-        if (quote.tip > 0) row(s.t('tip'), s.money(quote.tip)),
+        row(s.t('serviceFee'), s.money(quote.serviceFee, quote.currency)),
+        if (quote.discount > 0)
+          row(s.t('discount'), s.money(-quote.discount, quote.currency)),
+        if (quote.tip > 0) row(s.t('tip'), s.money(quote.tip, quote.currency)),
         const SizedBox(height: 8),
         const Divider(height: 1),
         const SizedBox(height: 8),
-        row(s.t('total'), s.money(quote.total), bold: true),
+        row(s.t('total'), s.money(quote.total, quote.currency), bold: true),
       ],
     );
   }

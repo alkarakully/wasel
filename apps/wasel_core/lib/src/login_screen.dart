@@ -3,13 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api/api_client.dart';
 import 'api/models.dart';
+import 'countries.dart';
 import 'strings.dart';
 import 'session.dart';
 import 'theme.dart';
 import 'widgets/brand.dart';
+import 'widgets/country_picker.dart';
 import 'widgets/icons.dart';
 import 'widgets/language_switch.dart';
 import 'widgets/motion.dart';
@@ -41,12 +44,37 @@ class _LoginScreenState extends State<LoginScreen> {
   final _phone = TextEditingController();
   final _code = TextEditingController();
   String _channel = 'whatsapp';
+  // The phone's country: Iraq at first, then the last one picked here.
+  String _country = 'IQ';
+  static const _countryKey = 'wasel_phone_country';
   String? _sentTo; // normalized phone once a code is sent
   String _sentBy = 'whatsapp';
   String? _error;
   bool _busy = false;
   int _resendIn = 0;
   Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      final saved = prefs.getString(_countryKey);
+      if (saved != null && mounted && countries.any((c) => c.code == saved)) {
+        setState(() => _country = saved);
+      }
+    });
+  }
+
+  Future<void> _pickCountry() async {
+    final picked = await showCountryPicker(context, _country);
+    if (picked == null || !mounted) return;
+    setState(() {
+      _country = picked;
+      _error = null;
+    });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_countryKey, picked);
+  }
 
   @override
   void dispose() {
@@ -74,6 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final sent = await context.read<ApiClient>().requestCode(
         phone ?? _phone.text,
         _channel,
+        country: _country,
       );
       setState(() {
         _sentTo = sent.phone;
@@ -97,7 +126,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       final api = context.read<ApiClient>();
-      final result = await api.verifyCode(_sentTo!, _code.text);
+      final result = await api.verifyCode(
+        _sentTo!,
+        _code.text,
+        country: _country,
+      );
       var admitted = widget.acceptUser?.call(result.user) ?? true;
       if (admitted && widget.admitUser != null) {
         api.token = result.token;
@@ -133,10 +166,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  String _formatPhone(String e164) {
-    final local = e164.replaceFirst('+964', '');
-    return '+964 ${local.substring(0, 3)} ${local.substring(3, 6)} ${local.substring(6)}';
-  }
+  String _formatPhone(String e164) => displayPhone(e164);
 
   @override
   Widget build(BuildContext context) {
@@ -306,25 +336,42 @@ class _LoginScreenState extends State<LoginScreen> {
           autofillHints: const [AutofillHints.telephoneNumberNational],
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
           decoration: InputDecoration(
-            prefixIcon: Padding(
-              padding: const EdgeInsetsDirectional.only(start: 16, end: 10),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '+964',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: theme.colorScheme.primary,
-                    ),
+            prefixIcon: Semantics(
+              button: true,
+              label:
+                  '${s.t('phoneCountry')}: ${countryFor(_country).name(s.lang)}',
+              excludeSemantics: true,
+              child: InkWell(
+                key: const Key('phone-country'),
+                onTap: _busy ? null : _pickCountry,
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(14),
+                ),
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CountryBadge(_country),
+                      const SizedBox(width: 6),
+                      Text(
+                        '+${countryFor(_country).dial}',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(Ph.caretDown, size: 14, color: t.muted),
+                      const SizedBox(width: 8),
+                      Container(width: 1, height: 22, color: t.hairline),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Container(width: 1, height: 22, color: t.hairline),
-                ],
+                ),
               ),
             ),
-            hintText: '0770 123 4567',
+            hintText: _country == 'IQ' ? '0770 123 4567' : null,
             errorText: _error == null ? null : s.t(_error!),
             errorMaxLines: 2,
           ),

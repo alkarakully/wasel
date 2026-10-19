@@ -2,23 +2,26 @@ import { useState } from 'react'
 
 import { Bars, ErrorNote, PageHeader, Skeleton, Stat, Tabs, TextField } from '../components/ui'
 import { query, type Report } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useLoad } from '../lib/useLoad'
 
-const iso = (d: Date) => d.toLocaleDateString('en-CA', { timeZone: 'Asia/Baghdad' })
-function daysBack(n: number) {
+/** A date as YYYY-MM-DD on the country's calendar. */
+const iso = (d: Date, timeZone: string) => d.toLocaleDateString('en-CA', { timeZone })
+function daysBack(n: number, timeZone: string) {
   const d = new Date()
   d.setDate(d.getDate() - (n - 1))
-  return iso(d)
+  return iso(d, timeZone)
 }
 
 export function ReportsPage() {
   const { t, money, num, pct, day } = useI18n()
-  const [range, setRange] = useState({ from: daysBack(30), to: iso(new Date()) })
-  const preset = [7, 30, 90].find((n) => range.from === daysBack(n) && range.to === iso(new Date()))
-  const { data, error, loading, reload } = useLoad<Report>(`reports/${query(range)}`)
+  const { country, region } = useCountry()
+  const tz = region.timeZone
+  const [range, setRange] = useState({ from: daysBack(30, tz), to: iso(new Date(), tz) })
+  const preset = [7, 30, 90].find((n) => range.from === daysBack(n, tz) && range.to === iso(new Date(), tz))
+  const { data, error, loading, reload } = useLoad<Report>(`reports/${query({ ...range, country })}`)
   const share = (part: number, whole: number) => (whole ? pct(Math.round((part / whole) * 100)) : '—')
 
   return (
@@ -28,7 +31,7 @@ export function ReportsPage() {
         <Tabs
           label={t('nav_reports')}
           value={String(preset ?? '')}
-          onChange={(v) => v && setRange({ from: daysBack(Number(v)), to: iso(new Date()) })}
+          onChange={(v) => v && setRange({ from: daysBack(Number(v), tz), to: iso(new Date(), tz) })}
           options={[
             { value: '7', label: t('range_7') },
             { value: '30', label: t('range_30') },
@@ -68,7 +71,7 @@ export function ReportsPage() {
               <Stat
                 label={t('commission')}
                 value={money(data.totals.commission)}
-                sub={share(data.totals.commission, data.totals.sales)}
+                sub={share(Number(data.totals.commission), Number(data.totals.sales))}
               />
               <Stat
                 label={t('service_fees')}
@@ -91,7 +94,7 @@ export function ReportsPage() {
               <Bars
                 label={t('sales')}
                 format={money}
-                data={data.days.map((d) => ({ key: d.day, value: d.sales, label: day(d.day) }))}
+                data={data.days.map((d) => ({ key: d.day, value: Number(d.sales), label: day(d.day) }))}
               />
             </section>
             <section className="panel">

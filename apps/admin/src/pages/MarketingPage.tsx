@@ -20,7 +20,8 @@ import {
   useToast,
 } from '../components/ui'
 import { api, query, type Offer, type Page, type PlusRow } from '../lib/api'
-import { useI18n } from '../lib/i18n'
+import { regionForCurrency } from '../lib/countries'
+import { useCountry, useI18n } from '../lib/i18n'
 import { navigate, useRoute } from '../lib/router'
 import type { StringKey } from '../lib/strings'
 import { useAction, useLoad } from '../lib/useLoad'
@@ -52,14 +53,15 @@ function Offers({ canWrite }: { canWrite: boolean }) {
   const { t, money, num, pct, when } = useI18n()
   const [state, setState] = useState<'running' | 'scheduled' | 'ended' | ''>('running')
   const [page, setPage] = useState(1)
-  const { data, error, loading, reload } = useLoad<Page<Offer>>(`offers/${query({ state, page })}`)
+  const { country } = useCountry()
+  const { data, error, loading, reload } = useLoad<Page<Offer>>(`offers/${query({ state, page, country })}`)
   const [editing, setEditing] = useState<Offer | 'new' | null>(null)
 
   const describe = (o: Offer) =>
     o.type === 'percent'
       ? pct(Number(o.value))
       : o.type === 'fixed'
-        ? money(Number(o.value))
+        ? money(o.value, o.currency)
         : t(`offer_${o.type}` as StringKey)
 
   return (
@@ -112,7 +114,7 @@ function Offers({ canWrite }: { canWrite: boolean }) {
                     <td>{o.store?.name ?? <Badge tone="lapis">{t('platform_wide')}</Badge>}</td>
                     <td>
                       {describe(o)}
-                      {o.min_order > 0 && <span className="sub">≥ {money(o.min_order)}</span>}
+                      {Number(o.min_order) > 0 && <span className="sub">≥ {money(o.min_order, o.currency)}</span>}
                     </td>
                     <td className="muted">{when(o.starts_at)}</td>
                     <td className="muted">{when(o.ends_at)}</td>
@@ -148,7 +150,10 @@ function localInput(iso: string) {
 function OfferDrawer({ offer, onClose, onSaved }: { offer: Offer | null; onClose: () => void; onSaved: () => void }) {
   const { t } = useI18n()
   const toast = useToast()
-  const stores = useLoad<{ id: number; name: string }[]>('stores/choices/')
+  const here = useCountry().region
+  const stores = useLoad<{ id: number; name: string }[]>(`stores/choices/?country=${offer?.country ?? here.country}`)
+  const currency = offer?.currency ?? here.currency
+  const decimals = regionForCurrency(currency).decimals
   const save = useAction()
   const remove = useAction()
   const now = new Date()
@@ -171,6 +176,8 @@ function OfferDrawer({ offer, onClose, onSaved }: { offer: Offer | null; onClose
     const body = {
       ...form,
       vendor: form.vendor ? Number(form.vendor) : null,
+      // A platform-wide offer runs in the selected country, in its currency.
+      country: offer?.country ?? here.country,
       value: form.type === 'free_delivery' ? '0' : form.value,
       starts_at: new Date(form.starts_at).toISOString(),
       ends_at: new Date(form.ends_at).toISOString(),
@@ -235,7 +242,7 @@ function OfferDrawer({ offer, onClose, onSaved }: { offer: Offer | null; onClose
           />
           {form.type !== 'free_delivery' && (
             <TextField
-              label={t('value')}
+              label={form.type === 'fixed' ? `${t('value')} · ${currency}` : `${t('value')} %`}
               dir="ltr"
               inputMode="decimal"
               required
@@ -246,9 +253,9 @@ function OfferDrawer({ offer, onClose, onSaved }: { offer: Offer | null; onClose
           )}
         </div>
         <TextField
-          label={t('min_order')}
+          label={`${t('min_order')} · ${currency}`}
           dir="ltr"
-          inputMode="numeric"
+          inputMode={decimals ? 'decimal' : 'numeric'}
           value={form.min_order}
           onChange={set('min_order')}
           errors={errors.min_order}

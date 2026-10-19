@@ -13,7 +13,8 @@ export function useI18n() {
     lang,
     t: (key: StringKey, vars?: Record<string, string | number>) => translate(lang, key, vars),
     error: (code: string) => errorText(lang, code),
-    money: (amount: string | number) => money(lang, amount),
+    /** In the given currency (the order's or store's), IQD when left out. */
+    money: (amount: string | number, currency?: string) => money(lang, amount, currency),
     name: (names: Names) => pickName(lang, names),
   }
 }

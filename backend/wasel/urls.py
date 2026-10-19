@@ -12,6 +12,7 @@ from billing.api import BillingView, CloseWeeksView, MarkPaidView, StatementView
 from billing.api import PayoutsView as BillingPayouts
 from vendors.manage import HoursView, InviteView, MemberView, ProductsView, ProductView, TeamView
 from vendors.onboarding import AnswerInviteView, ApplicationsView, MyInvitesView
+from regions.views import CountriesView
 from vendors.reports import ReportView
 from vendors.views import OfferViewSet, ProductAvailabilityView, VendorViewSet
 
@@ -40,6 +41,7 @@ urlpatterns = [
     path(settings.DJANGO_ADMIN_PATH, admin.site.urls),
     path("api/console/", include("console.urls")),
     path("api/auth/", include("accounts.urls")),
+    path("api/countries/", CountriesView.as_view(), name="countries"),
     path("api/devices/", DeviceView.as_view(), name="devices"),
     path("api/captain/location/", CaptainLocationView.as_view(), name="captain-location"),
     path("api/captain/status/", CaptainStatusView.as_view(), name="captain-status"),

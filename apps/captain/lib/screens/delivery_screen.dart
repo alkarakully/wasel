@@ -348,7 +348,10 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                   child: Text(
                     order.cashToCollect > 0
                         ? s.t('collectCash', {
-                            'amount': s.money(order.cashToCollect),
+                            'amount': s.money(
+                              order.cashToCollect,
+                              order.currency,
+                            ),
                           })
                         : s.t('paidInApp'),
                     style: TextStyle(

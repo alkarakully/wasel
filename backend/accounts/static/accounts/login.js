@@ -9,7 +9,9 @@
       phoneTitle: "سجّل دخولك",
       phoneLead: "أدخل رقم هاتفك وسنرسل لك رمز الدخول.",
       phoneLabel: "رقم الهاتف",
-      phoneHelp: "رقم عراقي يبدأ بـ 07",
+      phoneHelp: "اختر الدولة ثم اكتب رقمك",
+      countryLabel: "الدولة",
+      allCountries: "كل الدول",
       channelLabel: "أرسل الرمز عبر",
       whatsapp: "واتساب",
       sms: "رسالة نصية",
@@ -26,7 +28,7 @@
       welcomeNew: "أهلاً بك في واصل",
       welcomeBack: "أهلاً بعودتك",
       logout: "تسجيل الخروج",
-      errPhone: "رقم الهاتف غير صحيح. أدخل رقماً عراقياً يبدأ بـ 07.",
+      errPhone: "رقم الهاتف غير صحيح. تأكد من الدولة والرقم.",
       errCodeFormat: "الرمز يتكون من 6 أرقام.",
       errCode: "الرمز غير صحيح أو انتهت صلاحيته.",
       errTooSoon: "انتظر {s} ثانية قبل طلب رمز جديد.",
@@ -42,7 +44,9 @@
       phoneTitle: "چوونەژوورەوە",
       phoneLead: "ژمارەی مۆبایلەکەت بنووسە و کۆدی چوونەژوورەوەت بۆ دەنێرین.",
       phoneLabel: "ژمارەی مۆبایل",
-      phoneHelp: "ژمارەیەکی عێراقی کە بە 07 دەست پێدەکات",
+      phoneHelp: "وڵات هەڵبژێرە و ژمارەکەت بنووسە",
+      countryLabel: "وڵات",
+      allCountries: "هەموو وڵاتەکان",
       channelLabel: "کۆدەکە بنێرە لە ڕێگەی",
       whatsapp: "واتساپ",
       sms: "نامەی دەقی",
@@ -59,7 +63,7 @@
       welcomeNew: "بەخێربێیت بۆ واصل",
       welcomeBack: "بەخێربێیتەوە",
       logout: "چوونەدەرەوە",
-      errPhone: "ژمارەکە هەڵەیە. ژمارەیەکی عێراقی بنووسە کە بە 07 دەست پێدەکات.",
+      errPhone: "ژمارەکە هەڵەیە. وڵات و ژمارەکە بپشکنە.",
       errCodeFormat: "کۆدەکە 6 ژمارەیە.",
       errCode: "کۆدەکە هەڵەیە یان بەسەرچووە.",
       errTooSoon: "{s} چرکە چاوەڕێ بکە پێش داواکردنی کۆدێکی نوێ.",
@@ -75,7 +79,9 @@
       phoneTitle: "Log in",
       phoneLead: "Enter your phone number and we'll send you a login code.",
       phoneLabel: "Phone number",
-      phoneHelp: "An Iraqi number starting with 07",
+      phoneHelp: "Pick the country, then type your number",
+      countryLabel: "Country",
+      allCountries: "All countries",
       channelLabel: "Send the code by",
       whatsapp: "WhatsApp",
       sms: "Text message",
@@ -92,7 +98,7 @@
       welcomeNew: "Welcome to Wasel",
       welcomeBack: "Welcome back",
       logout: "Log out",
-      errPhone: "That number isn't valid. Enter an Iraqi number starting with 07.",
+      errPhone: "That number isn't valid. Check the country and the number.",
       errCodeFormat: "The code is 6 digits.",
       errCode: "The code is wrong or has expired.",
       errTooSoon: "Wait {s}s before asking for a new code.",
@@ -105,8 +111,9 @@
 
   var TOKEN_KEY = "wasel_token";
   var LANG_KEY = "wasel_lang";
+  var COUNTRY_KEY = "wasel_country";
 
-  var state = { lang: "ar", phone: null, channel: "whatsapp", resendAt: 0, timer: null, user: null, isNew: false };
+  var state = { lang: "ar", country: storage("get", COUNTRY_KEY) || "IQ", countries: null, phone: null, channel: "whatsapp", resendAt: 0, timer: null, user: null, isNew: false };
 
   var $ = function (id) { return document.getElementById(id); };
   var steps = { phone: $("step-phone"), code: $("step-code"), done: $("step-done") };
@@ -126,10 +133,52 @@
     return text;
   }
 
+  function flag(code) {
+    return String.fromCodePoint.apply(null, code.split("").map(function (c) { return 0x1f1e6 + c.charCodeAt(0) - 65; }));
+  }
+
   function formatPhone(e164) {
-    // +9647701234567 -> +964 770 123 4567
-    var local = e164.replace(/^\+964/, "");
-    return "+964 " + local.slice(0, 3) + " " + local.slice(3, 6) + " " + local.slice(6);
+    // +9647701234567 -> +964 770 123 4567; other countries: +966 501234567
+    if (e164.indexOf("+964") === 0) {
+      var local = e164.slice(4);
+      return "+964 " + local.slice(0, 3) + " " + local.slice(3, 6) + " " + local.slice(6);
+    }
+    var dials = (state.countries || []).map(function (c) { return c.dial; });
+    for (var n = 3; n >= 1; n--) {
+      var dial = e164.slice(1, 1 + n);
+      if (dials.indexOf(dial) !== -1) return "+" + dial + " " + e164.slice(1 + n);
+    }
+    return e164;
+  }
+
+  // Every country, Iraq first, then the Gulf, then A–Z (from /api/countries/).
+  function renderCountries() {
+    var select = $("country");
+    if (!state.countries) return;
+    var name = function (c) { return state.lang === "en" ? c.name_en : c.name_ar; };
+    var option = function (c) {
+      var o = document.createElement("option");
+      o.value = c.code;
+      o.dataset.dial = c.dial;
+      o.textContent = flag(c.code) + " +" + c.dial + "  " + name(c);
+      return o;
+    };
+    select.textContent = "";
+    var shortList = state.shortList || [];
+    state.countries.filter(function (c) { return shortList.indexOf(c.code) !== -1; }).forEach(function (c) { select.append(option(c)); });
+    var rest = document.createElement("optgroup");
+    rest.label = t("allCountries");
+    state.countries.filter(function (c) { return shortList.indexOf(c.code) === -1; }).forEach(function (c) { rest.append(option(c)); });
+    select.append(rest);
+    select.value = state.country;
+    if (select.value !== state.country) select.value = state.country = "IQ";
+    showCountry();
+  }
+
+  function showCountry() {
+    var picked = $("country").selectedOptions[0];
+    $("prefix-shown").textContent = flag(state.country) + " +" + (picked ? picked.dataset.dial : "964");
+    $("phone").placeholder = state.country === "IQ" ? "0770 123 4567" : "";
   }
 
   function applyLanguage(lang) {
@@ -138,6 +187,8 @@
     document.documentElement.dir = STRINGS[state.lang].dir;
     document.title = t("pageTitle");
     document.querySelectorAll("[data-i18n]").forEach(function (el) { el.textContent = t(el.dataset.i18n); });
+    document.querySelectorAll("[data-i18n-label]").forEach(function (el) { el.setAttribute("aria-label", t(el.dataset.i18nLabel)); });
+    renderCountries();
     document.querySelectorAll("[data-lang]").forEach(function (button) {
       button.setAttribute("aria-pressed", String(button.dataset.lang === state.lang));
     });
@@ -249,7 +300,7 @@
 
   function requestCode(phone, channel, button, errorField) {
     var done = busy(button, "sending");
-    return api("otp/request/", { method: "POST", body: { phone: phone, channel: channel } })
+    return api("otp/request/", { method: "POST", body: { phone: phone, channel: channel, country: state.country } })
       .then(function (result) {
         if (!result.ok) {
           setError(errorField, errorMessage(result));
@@ -268,7 +319,8 @@
   steps.phone.addEventListener("submit", function (event) {
     event.preventDefault();
     var phone = $("phone").value.trim();
-    if (phone.replace(/\D/g, "").length < 10 && !/[٠-٩۰-۹]/.test(phone)) {
+    var digits = phone.replace(/\D/g, "").length;
+    if (digits < (state.country === "IQ" ? 10 : 6) && !/[٠-٩۰-۹]/.test(phone)) {
       setError("phone", t("errPhone"));
       return;
     }
@@ -296,7 +348,7 @@
     if (button.disabled) return;
     setError("code", "");
     var done = busy(button, "checking");
-    api("otp/verify/", { method: "POST", body: { phone: state.phone, code: code } })
+    api("otp/verify/", { method: "POST", body: { phone: state.phone, code: code, country: state.country } })
       .then(function (result) {
         if (!result.ok) {
           setError("code", errorMessage(result));
@@ -364,6 +416,23 @@
   // --- Start ---------------------------------------------------------------
 
   applyLanguage(storage("get", LANG_KEY) || "ar");
+
+  $("country").addEventListener("change", function () {
+    state.country = $("country").value;
+    storage("set", COUNTRY_KEY, state.country);
+    showCountry();
+    $("phone").focus();
+  });
+
+  fetch("/api/countries/", { headers: { Accept: "application/json" } })
+    .then(function (response) { return response.ok ? response.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      state.countries = data.countries;
+      state.shortList = data.short_list;
+      renderCountries();
+    })
+    .catch(function () { /* Iraq stays available */ });
 
   if (storage("get", TOKEN_KEY)) {
     api("me/", { auth: true })

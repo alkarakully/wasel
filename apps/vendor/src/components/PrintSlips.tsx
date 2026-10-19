@@ -74,7 +74,9 @@ export function PrintSlips({ order, storeName }: Props) {
         )}
         <ul className="slip-items slip-check">{items}</ul>
         <p className="slip-pay">
-          {order.payment_type === 'cod' ? t('collectCash', { amount: money(order.total_amount) }) : t('paidInApp')}
+          {order.payment_type === 'cod'
+            ? t('collectCash', { amount: money(order.total_amount, order.currency) })
+            : t('paidInApp')}
         </p>
         <p className="slip-foot">{t('checkItems')}</p>
         <p className="slip-thanks">{t('thanks', { store: storeName })}</p>

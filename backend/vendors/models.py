@@ -1,4 +1,4 @@
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.gis.db import models
@@ -6,6 +6,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
 from accounts.models import money_field
+from regions.regions import CHOICES as REGION_CHOICES
+from regions.regions import quantize, region
 
 
 class Vendor(models.Model):
@@ -37,6 +39,8 @@ class Vendor(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
     )
     address = models.CharField(max_length=300, blank=True)
+    # The country the store trades in: its currency, clock, week and fees.
+    country = models.CharField(max_length=2, choices=REGION_CHOICES, default="IQ")
     type = models.CharField(max_length=12, choices=Type.choices, default=Type.RESTAURANT)
     cuisine = models.CharField(max_length=10, choices=Cuisine.choices, blank=True)
     location = models.PointField(geography=True)
@@ -58,6 +62,18 @@ class Vendor(models.Model):
         return self.name
 
     @property
+    def region(self):
+        return region(self.country)
+
+    @property
+    def currency(self):
+        return self.region.currency
+
+    @property
+    def tz(self):
+        return self.region.tz
+
+    @property
     def is_approved(self):
         return self.status == self.Status.APPROVED
 
@@ -66,8 +82,7 @@ class Vendor(models.Model):
         at = at or timezone.now()
         if self.commission_free_until and at < self.commission_free_until:
             return Decimal(0)
-        amount = Decimal(subtotal) * self.commission_rate / 100
-        return amount.quantize(Decimal(1), rounding=ROUND_HALF_UP)
+        return quantize(Decimal(subtotal) * self.commission_rate / 100, self.currency)
 
 
 class StoreMember(models.Model):
@@ -176,11 +191,13 @@ class Offer(models.Model):
         FREE_DELIVERY = "free_delivery", "Free delivery"
         BUNDLE = "bundle", "Bundle deal"
 
-    # Null vendor means a platform-wide offer.
+    # Null vendor means a platform-wide offer, for every store in `country`.
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, null=True, blank=True, related_name="offers")
+    # A store's offer follows its store's country; amounts are in that country's currency.
+    country = models.CharField(max_length=2, choices=REGION_CHOICES, default="IQ")
     title = models.CharField(max_length=150)
     type = models.CharField(max_length=15, choices=Type.choices)
-    value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    value = models.DecimalField(max_digits=15, decimal_places=3, default=0)
     min_order = money_field(default=0)
     starts_at = models.DateTimeField()
     ends_at = models.DateTimeField()
@@ -188,6 +205,15 @@ class Offer(models.Model):
 
     class Meta:
         ordering = ["-starts_at"]
+
+    def save(self, *args, **kwargs):
+        if self.vendor_id:
+            self.country = self.vendor.country
+        super().save(*args, **kwargs)
+
+    @property
+    def currency(self):
+        return region(self.country).currency
 
     def __str__(self):
         return self.title

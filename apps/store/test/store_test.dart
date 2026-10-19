@@ -364,8 +364,9 @@ void main() {
         client: MockClient((request) async {
           requests.add('${request.method} ${request.url.path}');
           final path = request.url.path;
-          if (path == '/api/store-invites/')
+          if (path == '/api/store-invites/') {
             return json(joined ? [] : [invite]);
+          }
           if (path == '/api/store-invites/4/accept/') {
             joined = true;
             return json({'id': 4, 'status': 'accepted'});

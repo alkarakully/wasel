@@ -1,17 +1,25 @@
 from rest_framework import serializers
 
 from orders.pricing import delivery_fee_for
+from regions.regions import as_api
+from regions.serializers import MoneyMixin
 
 from .models import Offer, Product, ProductModifier, Vendor
 
 
-class ProductModifierSerializer(serializers.ModelSerializer):
+class ProductModifierSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("price_delta",)
+
     class Meta:
         model = ProductModifier
         fields = ["id", "group_name", "name_ar", "name_ku", "name_en", "price_delta", "is_required"]
 
+    def currency_for(self, modifier):
+        return modifier.product.vendor.currency
 
-class ProductSerializer(serializers.ModelSerializer):
+
+class ProductSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("price",)
     modifiers = ProductModifierSerializer(many=True, read_only=True)
 
     class Meta:
@@ -28,6 +36,9 @@ class ProductSerializer(serializers.ModelSerializer):
             "modifiers",
         ]
 
+    def currency_for(self, product):
+        return product.vendor.currency
+
 
 class VendorSerializer(serializers.ModelSerializer):
     latitude = serializers.SerializerMethodField()
@@ -43,6 +54,8 @@ class VendorSerializer(serializers.ModelSerializer):
             "name",
             "type",
             "cuisine",
+            "country",
+            "currency",
             "latitude",
             "longitude",
             "delivery_radius_km",
@@ -59,7 +72,9 @@ class VendorSerializer(serializers.ModelSerializer):
     def get_delivery_fee(self, vendor):
         # Standard fee before Wasel Plus or offers; checkout shows the final price.
         distance = getattr(vendor, "distance", None)
-        return str(delivery_fee_for(distance.m)) if distance is not None else None
+        if distance is None:
+            return None
+        return as_api(delivery_fee_for(distance.m, vendor.country), vendor.currency)
 
     def get_latitude(self, vendor):
         return vendor.location.y
@@ -75,7 +90,21 @@ class VendorDetailSerializer(VendorSerializer):
         fields = VendorSerializer.Meta.fields + ["products"]
 
 
-class OfferSerializer(serializers.ModelSerializer):
+class OfferSerializer(MoneyMixin, serializers.ModelSerializer):
+    money_fields = ("min_order",)
+
     class Meta:
         model = Offer
-        fields = ["id", "vendor", "title", "type", "value", "min_order", "starts_at", "ends_at", "is_banner"]
+        fields = [
+            "id", "vendor", "country", "currency", "title", "type", "value", "min_order", "starts_at", "ends_at",
+            "is_banner",
+        ]
+
+    def to_representation(self, offer):
+        data = super().to_representation(offer)
+        # A fixed offer's value is money; a percent stays a plain number.
+        if offer.type == Offer.Type.FIXED:
+            data["value"] = as_api(offer.value, offer.currency)
+        else:
+            data["value"] = f"{offer.value.normalize():f}"
+        return data

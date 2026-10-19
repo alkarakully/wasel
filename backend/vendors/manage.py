@@ -18,8 +18,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
-from accounts.phone import InvalidPhone, normalize_iraqi_phone
+from accounts.phone import InvalidPhone, normalize_phone
+from accounts.serializers import CountryField
 from notifications.push import notify
+from regions.serializers import check_amount
 
 from . import access
 from .models import Product, StoreInvite, StoreMember, Vendor
@@ -65,12 +67,15 @@ class AddMemberSerializer(serializers.Serializer):
     phone = serializers.CharField()
     name = serializers.CharField(required=False, allow_blank=True, max_length=150)
     role = serializers.ChoiceField(choices=StoreMember.Role.choices, default=StoreMember.Role.CASHIER)
+    # The phone's country; local numbers are read in it (Iraq by default).
+    country = CountryField()
 
-    def validate_phone(self, value):
+    def validate(self, data):
         try:
-            return normalize_iraqi_phone(value)
+            data["phone"] = normalize_phone(data["phone"], data.get("country", "IQ"))
         except InvalidPhone as error:
-            raise serializers.ValidationError(str(error)) from error
+            raise serializers.ValidationError({"phone": [str(error)]}) from error
+        return data
 
 
 def _invite_row(invite):
@@ -190,7 +195,8 @@ class ProductEditSerializer(serializers.ModelSerializer):
     def validate_price(self, value):
         if value <= 0:
             raise serializers.ValidationError("Enter a price above zero.")
-        return value
+        currency = self.context.get("currency") or self.instance.vendor.currency
+        return check_amount(value, currency)
 
     def validate_name_ar(self, value):
         if not value.strip():
@@ -205,7 +211,7 @@ class ProductsView(StoreView):
         store = self.store(request, pk)
         if store is None:
             return _denied("menu")
-        data = ProductEditSerializer(data=request.data)
+        data = ProductEditSerializer(data=request.data, context={"currency": store.currency})
         data.is_valid(raise_exception=True)
         product = data.save(vendor=store)
         return Response(ProductSerializer(product).data, status=201)

@@ -234,7 +234,7 @@ class _OrderCardState extends State<OrderCard>
                 _PayChip(cash: order.paymentType == 'cod'),
                 const Spacer(),
                 Text(
-                  s.money(order.total),
+                  s.money(order.total, order.currency),
                   style: const TextStyle(
                     fontSize: 17,
                     fontWeight: FontWeight.w700,

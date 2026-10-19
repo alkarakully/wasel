@@ -16,9 +16,21 @@ class Session extends BaseSession {
   );
   bool usingDeviceLocation = false;
 
+  /// Where the fallback spot is: Baghdad, or the capital of the account's
+  /// country when Wasel runs there.
+  String fallbackCountry = 'IQ';
+
   // Ask for location and notifications only once someone is signed in.
   @override
   Future<void> onSignedIn() async {
+    final country = user?.country ?? 'IQ';
+    if (!usingDeviceLocation &&
+        country != 'IQ' &&
+        regions.any((r) => r.country == country)) {
+      final region = regionFor(country);
+      fallbackCountry = country;
+      deliveryPoint = GeoPoint(region.lat, region.lng);
+    }
     await refreshLocation();
     await push?.start();
   }
