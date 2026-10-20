@@ -200,10 +200,15 @@ class Wordmark extends StatelessWidget {
     return Semantics(
       label: 'WASEL واصل',
       image: true,
-      child: SvgPicture.string(
-        _svg(),
-        height: height,
-        excludeFromSemantics: true,
+      // Shrinks to fit a narrow panel instead of overflowing it.
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: SvgPicture.string(
+          _svg(),
+          height: height,
+          excludeFromSemantics: true,
+        ),
       ),
     );
   }

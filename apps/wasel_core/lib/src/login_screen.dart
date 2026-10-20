@@ -281,7 +281,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: LanguageSwitch(onDark: true),
                     ),
                     const SizedBox(height: 28),
-                    brand(64),
+                    // Phones keep the compact logo; tablets in portrait get a larger one.
+                    brand(box.maxWidth < 600 ? 64 : 92),
                   ],
                 ),
               ),
