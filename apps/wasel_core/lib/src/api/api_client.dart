@@ -32,6 +32,12 @@ class ApiClient {
   final String baseUrl;
   String? token;
 
+  /// Full address of an uploaded file the API names by path ("/media/...").
+  String? mediaUrl(String? path) =>
+      path == null || path.isEmpty || path.startsWith('http')
+      ? path
+      : '$baseUrl$path';
+
   Uri socketUri() {
     final base = Uri.parse(baseUrl);
     return base.replace(

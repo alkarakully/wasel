@@ -48,7 +48,12 @@ export interface Product {
   name_ar: string
   name_ku: string
   name_en: string
+  description_ar: string
+  description_ku: string
+  description_en: string
   menu_section: string
+  /** Path on this server ("/media/products/12-ab.jpg"), or null without a photo. */
+  image: string | null
   price: string
   unit_type: 'item' | 'kg'
   is_available: boolean
@@ -80,9 +85,40 @@ export interface ProductInput {
   name_ar: string
   name_ku: string
   name_en: string
+  description_ar: string
+  description_ku: string
+  description_en: string
   menu_section: string
   price: string
   unit_type: 'item' | 'kg'
+}
+
+export type OfferType = 'percent' | 'fixed' | 'free_delivery'
+
+/** A store's own offer. Checkout applies the best running one the cart qualifies for. */
+export interface StoreOffer {
+  id: number
+  title: string
+  type: OfferType
+  /** Percent off for "percent", an amount in `currency` for "fixed", "0" for free delivery. */
+  value: string
+  min_order: string
+  currency: string
+  starts_at: string
+  ends_at: string
+  /** Shown on the customer app's home banner (Wasel staff decide). */
+  is_banner: boolean
+  state: 'running' | 'scheduled' | 'ended'
+  orders: number | null
+}
+
+export interface OfferInput {
+  title: string
+  type: OfferType
+  value: string
+  min_order: string
+  starts_at: string
+  ends_at: string
 }
 
 export interface TeamMember {
@@ -278,10 +314,11 @@ export class Api {
         method,
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/json',
+          // The browser sets the multipart boundary for uploads itself.
+          ...(body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
           ...(this.token ? { Authorization: `Token ${this.token}` } : {}),
         },
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined || body instanceof FormData ? body : JSON.stringify(body),
       })
     } catch {
       throw new ApiError('network', 0)
@@ -345,6 +382,21 @@ export class Api {
   updateProduct = (productId: number, product: Partial<ProductInput>) =>
     this.send<Product>('PATCH', `/api/products/${productId}/`, product)
   removeProduct = (productId: number) => this.send<null>('DELETE', `/api/products/${productId}/`)
+  setProductImage = (productId: number, image: Blob) => {
+    const form = new FormData()
+    form.append('image', image, 'photo.jpg')
+    return this.send<Product>('POST', `/api/products/${productId}/image/`, form)
+  }
+  removeProductImage = (productId: number) => this.send<Product>('DELETE', `/api/products/${productId}/image/`)
+
+  // Offers
+  offers = (storeId: number) => this.send<StoreOffer[]>('GET', `/api/vendors/${storeId}/offers/`)
+  addOffer = (storeId: number, offer: OfferInput) =>
+    this.send<StoreOffer>('POST', `/api/vendors/${storeId}/offers/`, offer)
+  updateOffer = (storeId: number, offerId: number, offer: Partial<OfferInput>) =>
+    this.send<StoreOffer>('PATCH', `/api/vendors/${storeId}/offers/${offerId}/`, offer)
+  /** Deletes an offer nobody used; one already on orders ends now instead. */
+  endOffer = (storeId: number, offerId: number) => this.send<null>('DELETE', `/api/vendors/${storeId}/offers/${offerId}/`)
   setHours = (storeId: number, hours: OpeningHours) =>
     this.send<{ id: number; opening_hours: OpeningHours }>('PUT', `/api/vendors/${storeId}/hours/`, hours)
 

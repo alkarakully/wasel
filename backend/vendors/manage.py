@@ -6,24 +6,34 @@ Store self-service for the portal: the team, the menu and opening hours.
   DELETE       /api/vendors/{id}/team/invites/{invite}/  owner (cancels an invite)
   POST         /api/vendors/{id}/products/         owner, manager
   PATCH/DELETE /api/products/{id}/                 owner, manager
+  POST/DELETE  /api/products/{id}/image/           owner, manager (multipart field "image")
+  GET/POST     /api/vendors/{id}/offers/           owner, manager
+  PATCH/DELETE /api/vendors/{id}/offers/{offer}/   owner, manager
   PUT          /api/vendors/{id}/hours/            owner, manager
 """
 
 import re
+from decimal import Decimal
 
 from django.db import IntegrityError, transaction
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import permissions, serializers
+from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
 from accounts.phone import InvalidPhone, normalize_phone
 from accounts.serializers import CountryField
+from regions.regions import as_api
 from regions.serializers import check_amount
 
 from . import access
-from .models import Product, StoreInvite, StoreMember, Vendor
+from .images import BadImage, remove_product_image, save_product_image
+from .models import Offer, Product, StoreInvite, StoreMember, Vendor
+from .offers import check_offer, end_or_delete, offer_state, offer_value
 from .onboarding import store_account_problem
 from .serializers import ProductSerializer
 
@@ -35,6 +45,7 @@ def _denied(area):
     detail = {
         "team": "Only the store owner can manage the team.",
         "menu": "Only the owner or a manager can change the menu.",
+        "offers": "Only the owner or a manager can run offers.",
     }[area]
     return Response({"error": "not_allowed", "detail": detail}, status=403)
 
@@ -187,7 +198,10 @@ class MemberView(StoreView):
 class ProductEditSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
-        fields = ["name_ar", "name_ku", "name_en", "menu_section", "price", "unit_type", "is_available"]
+        fields = [
+            "name_ar", "name_ku", "name_en", "description_ar", "description_ku", "description_en",
+            "menu_section", "price", "unit_type", "is_available",
+        ]
 
     def validate_price(self, value):
         if value <= 0:
@@ -239,7 +253,120 @@ class ProductView(APIView):
             product.is_archived = True
             product.save(update_fields=["is_archived"])
         else:
+            remove_product_image(product, save=False)
             product.delete()
+        return Response(status=204)
+
+
+class ProductImageView(ProductView):
+    """POST a photo (multipart, field "image") to set or replace it; DELETE removes it."""
+
+    parser_classes = [MultiPartParser]
+
+    def post(self, request, pk):
+        product = self._product(request, pk)
+        if product is None:
+            return _denied("menu")
+        upload = request.FILES.get("image")
+        if upload is None:
+            return Response({"error": "image_required", "detail": "Choose a photo."}, status=400)
+        try:
+            save_product_image(product, upload)
+        except BadImage as error:
+            return Response({"error": error.code, "detail": error.detail}, status=400)
+        return Response(ProductSerializer(product).data)
+
+    def delete(self, request, pk):
+        product = self._product(request, pk)
+        if product is None:
+            return _denied("menu")
+        remove_product_image(product)
+        return Response(ProductSerializer(product).data)
+
+
+# --- Offers -----------------------------------------------------------------------
+
+
+class StoreOfferInput(serializers.ModelSerializer):
+    # Bundles need a bundle definition, which isn't modelled yet; home banners are Wasel's call.
+    type = serializers.ChoiceField(choices=[Offer.Type.PERCENT, Offer.Type.FIXED, Offer.Type.FREE_DELIVERY])
+
+    class Meta:
+        model = Offer
+        fields = ["title", "type", "value", "min_order", "starts_at", "ends_at"]
+
+    def validate_title(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Give the offer a name customers will see.")
+        return value.strip()
+
+    def validate(self, data):
+        if data.get("type") == Offer.Type.FREE_DELIVERY:
+            data["value"] = Decimal(0)
+        check_offer(data, self.instance, self.context["store"].country)
+        return data
+
+
+def _offer_row(offer, now=None):
+    return {
+        "id": offer.pk,
+        "title": offer.title,
+        "type": offer.type,
+        "value": offer_value(offer),
+        "min_order": as_api(offer.min_order, offer.currency),
+        "currency": offer.currency,
+        "starts_at": offer.starts_at.isoformat(),
+        "ends_at": offer.ends_at.isoformat(),
+        "is_banner": offer.is_banner,
+        "state": offer_state(offer, now),
+        "orders": getattr(offer, "order_count", None),
+    }
+
+
+class StoreOffersView(StoreView):
+    """The store's offers, newest first (ended ones included); POST adds one."""
+
+    area = "offers"
+
+    def get(self, request, pk):
+        store = self.store(request, pk)
+        if store is None:
+            return _denied("offers")
+        now = timezone.now()
+        offers = store.offers.annotate(order_count=Count("orders"))
+        return Response([_offer_row(o, now) for o in offers])
+
+    def post(self, request, pk):
+        store = self.store(request, pk)
+        if store is None:
+            return _denied("offers")
+        data = StoreOfferInput(data=request.data, context={"store": store})
+        data.is_valid(raise_exception=True)
+        offer = data.save(vendor=store)
+        return Response(_offer_row(offer), status=201)
+
+
+class StoreOfferView(StoreView):
+    area = "offers"
+
+    def _offer(self, request, pk, offer_id):
+        store = self.store(request, pk)
+        return store, (get_object_or_404(Offer, pk=offer_id, vendor=store) if store else None)
+
+    def patch(self, request, pk, offer_id):
+        store, offer = self._offer(request, pk, offer_id)
+        if offer is None:
+            return _denied("offers")
+        data = StoreOfferInput(offer, data=request.data, partial=True, context={"store": store})
+        data.is_valid(raise_exception=True)
+        return Response(_offer_row(data.save()))
+
+    def delete(self, request, pk, offer_id):
+        """An offer nobody used is deleted; a used one ends now, so old orders keep it."""
+        store, offer = self._offer(request, pk, offer_id)
+        if offer is None:
+            return _denied("offers")
+        end_or_delete(offer)
         return Response(status=204)
 
 

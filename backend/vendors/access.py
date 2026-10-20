@@ -1,8 +1,8 @@
 """
 Who can do what at a store.
 
-  owner    everything: orders, menu and hours, reports, billing, team
-  manager  orders, menu and hours, reports
+  owner    everything: orders, menu and hours, offers, reports, billing, team
+  manager  orders, menu and hours, offers, reports
   cashier  orders (accept, reject, ready), stock switches, open/close
 
 The owner is Vendor.owner; everyone else is a StoreMember. A store that
@@ -19,6 +19,7 @@ OWNER = "owner"
 ALLOWED = {
     "orders": {OWNER, StoreMember.Role.MANAGER, StoreMember.Role.CASHIER},
     "menu": {OWNER, StoreMember.Role.MANAGER},
+    "offers": {OWNER, StoreMember.Role.MANAGER},
     "reports": {OWNER, StoreMember.Role.MANAGER},
     "billing": {OWNER},
     "team": {OWNER},

@@ -14,10 +14,10 @@ from billing.api import _row as statement_row
 from billing.models import Statement
 from billing.weeks import close_finished_weeks
 from orders.models import Order
-from regions.regions import quantize, region
-from regions.serializers import check_amount
+from regions.regions import region
 from subscriptions.models import WaselPlusSubscription
 from vendors.models import Offer, Vendor
+from vendors.offers import check_offer, offer_state, offer_value
 
 from .access import ConsoleView
 from .audit import diff, record
@@ -224,32 +224,12 @@ class OfferInput(serializers.ModelSerializer):
     def validate(self, data):
         # A store's offer is in its store's country and currency; a platform-wide one names its country.
         vendor = data.get("vendor", getattr(self.instance, "vendor", None))
-        country = vendor.country if vendor else data.get("country", getattr(self.instance, "country", "IQ"))
-        data["country"] = country
-        currency = region(country).currency
-        starts = data.get("starts_at", getattr(self.instance, "starts_at", None))
-        ends = data.get("ends_at", getattr(self.instance, "ends_at", None))
-        if starts and ends and ends <= starts:
-            raise serializers.ValidationError({"ends_at": "End after it starts."})
-        kind = data.get("type", getattr(self.instance, "type", None))
-        value = data.get("value", getattr(self.instance, "value", 0))
-        if kind == Offer.Type.PERCENT and not (0 < value <= 100):
-            raise serializers.ValidationError({"value": "A percentage from 1 to 100."})
-        if kind == Offer.Type.FIXED and value <= 0:
-            raise serializers.ValidationError({"value": "Enter an amount above zero."})
-        try:
-            if kind == Offer.Type.FIXED:
-                check_amount(value, currency)
-            check_amount(data.get("min_order", getattr(self.instance, "min_order", 0)), currency)
-        except serializers.ValidationError as error:
-            field = "value" if kind == Offer.Type.FIXED and value != quantize(value, currency) else "min_order"
-            raise serializers.ValidationError({field: error.detail}) from error
+        data["country"] = vendor.country if vendor else data.get("country", getattr(self.instance, "country", "IQ"))
+        check_offer(data, self.instance, data["country"])
         return data
 
 
 def offer_row(o, now=None):
-    now = now or timezone.now()
-    state = "scheduled" if o.starts_at > now else "ended" if o.ends_at <= now else "running"
     return {
         "id": o.pk,
         "store": {"id": o.vendor_id, "name": o.vendor.name} if o.vendor_id else None,
@@ -257,12 +237,12 @@ def offer_row(o, now=None):
         "type": o.type,
         "country": o.country,
         "currency": o.currency,
-        "value": money(o.value, o.currency) if o.type == Offer.Type.FIXED else f"{o.value.normalize():f}",
+        "value": offer_value(o),
         "min_order": money(o.min_order, o.currency),
         "starts_at": o.starts_at.isoformat(),
         "ends_at": o.ends_at.isoformat(),
         "is_banner": o.is_banner,
-        "state": state,
+        "state": offer_state(o, now),
         "orders": getattr(o, "order_count", None),
     }
 

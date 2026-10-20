@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from orders.pricing import delivery_fee_for
@@ -21,6 +22,8 @@ class ProductModifierSerializer(MoneyMixin, serializers.ModelSerializer):
 class ProductSerializer(MoneyMixin, serializers.ModelSerializer):
     money_fields = ("price",)
     modifiers = ProductModifierSerializer(many=True, read_only=True)
+    # Path on the API's own host ("/media/products/12-ab.jpg"), or null.
+    image = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -29,7 +32,11 @@ class ProductSerializer(MoneyMixin, serializers.ModelSerializer):
             "name_ar",
             "name_ku",
             "name_en",
+            "description_ar",
+            "description_ku",
+            "description_en",
             "menu_section",
+            "image",
             "price",
             "unit_type",
             "is_available",
@@ -38,6 +45,9 @@ class ProductSerializer(MoneyMixin, serializers.ModelSerializer):
 
     def currency_for(self, product):
         return product.vendor.currency
+
+    def get_image(self, product):
+        return product.image.url if product.image else None
 
 
 class VendorSerializer(serializers.ModelSerializer):
@@ -85,9 +95,16 @@ class VendorSerializer(serializers.ModelSerializer):
 
 class VendorDetailSerializer(VendorSerializer):
     products = ProductSerializer(many=True, read_only=True)
+    # The store's own offers running now; checkout applies the best one.
+    offers = serializers.SerializerMethodField()
 
     class Meta(VendorSerializer.Meta):
-        fields = VendorSerializer.Meta.fields + ["products"]
+        fields = VendorSerializer.Meta.fields + ["products", "offers"]
+
+    def get_offers(self, vendor):
+        now = timezone.now()
+        running = vendor.offers.filter(starts_at__lte=now, ends_at__gte=now).order_by("ends_at")
+        return OfferSerializer(running, many=True).data
 
 
 class OfferSerializer(MoneyMixin, serializers.ModelSerializer):

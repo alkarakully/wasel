@@ -15,8 +15,8 @@ COPY . .
 
 # Run as an unprivileged user; static files are collected into a shared volume.
 RUN useradd --system --uid 1001 --home /app wasel \
-    && mkdir -p /app/staticfiles \
-    && chown wasel /app/staticfiles
+    && mkdir -p /app/staticfiles /app/media \
+    && chown wasel /app/staticfiles /app/media
 USER wasel
 
 EXPOSE 8000

@@ -56,6 +56,14 @@ server {
         access_log off;
     }
 
+    # Product photos stores upload (resized JPEGs; a new photo gets a new name).
+    location /media/ {
+        alias /var/www/media/;
+        expires 30d;
+        add_header X-Content-Type-Options nosniff;
+        access_log off;
+    }
+
     # The Django admin: an emergency tool for superusers, at a path only the team knows.
     location ^~ /${DJANGO_ADMIN_PATH}/ {
         add_header X-Robots-Tag "noindex, nofollow" always;

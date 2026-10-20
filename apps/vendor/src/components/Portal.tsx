@@ -11,6 +11,7 @@ import { HoursEditor } from './HoursEditor'
 import { InviteList } from './Invites'
 import { LanguageSwitch } from './LanguageSwitch'
 import { MenuView } from './MenuView'
+import { OffersView } from './OffersView'
 import { PrintSlips } from './PrintSlips'
 import { ReportsView } from './ReportsView'
 import { StoresView } from './StoresView'
@@ -24,12 +25,12 @@ interface Props {
   setLang: (lang: Lang) => void
 }
 
-type Tab = 'orders' | 'menu' | 'reports' | 'billing' | 'team' | 'settings'
+type Tab = 'orders' | 'menu' | 'offers' | 'reports' | 'billing' | 'team' | 'settings'
 
 /** Which sections each role sees (the server checks the same rules). */
 const TABS: Record<StoreRole, Tab[]> = {
-  owner: ['orders', 'menu', 'reports', 'billing', 'team', 'settings'],
-  manager: ['orders', 'menu', 'reports'],
+  owner: ['orders', 'menu', 'offers', 'reports', 'billing', 'team', 'settings'],
+  manager: ['orders', 'menu', 'offers', 'reports'],
   cashier: ['orders', 'menu'],
 }
 
@@ -238,6 +239,8 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
       <main className="portal-body view" key={`${section}-${store?.id}`}>
         {stores && stores.length === 0 ? (
           <p className="empty">{t('noStores')}</p>
+        ) : section === 'offers' && store ? (
+          <OffersView api={api} storeId={store.id} currency={store.currency} onError={showError} />
         ) : section === 'reports' && store ? (
           <ReportsView api={api} storeId={store.id} onError={showError} />
         ) : section === 'billing' && store ? (

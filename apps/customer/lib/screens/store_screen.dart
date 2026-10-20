@@ -25,7 +25,11 @@ class _StoreScreenState extends State<StoreScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) => ProductSheet(product: product, currency: store.currency),
+      builder: (_) => ProductSheet(
+        product: product,
+        currency: store.currency,
+        imageUrl: context.read<ApiClient>().mediaUrl(product.image),
+      ),
     );
     if (line == null || !mounted) return;
 
@@ -87,6 +91,7 @@ class _StoreScreenState extends State<StoreScreen> {
             );
           }
 
+          final api = context.read<ApiClient>();
           final sections = <String, List<Product>>{};
           for (final product in store.products) {
             sections.putIfAbsent(product.menuSection, () => []).add(product);
@@ -94,6 +99,8 @@ class _StoreScreenState extends State<StoreScreen> {
           return CustomScrollView(
             slivers: [
               _StoreHero(store: store),
+              if (store.offers.isNotEmpty)
+                SliverToBoxAdapter(child: _StoreOffers(store: store)),
               for (final entry in sections.entries) ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -149,6 +156,7 @@ class _StoreScreenState extends State<StoreScreen> {
                             index: i,
                             child: _ProductRow(
                               product: product,
+                              imageUrl: api.mediaUrl(product.image),
                               currency: store.currency,
                               enabled: store.isOpen && product.isAvailable,
                               onTap: () => _open(store, product),
@@ -376,14 +384,164 @@ class _HeroPill extends StatelessWidget {
   }
 }
 
+/// The store's running offers as gold cards; the best one applies at checkout.
+class _StoreOffers extends StatelessWidget {
+  const _StoreOffers({required this.store});
+  final VendorDetail store;
+
+  String _deal(S s, Offer offer) => switch (offer.type) {
+    'percent' => s.t('offerPercent', {
+      'value': offer.value.toStringAsFixed(offer.value % 1 == 0 ? 0 : 1),
+    }),
+    'fixed' => s.t('offerFixed', {
+      'value': s.money(offer.value, offer.currency),
+    }),
+    _ => s.t('offerFree'),
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final t = WaselTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: SizedBox(
+        height: 92,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: store.offers.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (context, i) {
+            final offer = store.offers[i];
+            return Reveal(
+              index: i,
+              child: Container(
+                width: 260,
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                decoration: BoxDecoration(
+                  color: t.surface,
+                  borderRadius: BorderRadius.circular(Radii.lg),
+                  border: Border.all(color: Gold.c400.withValues(alpha: 0.5)),
+                  boxShadow: t.raised,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Gold.c400.withValues(alpha: 0.22),
+                      ),
+                      child: Icon(Ph.sparkle, size: 22, color: Gold.c700),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _deal(s, offer),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            offer.minOrder > 0
+                                ? s.t('offerMin', {
+                                    'value': s.money(
+                                      offer.minOrder,
+                                      offer.currency,
+                                    ),
+                                  })
+                                : offer.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: t.muted, fontSize: 13),
+                          ),
+                          Text(
+                            s.t('offerAuto'),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(color: t.muted, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// A product photo from the API, fading in; a fork-and-knife tile without one.
+class ProductPhoto extends StatelessWidget {
+  const ProductPhoto({
+    super.key,
+    required this.url,
+    required this.size,
+    this.dimmed = false,
+  });
+  final String? url;
+  final double size;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = WaselTheme.of(context);
+    final placeholder = Container(
+      color: t.sunk,
+      alignment: Alignment.center,
+      child: Icon(Ph.forkKnife, size: size * 0.32, color: t.muted),
+    );
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: SizedBox.square(
+        dimension: size,
+        child: url == null
+            ? placeholder
+            : Opacity(
+                opacity: dimmed ? 0.45 : 1,
+                child: Image.network(
+                  url!,
+                  fit: BoxFit.cover,
+                  cacheWidth: (size * MediaQuery.devicePixelRatioOf(context))
+                      .round(),
+                  errorBuilder: (_, _, _) => placeholder,
+                  frameBuilder: (_, child, frame, sync) => sync
+                      ? child
+                      : AnimatedOpacity(
+                          opacity: frame == null ? 0 : 1,
+                          duration: Motion.fast,
+                          child: child,
+                        ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
 class _ProductRow extends StatelessWidget {
   const _ProductRow({
     required this.product,
+    required this.imageUrl,
     required this.currency,
     required this.enabled,
     required this.onTap,
   });
   final Product product;
+  final String? imageUrl;
   final String currency;
   final bool enabled;
   final VoidCallback onTap;
@@ -393,6 +551,7 @@ class _ProductRow extends StatelessWidget {
     final s = S.of(context);
     final t = WaselTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final description = product.description(s.lang);
     return InkWell(
       onTap: enabled ? onTap : null,
       child: Padding(
@@ -411,6 +570,19 @@ class _ProductRow extends StatelessWidget {
                       color: enabled ? t.ink : t.muted,
                     ),
                   ),
+                  if (description.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: t.muted,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   if (product.isAvailable)
                     Text.rich(
@@ -440,6 +612,10 @@ class _ProductRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (imageUrl != null) ...[
+              const SizedBox(width: 12),
+              ProductPhoto(url: imageUrl, size: 76, dimmed: !enabled),
+            ],
             const SizedBox(width: 12),
             Tooltip(
               message: s.t('add'),

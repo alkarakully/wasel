@@ -9,7 +9,17 @@ from rest_framework.routers import DefaultRouter
 from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferView, OfferAnswerView, OrderViewSet
 from billing.api import BillingView, CloseWeeksView, MarkPaidView, StatementView
 from billing.api import PayoutsView as BillingPayouts
-from vendors.manage import HoursView, InviteView, MemberView, ProductsView, ProductView, TeamView
+from vendors.manage import (
+    HoursView,
+    InviteView,
+    MemberView,
+    ProductImageView,
+    ProductsView,
+    ProductView,
+    StoreOffersView,
+    StoreOfferView,
+    TeamView,
+)
 from vendors.onboarding import AnswerInviteView, ApplicationsView, MyInvitesView
 from regions.views import CountriesView
 from vendors.reports import ReportView
@@ -56,11 +66,14 @@ urlpatterns = [
     path("api/vendors/<int:pk>/team/<int:member_id>/", MemberView.as_view(), name="store-member"),
     path("api/vendors/<int:pk>/team/invites/<int:invite_id>/", InviteView.as_view(), name="store-invite"),
     path("api/vendors/<int:pk>/products/", ProductsView.as_view(), name="store-products"),
+    path("api/vendors/<int:pk>/offers/", StoreOffersView.as_view(), name="store-offers"),
+    path("api/vendors/<int:pk>/offers/<int:offer_id>/", StoreOfferView.as_view(), name="store-offer"),
     path("api/vendors/<int:pk>/hours/", HoursView.as_view(), name="store-hours"),
     path("api/vendors/<int:pk>/report/", ReportView.as_view(), name="store-report"),
     path("api/vendors/<int:pk>/billing/", BillingView.as_view(), name="store-billing"),
     path("api/vendors/<int:pk>/statements/<int:statement_id>/", StatementView.as_view(), name="store-statement"),
     path("api/products/<int:pk>/", ProductView.as_view(), name="product"),
+    path("api/products/<int:pk>/image/", ProductImageView.as_view(), name="product-image"),
     # Onboarding: applying to sell on Wasel and answering team invites.
     path("api/store-applications/", ApplicationsView.as_view(), name="store-applications"),
     path("api/store-invites/", MyInvitesView.as_view(), name="my-invites"),
@@ -74,3 +87,9 @@ urlpatterns = [
     path("track/<int:order_id>/", TemplateView.as_view(template_name="orders/track.html", extra_context={"map_styles": settings.MAP_STYLES}), name="track-order"),
     path("api-auth/", include("rest_framework.urls")),
 ]
+
+if settings.DEBUG:
+    # Production serves uploaded photos from nginx.
+    from django.conf.urls.static import static
+
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

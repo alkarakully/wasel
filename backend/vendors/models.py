@@ -155,7 +155,12 @@ class Product(models.Model):
     name_ar = models.CharField(max_length=150)
     name_ku = models.CharField(max_length=150, blank=True)
     name_en = models.CharField(max_length=150, blank=True)
+    description_ar = models.CharField(max_length=300, blank=True)
+    description_ku = models.CharField(max_length=300, blank=True)
+    description_en = models.CharField(max_length=300, blank=True)
     menu_section = models.CharField(max_length=100, blank=True)
+    # A square-ish JPEG, resized on upload (see vendors/images.py).
+    image = models.ImageField(upload_to="products/", blank=True)
     price = money_field()
     unit_type = models.CharField(max_length=4, choices=UnitType.choices, default=UnitType.ITEM)
     is_available = models.BooleanField(default=True)

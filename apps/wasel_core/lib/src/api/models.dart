@@ -135,6 +135,10 @@ class Product {
     required this.unitType,
     required this.isAvailable,
     required this.modifiers,
+    this.descriptionAr = '',
+    this.descriptionKu = '',
+    this.descriptionEn = '',
+    this.image,
   });
   final int id;
   final String nameAr;
@@ -145,9 +149,17 @@ class Product {
   final String unitType;
   final bool isAvailable;
   final List<Modifier> modifiers;
+  final String descriptionAr;
+  final String descriptionKu;
+  final String descriptionEn;
+
+  /// Path on the API host ("/media/products/12-ab.jpg"); see [ApiClient.mediaUrl].
+  final String? image;
 
   bool get soldByKg => unitType == 'kg';
   String name(String lang) => localizedName(lang, nameAr, nameKu, nameEn);
+  String description(String lang) =>
+      localizedName(lang, descriptionAr, descriptionKu, descriptionEn);
 
   /// Option groups in menu order; a group is required if any option in it is.
   Map<String, List<Modifier>> get modifierGroups {
@@ -168,6 +180,10 @@ class Product {
     unitType: json['unit_type'] ?? 'item',
     isAvailable: json['is_available'] ?? true,
     modifiers: [for (final m in json['modifiers'] ?? []) Modifier.fromJson(m)],
+    descriptionAr: json['description_ar'] ?? '',
+    descriptionKu: json['description_ku'] ?? '',
+    descriptionEn: json['description_en'] ?? '',
+    image: json['image'],
   );
 }
 
@@ -181,8 +197,12 @@ class VendorDetail extends Vendor {
     super.country,
     super.currency,
     required this.products,
+    this.offers = const [],
   });
   final List<Product> products;
+
+  /// The store's own offers running now; checkout applies the best one.
+  final List<Offer> offers;
 
   factory VendorDetail.fromJson(Map<String, dynamic> json) => VendorDetail(
     id: json['id'],
@@ -193,6 +213,7 @@ class VendorDetail extends Vendor {
     country: json['country'] ?? 'IQ',
     currency: json['currency'] ?? 'IQD',
     products: [for (final p in json['products'] ?? []) Product.fromJson(p)],
+    offers: [for (final o in json['offers'] ?? []) Offer.fromJson(o)],
   );
 }
 
@@ -202,17 +223,25 @@ class Offer {
     required this.title,
     required this.type,
     required this.value,
+    this.minOrder = 0,
+    this.currency = 'IQD',
   });
   final int id;
   final String title;
+
+  /// "percent", "fixed" (an amount in [currency]) or "free_delivery".
   final String type;
   final double value;
+  final num minOrder;
+  final String currency;
 
   factory Offer.fromJson(Map<String, dynamic> json) => Offer(
     id: json['id'],
     title: json['title'],
     type: json['type'],
     value: double.parse(json['value'].toString()),
+    minOrder: _money(json['min_order'] ?? 0),
+    currency: json['currency'] ?? 'IQD',
   );
 }
 

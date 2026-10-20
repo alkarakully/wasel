@@ -115,7 +115,13 @@ The database lives in the `wasel-prod_pgdata` volume. Back it up daily, for exam
 docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml exec -T db pg_dump -U wasel -Fc wasel > wasel-$(date +%F).dump
 ```
 
-Copy the dumps off the server.
+Product photos live in the `wasel-prod_media` volume; back it up too:
+
+```bash
+docker run --rm -v wasel-prod_media:/media -v "$PWD":/out alpine tar czf /out/media-$(date +%F).tgz -C /media .
+```
+
+Copy the dumps and photo archives off the server.
 
 ## Settings reference
 

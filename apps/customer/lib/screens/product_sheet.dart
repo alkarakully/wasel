@@ -6,8 +6,16 @@ import '../state/cart.dart';
 /// Choose options and quantity, then add to the cart.
 /// Required groups are pick-one; optional groups allow several.
 class ProductSheet extends StatefulWidget {
-  const ProductSheet({super.key, required this.product, this.currency = 'IQD'});
+  const ProductSheet({
+    super.key,
+    required this.product,
+    this.currency = 'IQD',
+    this.imageUrl,
+  });
   final Product product;
+
+  /// The product photo's full address, if it has one.
+  final String? imageUrl;
 
   /// The store's currency.
   final String currency;
@@ -52,6 +60,20 @@ class _ProductSheetState extends State<ProductSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (widget.imageUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(Radii.lg),
+                child: AspectRatio(
+                  aspectRatio: 16 / 10,
+                  child: Image.network(
+                    widget.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, _, _) => Container(color: t.sunk),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             Text(
               product.name(s.lang),
               style: const TextStyle(
@@ -76,6 +98,13 @@ class _ProductSheetState extends State<ProductSheet> {
               ),
               style: TextStyle(color: t.muted, fontSize: 16),
             ),
+            if (product.description(s.lang).isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                product.description(s.lang),
+                style: TextStyle(color: t.muted, fontSize: 15, height: 1.5),
+              ),
+            ],
             const SizedBox(height: 14),
             const GoldRule(width: 48),
             Flexible(

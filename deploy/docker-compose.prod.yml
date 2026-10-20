@@ -14,6 +14,8 @@ x-backend: &backend
   volumes:
     # Files that must stay out of git.
     - ./secrets:/run/secrets:ro
+    # Product photos stores upload; nginx serves them.
+    - media:/app/media
   restart: unless-stopped
 
 services:
@@ -92,6 +94,7 @@ services:
       - "${HTTPS_PORT:-443}:443"
     volumes:
       - static:/var/www/static:ro
+      - media:/var/www/media:ro
       - letsencrypt:/etc/letsencrypt
       - certbot-www:/var/www/certbot
     depends_on:
@@ -112,5 +115,6 @@ services:
 volumes:
   pgdata:
   static:
+  media:
   letsencrypt:
   certbot-www:

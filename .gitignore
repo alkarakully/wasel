@@ -12,3 +12,4 @@ celerybeat-schedule*
 deploy/.env
 deploy/secrets/*
 !deploy/secrets/README.md
+backend/media/
