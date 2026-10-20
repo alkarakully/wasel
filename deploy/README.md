@@ -26,7 +26,6 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
 - A Linux server with Docker and the Compose plugin, ports 80 and 443 open.
 - A domain whose DNS points at the server.
 - For login codes in production: a WhatsApp Business (Meta Cloud API) number with an approved authentication template. No SMS provider is connected yet, so WhatsApp is required.
-- For push notifications: a Firebase project (see `backend/README.md`, "Turning on real pushes").
 
 ## First deploy
 
@@ -42,7 +41,7 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
    python3 -c "import secrets; print(secrets.token_urlsafe(50))"
    ```
 
-   Use one value for `DJANGO_SECRET_KEY` and another for `POSTGRES_PASSWORD`. Put the Firebase service account JSON in `deploy/secrets/` if you use push.
+   Use one value for `DJANGO_SECRET_KEY` and another for `POSTGRES_PASSWORD`.
 
 2. Build and start (from the repository root):
 
@@ -133,7 +132,6 @@ All settings live in `deploy/.env` (see `.env.example`):
 | `DJANGO_LOG_LEVEL` | `WARNING` by default; `INFO` for more detail |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name and credentials |
 | `WHATSAPP_*` | WhatsApp login codes (see `backend/README.md`) |
-| `FCM_CREDENTIALS_FILE`, `FCM_PROJECT_ID` | Push notifications |
 | `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | Map styles for the tracking page (optional) |
 | `HTTP_PORT`, `HTTPS_PORT` | Host ports for nginx (80/443) |
 

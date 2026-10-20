@@ -14,7 +14,6 @@ from accounts.models import User
 from accounts.phone import InvalidPhone, normalize_phone
 from accounts.serializers import CountryField
 from orders.models import Order
-from notifications.push import notify
 from regions.serializers import check_amount
 from regions.regions import CODES as REGION_CODES
 from regions.regions import region as region_for
@@ -225,12 +224,10 @@ class StoreReviewView(ConsoleView):
                 store.rejection_reason = ""
                 if "commission_rate" in d:
                     store.commission_rate = d["commission_rate"]
-                notify(store.owner_id, "store", "store_approved", store=store.name, store_id=store.pk)
             else:
                 store.status = Vendor.Status.REJECTED
                 store.rejection_reason = reason
                 store.is_open = False
-                notify(store.owner_id, "store", "store_rejected", store=store.name, store_id=store.pk, reason=reason)
             store.reviewed_at = timezone.now()
             store.reviewed_by = request.user
             store.save()

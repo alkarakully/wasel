@@ -44,18 +44,6 @@ xcrun simctl location booted start --speed=15 33.3045,44.4214 33.3005,44.4265 33
 
 GPS goes over the live socket at most every 3 seconds, falling back to REST when the socket is down, and is resent every minute while standing still so dispatch knows the captain is still there. Captains start offline each time the app opens, and can't go offline while carrying an order.
 
-## Push notifications
-
-Push is off unless the build gets Firebase settings (from the Firebase console, for this app and platform):
-
-```bash
-flutter run --dart-define=API_URL=https://api.example.com --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=... --dart-define=FIREBASE_SENDER_ID=... --dart-define=FIREBASE_APP_ID=...
-```
-
-After login the app asks for notification permission and registers the phone with the backend; logging out removes it. iPhone pushes also need the APNs key uploaded to Firebase (see `backend/README.md`) and a real device, since the iOS Simulator can't receive remote pushes.
-
-An offer push arrives even when the app is closed; tapping it opens the app, puts the captain online and shows the offer if it's still open.
-
 ## Tests
 
 ```bash

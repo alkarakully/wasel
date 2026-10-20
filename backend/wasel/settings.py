@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "subscriptions",
     "vendors",
     "orders",
-    "notifications",
     "ops",
     "billing",
     "console",
@@ -210,21 +209,6 @@ DISPATCH = {
 MAP_STYLES = {
     "light": os.environ.get("MAP_STYLE_LIGHT", "https://tiles.openfreemap.org/styles/positron"),
     "dark": os.environ.get("MAP_STYLE_DARK", "https://tiles.openfreemap.org/styles/dark"),
-}
-
-# Push notifications through Firebase Cloud Messaging (Android and, via an
-# APNs key uploaded to Firebase, iPhone). Point FCM_CREDENTIALS_FILE at the
-# Firebase service account JSON to send real pushes.
-PUSH = {
-    "FCM_CREDENTIALS_FILE": os.environ.get("FCM_CREDENTIALS_FILE", ""),
-    "FCM_PROJECT_ID": os.environ.get("FCM_PROJECT_ID", ""),
-    "SENDER": (
-        "notifications.push.FcmSender"
-        if os.path.isfile(os.environ.get("FCM_CREDENTIALS_FILE", ""))
-        else "notifications.push.ConsoleSender"
-        if DEBUG
-        else "notifications.push.UnconfiguredSender"
-    ),
 }
 
 WHATSAPP = {

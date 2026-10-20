@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import 'screens/home_screen.dart';
-import 'screens/tracking_screen.dart';
 import 'state/cart.dart';
 import 'state/session.dart';
 import 'strings.dart';
@@ -15,16 +14,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   S.addStrings(customerStrings);
   final api = ApiClient();
-  final push = PushService(api, app: 'customer');
-  final session = Session(api, push: push);
-  // Tapping an order notification opens that order's tracking screen.
-  push.onOpen = (data) {
-    final orderId = int.tryParse('${data['order_id']}');
-    if (orderId == null) return;
-    navigatorKey.currentState?.push(
-      MaterialPageRoute(builder: (_) => TrackingScreen(orderId: orderId)),
-    );
-  };
+  final session = Session(api);
   final live = LiveUpdates(api);
   // Keep one live socket open whenever someone is signed in.
   session.addListener(() => session.signedIn ? live.start() : live.stop());

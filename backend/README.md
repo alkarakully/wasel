@@ -272,37 +272,18 @@ When a store accepts an order, dispatch offers it to the **nearest free captain*
 
 Offers expire on time through a scheduled Celery task, with a sweep every 15 seconds as backup. Every offer is kept as a `DispatchOffer` (admin: Orders) with its distance and outcome.
 
-## Push notifications
+## Live updates, no pushes
 
-Pushes reach phones when the app is in the background or closed (the live socket covers it while open). They go through **Firebase Cloud Messaging**, which delivers to Android directly and to iPhones through APNs.
+Wasel sends no push notifications (no Firebase). Everything reaches the apps over the live socket while they are open:
 
-| Push | To | When |
-| :--- | :--- | :--- |
-| New order offer (30-second window, high priority, dropped if not delivered in time) | The offered captain | Dispatch offers them an order |
-| "Store accepted, ready in about N minutes" | Customer | The store accepts |
-| "Your captain is on the way" | Customer | The captain picks up |
-| "Delivered" | Customer | Delivery confirmed with the PIN |
-| "Your order was cancelled" with the store's reason | Customer | The store rejects |
-| "Your Wasel Plus trial has ended" | Customer | The trial expires |
-| "Your store is approved" / "wasn't approved" with the reason | Store owner (tablet app) | Staff review the application |
-| "You're invited to join {store}" | The invited person (tablet app), if they have an account | The owner invites them |
+| Update | Who sees it |
+| :--- | :--- |
+| New order offers, with their 30-second window | The offered captain, while online in the app |
+| Order status changes | The customer on the tracking screen, the store on its board |
+| New orders and cancellations | The store tablet, which stays awake and rings while signed in |
+| Store approval or rejection, team invites | The owner or invitee, the next time they open the portal or the store app |
 
-Text is in each user's language (`language_pref`, which the apps keep in sync). Each push carries `kind` plus `order_id` / `offer_id`, so tapping it opens the right screen.
-
-Apps register their Firebase Installation ID (FID) with `POST /api/devices/ {fid, platform, app}` after login and remove it with `DELETE /api/devices/ {fid}` on logout. FIDs FCM reports as gone are deleted automatically. Pushes are queued after the change commits and sent by Celery (`notifications/tasks.py`).
-
-In development (`DJANGO_DEBUG=1`) pushes are written to the worker log instead:
-
-```bash
-docker compose logs worker | grep "Push to"
-```
-
-### Turning on real pushes
-
-1. Create a Firebase project and add four apps: iOS and Android for both the customer app (`com.wasel.waselCustomer`) and the captain app (`com.wasel.waselCaptain`).
-2. iPhone delivery: in the Apple Developer account create an **APNs key** (Keys > Apple Push Notifications service) and upload it in Firebase (Project settings > Cloud Messaging > Apple app configuration).
-3. Backend: in Firebase, Project settings > Service accounts > Generate new private key. Put the JSON file on the server (not in git) and set `FCM_CREDENTIALS_FILE=/path/to/key.json` (and `FCM_PROJECT_ID` if it differs from the file).
-4. Apps: build with the Firebase settings for that app and platform (see each app's README).
+If an app is closed, it catches up from the API when it opens again.
 
 ## Background jobs (Celery)
 

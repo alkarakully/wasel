@@ -42,18 +42,6 @@ xcrun simctl location booted set 33.3045,44.4214
 | `MAP_STYLE_LIGHT` | OpenFreeMap Positron | Map style for light mode |
 | `MAP_STYLE_DARK` | OpenFreeMap Dark | Map style for dark mode |
 
-## Push notifications
-
-Push is off unless the build gets Firebase settings (from the Firebase console, for this app and platform):
-
-```bash
-flutter run --dart-define=API_URL=https://api.example.com --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=... --dart-define=FIREBASE_SENDER_ID=... --dart-define=FIREBASE_APP_ID=...
-```
-
-After login the app asks for notification permission and registers the phone with the backend; logging out removes it. iPhone pushes also need the APNs key uploaded to Firebase (see `backend/README.md`) and a real device, since the iOS Simulator can't receive remote pushes.
-
-Tapping an order notification opens that order's tracking screen.
-
 ## Layout
 
 | Path | What it holds |

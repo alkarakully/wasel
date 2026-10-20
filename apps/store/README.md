@@ -46,16 +46,6 @@ Only store owners (role Vendor) can log in. Add owners and their stores in the D
 
 Orders arrive over the live socket. If the connection drops, a banner says so and the board reloads as soon as it's back. The screen stays awake while signed in.
 
-## Push notifications
-
-Push is off unless the build gets Firebase settings (from the Firebase console, for this app and platform):
-
-```bash
-flutter run --dart-define=API_URL=https://api.example.com --dart-define=FIREBASE_API_KEY=... --dart-define=FIREBASE_PROJECT_ID=... --dart-define=FIREBASE_SENDER_ID=... --dart-define=FIREBASE_APP_ID=...
-```
-
-After login the tablet registers as a "store" device. The owner then gets an urgent push for every new order ("New order #12") and when a customer cancels, even with the app closed.
-
 ## Tests
 
 ```bash

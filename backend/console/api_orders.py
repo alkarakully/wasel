@@ -11,11 +11,9 @@ from rest_framework import serializers
 from rest_framework.response import Response
 
 from accounts.models import User
-from notifications.push import notify
 from orders import dispatch, realtime, workflow
 from orders.models import CaptainLocation, Order, StuckOrderAlert
 from subscriptions.models import WaselPlusSubscription
-from vendors import access as store_access
 from regions.regions import region
 from vendors.models import Vendor
 
@@ -253,9 +251,6 @@ class CancelOrderView(ConsoleView):
             workflow._cancel(order, Order.CancelledBy.SUPPORT, reason)
             dispatch.withdraw(order.pk, "cancelled")
             _resolve_alerts(order.pk)
-            notify(order.customer_id, "customer", "order_cancelled", order_id=order.pk, store=order.vendor.name, reason=reason)
-            for user_id in store_access.staff_ids(order.vendor):
-                notify(user_id, "store", "store_order_cancelled", order_id=order.pk, store=order.vendor.name)
             realtime.broadcast_order(order.pk, was_available)
             record(request, "order.cancel", f"Cancelled order #{order.pk}", order, {"reason": reason, "refunded": order.payment_status == Order.PaymentStatus.REFUNDED})
         return Response(order_detail(_load(pk)))

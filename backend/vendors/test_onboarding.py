@@ -4,7 +4,6 @@ approved owners add branches, and team members join by accepting invites.
 """
 
 from decimal import Decimal
-from unittest import mock
 
 from django.contrib.gis.geos import Point
 from django.test import TestCase
@@ -174,15 +173,13 @@ class ReviewTests(TestCase):
         # Not among the running stores yet.
         self.assertEqual(self.ops.get("/api/ops/stores/").data, [])
 
-    @mock.patch("ops.api.notify")
-    def test_approving_sets_commission_and_tells_the_owner(self, notify):
+    def test_approving_sets_commission_and_the_owner_sees_it(self):
         with self.captureOnCommitCallbacks(execute=True):
             response = self.ops.post(f"/api/ops/applications/{self.store.pk}/approve/", {"commission_rate": "12.5"}, format="json")
         self.assertEqual(response.status_code, 200, response.data)
         self.store.refresh_from_db()
         self.assertEqual((self.store.status, self.store.commission_rate), (Vendor.Status.APPROVED, Decimal("12.5")))
         self.assertEqual(self.store.reviewed_by, self.staff)
-        notify.assert_called_once_with(self.owner.pk, "store", "store_approved", store="Hassan's Grill", store_id=self.store.pk)
 
         owner = client_for(self.owner)
         mine = owner.get("/api/vendors/mine/").data
@@ -201,18 +198,15 @@ class ReviewTests(TestCase):
         self.store.refresh_from_db()
         self.assertEqual(self.store.commission_rate, Decimal("15"))
 
-    @mock.patch("ops.api.notify")
-    def test_rejecting_needs_a_reason_the_owner_then_sees(self, notify):
+    def test_rejecting_needs_a_reason_the_owner_then_sees(self):
         self.assertEqual(self.ops.post(f"/api/ops/applications/{self.store.pk}/reject/", {"reason": " "}, format="json").status_code, 400)
         response = self.ops.post(
             f"/api/ops/applications/{self.store.pk}/reject/", {"reason": "The address couldn't be found."}, format="json"
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(notify.call_args.args[2], "store_rejected")
-        self.assertEqual(notify.call_args.kwargs["reason"], "The address couldn't be found.")
-
         apps = client_for(self.owner).get("/api/store-applications/").data
         self.assertEqual(apps["applications"][0]["status"], "rejected")
+        self.assertEqual(apps["applications"][0]["rejection_reason"], "The address couldn't be found.")
         self.assertEqual(apps["applications"][0]["rejection_reason"], "The address couldn't be found.")
         # They can fix it and apply again.
         self.assertTrue(apps["can_apply"])
@@ -258,15 +252,11 @@ class InviteTests(TestCase):
             f"/api/vendors/{self.store.pk}/team/", {"phone": phone, "role": role, "name": name}, format="json"
         )
 
-    @mock.patch("vendors.manage.notify")
-    def test_people_with_an_account_get_a_push(self, notify):
+    def test_people_with_an_account_see_the_invite_when_they_sign_in(self):
         sara = User.objects.create_user("+9647800000541", role=User.Role.VENDOR)
-        with self.captureOnCommitCallbacks(execute=True):
-            invite = self.invite().data
-        notify.assert_called_once_with(sara.pk, "store", "store_invite", store="Tigris Grill", invite_id=invite["id"])
-        notify.reset_mock()
-        self.invite(phone="07800000542")  # no account yet: nobody to push
-        notify.assert_not_called()
+        invite = self.invite().data
+        mine = client_for(sara).get("/api/store-invites/").data
+        self.assertEqual([i["id"] for i in mine], [invite["id"]])
 
     def test_declining_leaves_the_team_unchanged(self):
         self.invite()

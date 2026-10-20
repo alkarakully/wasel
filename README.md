@@ -50,7 +50,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
   * Credit/Debit Cards.
   * **Wasel Wallet** with balance, top-ups, refunds and cashback (top up via ZainCash, FastPay, Qi Card).
 * **Order Tracking:**
-  * Live status (`Received` → `Preparing` → `Ready` → `Out for Delivery` → `Delivered`) pushed over WebSockets, with a push notification at every step.
+  * Live status (`Received` → `Preparing` → `Ready` → `Out for Delivery` → `Delivered`) pushed over WebSockets while the app is open.
   * Captain on a live map once picked up.
   * **Call the captain** by phone or in-app internet call (no phone number exposed).
   * Automatic alert to support if an order sits in one status too long, so orders never get stuck "pending".
@@ -144,7 +144,7 @@ All text colors meet WCAG AA contrast (4.5:1 or better) in both modes.
 | **Backend Framework** | **Django REST Framework (Python)** | Mature API toolkit with built-in admin (useful for support and vendor onboarding), strong auth/permissions, and GeoDjango for PostGIS map queries. |
 | **Primary Database** | **PostgreSQL + PostGIS** | Relational storage for transactions and orders, paired with spatial indexing for map-based queries. |
 | **Caching & Real-Time** | **Redis + Django Channels (WebSockets)** | Instant order alerts, live captain GPS streaming, and high-performance session caching. |
-| **Background Jobs** | **Celery + Redis** | Stuck-order alerts, Wasel Plus trial expiry, weekly vendor payouts, and push notifications. |
+| **Background Jobs** | **Celery + Redis** | Stuck-order alerts, Wasel Plus trial expiry, dispatch offer timeouts and weekly vendor payouts. |
 | **Payments Infrastructure** | **ZainCash API, FastPay API, Local Gateways** | Direct integration with regional digital wallet providers alongside Cash-on-Delivery reconciliation modules. |
 
 ---
@@ -278,7 +278,7 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 
 | Folder | What it is |
 | :--- | :--- |
-| [`backend/`](backend/README.md) | Django REST API, live sockets, dispatch, Celery jobs, push notifications |
+| [`backend/`](backend/README.md) | Django REST API, live sockets, dispatch, Celery jobs |
 | [`apps/customer/`](apps/customer/README.md) | Flutter customer app |
 | [`apps/captain/`](apps/captain/README.md) | Flutter captain app |
 | [`apps/store/`](apps/store/README.md) | Flutter store app for restaurant and shop tablets (iPad, Android) |

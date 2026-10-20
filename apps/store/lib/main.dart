@@ -16,15 +16,10 @@ void main() {
   S.addStrings(storeStrings);
   final api = ApiClient();
   final live = LiveUpdates(api);
-  final push = PushService(api, app: 'store');
-  final session = StoreSession(api, push: push);
+  final session = StoreSession(api);
   final board = StoreBoard(api, live);
   final alarm = OrderAlarm();
 
-  // Tapping a new-order notification opens the board fresh; an invite
-  // notification brings the invites back up.
-  push.onOpen = (data) =>
-      data['kind'] == 'store_invite' ? session.loadInvites() : board.reload();
   session.onJoinedStore = () {
     board.loadStores();
     board.reload();

@@ -20,7 +20,6 @@ from rest_framework.views import APIView
 from accounts.models import User
 from accounts.phone import InvalidPhone, normalize_phone
 from accounts.serializers import CountryField
-from notifications.push import notify
 from regions.serializers import check_amount
 
 from . import access
@@ -135,8 +134,6 @@ class TeamView(StoreView):
                 invite = StoreInvite.objects.create(
                     vendor=store, phone=phone, name=name, role=role, invited_by=request.user
                 )
-                if user is not None:
-                    notify(user.pk, "store", "store_invite", store=store.name, invite_id=invite.pk)
         except IntegrityError:
             # One open invite per number per store.
             return Response(

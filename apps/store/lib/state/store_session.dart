@@ -2,15 +2,12 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 /// The store owner's session. While signed in, the tablet stays awake (it
-/// sits on the counter all day) and registers for new-order pushes.
+/// sits on the counter all day) so new orders ring over the live connection.
 ///
 /// Team invites are answered at sign-in: until [invites] is empty the app
 /// shows them instead of the board.
 class StoreSession extends BaseSession {
-  StoreSession(super.api, {this.push, this.keepAwake = true});
-
-  /// New orders while the app is in the background or closed; null in tests.
-  final PushService? push;
+  StoreSession(super.api, {this.keepAwake = true});
   final bool keepAwake;
 
   /// Invites waiting for an answer; null until checked after signing in.
@@ -23,14 +20,12 @@ class StoreSession extends BaseSession {
   Future<void> onSignedIn() async {
     await loadInvites();
     if (keepAwake) await WakelockPlus.enable();
-    await push?.start();
   }
 
   @override
   Future<void> onSigningOut() async {
     invites = null;
     if (keepAwake) await WakelockPlus.disable();
-    await push?.stop();
   }
 
   Future<void> loadInvites() async {

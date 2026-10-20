@@ -17,7 +17,6 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.models import User
-from notifications.push import notify
 from orders.models import CaptainLocation, Order, StuckOrderAlert
 from regions.regions import CODES, as_api, region
 from vendors.models import Vendor
@@ -392,14 +391,12 @@ class ReviewApplicationView(StaffView):
                 store.status = Vendor.Status.APPROVED
                 store.commission_rate = data.validated_data["commission_rate"]
                 store.rejection_reason = ""
-                notify(store.owner_id, "store", "store_approved", store=store.name, store_id=store.pk)
             else:
                 data = RejectSerializer(data=request.data)
                 data.is_valid(raise_exception=True)
                 store.status = Vendor.Status.REJECTED
                 store.rejection_reason = data.validated_data["reason"]
                 store.is_open = False
-                notify(store.owner_id, "store", "store_rejected", store=store.name, store_id=store.pk, reason=store.rejection_reason)
             store.reviewed_at = timezone.now()
             store.reviewed_by = request.user
             store.save()

@@ -1,6 +1,5 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
-from unittest import mock
 
 from django.contrib.gis.geos import Point
 from django.test import TestCase
@@ -121,21 +120,22 @@ class TeamTests(StoreTestCase):
         self.client.force_authenticate(user)
         self.assertEqual(self.client.get("/api/vendors/mine/").data, [])
 
-    @mock.patch("orders.services.notify")
-    def test_the_whole_team_hears_new_orders(self, notify):
+    def test_the_whole_team_sees_new_orders(self):
         cashier = self.member("cashier")
         customer = APIClient()
         customer.force_authenticate(self.customer)
         with self.captureOnCommitCallbacks(execute=True):
-            customer.post(
+            placed = customer.post(
                 "/api/orders/",
                 {"vendor": self.store.pk, "items": [{"product": self.kebab.pk, "quantity": "1"}],
                  "delivery_latitude": 33.3045, "delivery_longitude": 44.4214,
                  "delivery_address": "Karrada", "payment_type": "cod"},
                 format="json",
             )
-        told = {c.args[0] for c in notify.call_args_list if c.args[2] == "store_new_order"}
-        self.assertEqual(told, {self.owner.pk, cashier.pk})
+        for person in (self.owner, cashier):
+            self.client.force_authenticate(person)
+            ids = [o["id"] for o in self.client.get("/api/orders/").json()["results"]]
+            self.assertIn(placed.json()["id"], ids)
 
 
 class MenuAndHoursTests(StoreTestCase):

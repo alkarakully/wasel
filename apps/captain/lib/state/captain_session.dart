@@ -8,12 +8,9 @@ import 'location_sharer.dart';
 /// offline stops both. Captains start offline every time the app opens, so
 /// nobody shares location by accident.
 class CaptainSession extends BaseSession {
-  CaptainSession(super.api, this.sharer, {this.push});
+  CaptainSession(super.api, this.sharer);
 
   final LocationSharer sharer;
-
-  /// Offers while the app is in the background or closed; null in tests.
-  final PushService? push;
   bool online = false;
 
   Future<void> setOnline(bool value) async {
@@ -31,12 +28,6 @@ class CaptainSession extends BaseSession {
       sharer.stop();
     }
   }
-
-  @override
-  Future<void> onSignedIn() async => push?.start();
-
-  @override
-  Future<void> onSigningOut() async => push?.stop();
 
   @override
   Future<void> signOut() async {

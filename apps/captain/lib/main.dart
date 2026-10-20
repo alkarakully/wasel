@@ -14,13 +14,7 @@ void main() {
   final api = ApiClient();
   final live = LiveUpdates(api);
   final sharer = LocationSharer(api, live);
-  final push = PushService(api, app: 'captain');
-  final session = CaptainSession(api, sharer, push: push);
-  // Tapping an offer means "I want it": go online, and the home screen shows
-  // the offer if it's still open.
-  push.onOpen = (data) {
-    if (data['kind'] == 'offer' && !session.online) session.setOnline(true);
-  };
+  final session = CaptainSession(api, sharer);
   session.addListener(() => session.signedIn ? live.start() : live.stop());
   session.load();
 

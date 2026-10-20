@@ -5,10 +5,7 @@ import '../config.dart';
 
 /// The customer's session, plus where to deliver.
 class Session extends BaseSession {
-  Session(super.api, {this.push});
-
-  /// Order updates while the app is closed; null in tests.
-  final PushService? push;
+  Session(super.api);
 
   GeoPoint deliveryPoint = const GeoPoint(
     Config.fallbackLat,
@@ -20,7 +17,7 @@ class Session extends BaseSession {
   /// country when Wasel runs there.
   String fallbackCountry = 'IQ';
 
-  // Ask for location and notifications only once someone is signed in.
+  // Ask for location only once someone is signed in.
   @override
   Future<void> onSignedIn() async {
     final country = user?.country ?? 'IQ';
@@ -32,11 +29,7 @@ class Session extends BaseSession {
       deliveryPoint = GeoPoint(region.lat, region.lng);
     }
     await refreshLocation();
-    await push?.start();
   }
-
-  @override
-  Future<void> onSigningOut() async => push?.stop();
 
   /// Uses the phone's location when allowed; otherwise keeps the fallback spot.
   Future<void> refreshLocation() async {

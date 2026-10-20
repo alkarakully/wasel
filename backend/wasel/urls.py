@@ -7,7 +7,6 @@ from django.views.generic import RedirectView, TemplateView
 from rest_framework.routers import DefaultRouter
 
 from orders.views import CaptainLocationView, CaptainStatusView, CurrentOfferView, OfferAnswerView, OrderViewSet
-from notifications.views import DeviceView
 from billing.api import BillingView, CloseWeeksView, MarkPaidView, StatementView
 from billing.api import PayoutsView as BillingPayouts
 from vendors.manage import HoursView, InviteView, MemberView, ProductsView, ProductView, TeamView
@@ -42,7 +41,6 @@ urlpatterns = [
     path("api/console/", include("console.urls")),
     path("api/auth/", include("accounts.urls")),
     path("api/countries/", CountriesView.as_view(), name="countries"),
-    path("api/devices/", DeviceView.as_view(), name="devices"),
     path("api/captain/location/", CaptainLocationView.as_view(), name="captain-location"),
     path("api/captain/status/", CaptainStatusView.as_view(), name="captain-status"),
     path("api/dispatch/offers/current/", CurrentOfferView.as_view(), name="dispatch-current"),
