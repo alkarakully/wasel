@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:wasel_core/wasel_core.dart';
@@ -10,6 +11,8 @@ import 'strings.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  // A phone app: always upright.
+  SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   S.addStrings(captainStrings);
   final api = ApiClient();
   final live = LiveUpdates(api);

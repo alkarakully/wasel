@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- A counter tablet app: Google Play offers it only to screens 600dp and wider. -->
+    <supports-screens
+        android:smallScreens="false"
+        android:normalScreens="false"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:requiresSmallestWidthDp="600" />
     <application
         android:label="Wasel Store"
         android:name="${applicationName}"
