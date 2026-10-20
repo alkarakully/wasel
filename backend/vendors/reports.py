@@ -10,7 +10,7 @@ cancellations. For the owner and managers.
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Q, Sum
+from django.db.models import Avg, Count, DurationField, ExpressionWrapper, F, Sum
 from django.db.models.functions import ExtractHour, TruncDate
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -43,8 +43,8 @@ def store_payout(orders):
     sums = orders.aggregate(
         food=Sum("subtotal"),
         commission=Sum("commission_amount"),
-        # Offers on the store's own menu are paid by the store; Wasel pays for its own.
-        store_discounts=Sum("discount", filter=Q(offer__vendor__isnull=False)),
+        # Recorded at checkout: the store's item deals and its own offers; Wasel pays for its own.
+        store_discounts=Sum("store_discount"),
     )
     food, commission, discounts = _money(sums["food"]), _money(sums["commission"]), _money(sums["store_discounts"])
     return {

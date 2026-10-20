@@ -50,11 +50,11 @@ def _row(statement):
 
 def _lines(vendor, start):
     """Every delivered order of the week, with what the store keeps from it."""
-    orders = week_orders(vendor, start).select_related("offer").order_by("delivered_at")
+    orders = week_orders(vendor, start).order_by("delivered_at")
     c = vendor.currency
     rows = []
     for o in orders:
-        store_discount = o.discount if o.offer_id and o.offer.vendor_id else 0
+        store_discount = o.store_discount
         rows.append(
             {
                 "order": o.pk,

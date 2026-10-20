@@ -519,8 +519,14 @@ class _Breakdown extends StatelessWidget {
               : s.money(quote.deliveryFee, quote.currency),
         ),
         row(s.t('serviceFee'), s.money(quote.serviceFee, quote.currency)),
-        if (quote.discount > 0)
-          row(s.t('discount'), s.money(-quote.discount, quote.currency)),
+        // Buy-one-get-one deals, then the order offer.
+        if (quote.itemsDiscount > 0)
+          row(s.t('offerBogo'), s.money(-quote.itemsDiscount, quote.currency)),
+        if (quote.discount - quote.itemsDiscount > 0)
+          row(
+            s.t('discount'),
+            s.money(-(quote.discount - quote.itemsDiscount), quote.currency),
+          ),
         if (quote.tip > 0) row(s.t('tip'), s.money(quote.tip, quote.currency)),
         const SizedBox(height: 8),
         const Divider(height: 1),

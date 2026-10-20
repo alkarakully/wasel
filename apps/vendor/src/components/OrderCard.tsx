@@ -78,6 +78,9 @@ export function OrderCard({ api, order, showStore, onChanged, onError, onPrint, 
               {item.modifiers.length > 0 && (
                 <span className="mods">{item.modifiers.map((m) => name(m.name)).join('، ')}</span>
               )}
+              {(item.free_units ?? 0) > 0 && (
+                <span className="mods free">{t('freeUnits', { n: item.free_units! })}</span>
+              )}
             </span>
           </li>
         ))}

@@ -120,6 +120,7 @@ class StoreOfferTests(TestCase):
             ({"type": "fixed", "value": "0"}, "value"),
             ({"type": "fixed", "value": "1000.5"}, "value"),  # dinars have no decimals
             ({"type": "bundle", "value": "1"}, "type"),
+            ({"type": "bogo"}, "product"),
             ({"type": "percent", "value": "10", "ends_at": self.week["starts_at"]}, "ends_at"),
         ]
         for extra, field in cases:
@@ -137,6 +138,28 @@ class StoreOfferTests(TestCase):
         Order.objects.create(customer=customer, vendor=self.store, offer_id=offer["id"], subtotal=20000, delivery_address="x", delivery_location=Point(44.4, 33.34, srid=4326))
         self.assertEqual(self.client.delete(f"{self.url}{offer['id']}/").status_code, 204)
         self.assertEqual(self.client.get(self.url).json()[0]["state"], "ended")
+
+    def test_buy_one_get_one_free_is_on_one_of_the_stores_items(self):
+        burger = Product.objects.create(vendor=self.store, name_ar="برغر", name_en="Burger", price=7000)
+        dates = Product.objects.create(vendor=self.store, name_ar="تمر", price=5000, unit_type=Product.UnitType.KG)
+        other_store = Vendor.objects.create(
+            status=Vendor.Status.APPROVED, owner=User.objects.create_user(phone="+9647800000074"),
+            name="Other", location=Point(44.4, 33.34, srid=4326),
+        )
+        theirs = Product.objects.create(vendor=other_store, name_ar="x", price=1000)
+        for product, field in [(None, "product"), (dates.pk, "product"), (theirs.pk, "product")]:
+            response = self.client.post(self.url, {"title": "1+1", "type": "bogo", "product": product, **self.week}, format="json")
+            self.assertEqual(response.status_code, 400, product)
+            self.assertIn(field, response.json())
+        response = self.client.post(self.url, {"title": "1+1", "type": "bogo", "product": burger.pk, **self.week}, format="json")
+        self.assertEqual(response.status_code, 201, response.content)
+        self.assertEqual((response.json()["product"], response.json()["value"]), (burger.pk, "0"))
+        offer = APIClient().get(f"/api/vendors/{self.store.pk}/").json()["offers"][0]
+        self.assertEqual((offer["type"], offer["product"]["name_en"]), ("bogo", "Burger"))
+        # One deal per item at a time.
+        again = self.client.post(self.url, {"title": "Again", "type": "bogo", "product": burger.pk, **self.week}, format="json")
+        self.assertEqual(again.status_code, 400)
+        self.assertIn("product", again.json())
 
     def test_unused_offer_is_deleted(self):
         offer = self.client.post(self.url, {"title": "A", "type": "percent", "value": "5", **self.week}, format="json").json()

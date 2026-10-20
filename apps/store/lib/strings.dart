@@ -67,6 +67,7 @@ const storeStrings = <String, Map<String, String>>{
     'noStores': 'لا يوجد متجر مرتبط بهذا الحساب.',
     'err_invalid_transition': 'تغيّرت حالة الطلب. تم تحديث اللوحة.',
     'kg': 'كغ',
+    'freeUnits': '{n} مجاناً (اشترِ 1 واحصل على 1)',
   },
   'ku': {
     'print': 'چاپکردن',
@@ -135,6 +136,7 @@ const storeStrings = <String, Map<String, String>>{
     'noStores': 'هیچ دووکانێک بەم هەژمارەوە نەبەستراوە.',
     'err_invalid_transition': 'دۆخی داواکارییەکە گۆڕا. پانێڵەکە نوێکرایەوە.',
     'kg': 'کگ',
+    'freeUnits': '{n} بەخۆڕایی (1 بکڕە، 1 بەخۆڕایی)',
   },
   'en': {
     'print': 'Print',
@@ -204,5 +206,6 @@ const storeStrings = <String, Map<String, String>>{
     'err_invalid_transition':
         'The order changed. The board has been refreshed.',
     'kg': 'kg',
+    'freeUnits': '{n} free (buy 1, get 1)',
   },
 };

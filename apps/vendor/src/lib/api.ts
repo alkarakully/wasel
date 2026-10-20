@@ -12,6 +12,8 @@ export interface OrderItem {
   unit_type: 'item' | 'kg'
   quantity: string
   line_total: string
+  /** Units free under a buy-one-get-one deal, so the kitchen knows the extra one is meant. */
+  free_units?: number
   modifiers: { modifier: number; group_name: string; name: Names }[]
 }
 
@@ -93,7 +95,7 @@ export interface ProductInput {
   unit_type: 'item' | 'kg'
 }
 
-export type OfferType = 'percent' | 'fixed' | 'free_delivery'
+export type OfferType = 'percent' | 'fixed' | 'free_delivery' | 'bogo'
 
 /** A store's own offer. Checkout applies the best running one the cart qualifies for. */
 export interface StoreOffer {
@@ -108,6 +110,8 @@ export interface StoreOffer {
   ends_at: string
   /** Shown on the customer app's home banner (Wasel staff decide). */
   is_banner: boolean
+  /** Buy one, get one free: the menu item it's on. */
+  product: number | null
   state: 'running' | 'scheduled' | 'ended'
   orders: number | null
 }
@@ -115,6 +119,8 @@ export interface StoreOffer {
 export interface OfferInput {
   title: string
   type: OfferType
+  /** Buy one, get one free: the menu item it's on. */
+  product?: number | null
   value: string
   min_order: string
   starts_at: string

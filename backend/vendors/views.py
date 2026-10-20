@@ -38,7 +38,7 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
         if cuisine := params.get("cuisine"):
             queryset = queryset.filter(cuisine=cuisine)
         now = timezone.now()
-        running = Offer.objects.filter(starts_at__lte=now, ends_at__gte=now)
+        running = Offer.objects.filter(starts_at__lte=now, ends_at__gte=now).select_related("product")
         if params.get("offers") == "1":
             queryset = queryset.filter(offers__in=running).distinct()
         query = params.get("q", "").strip()[:100]

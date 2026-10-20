@@ -13,8 +13,9 @@ const storeTypes = [
   'flowers',
 ];
 
-/// "15% off", "3,000 IQD off" or "Free delivery".
+/// "15% off", "3,000 IQD off", "Buy 1, get 1 free" or "Free delivery".
 String offerHeadline(S s, Offer offer) => switch (offer.type) {
+  'bogo' => s.t('offerBogo'),
   'percent' => s.t('offerPercent', {
     'value': offer.value.toStringAsFixed(offer.value % 1 == 0 ? 0 : 1),
   }),
@@ -56,22 +57,11 @@ class StoreCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    CuisineArt(
-                      cuisine: store.cuisine,
-                      type: store.type,
-                      size: 76,
-                      radius: Radii.md,
-                    ),
-                    if (store.offer != null)
-                      PositionedDirectional(
-                        start: -4,
-                        bottom: -6,
-                        child: OfferBadge(text: offerHeadline(s, store.offer!)),
-                      ),
-                  ],
+                CuisineArt(
+                  cuisine: store.cuisine,
+                  type: store.type,
+                  size: 76,
+                  radius: Radii.md,
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -99,8 +89,11 @@ class StoreCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 14,
-                        runSpacing: 4,
+                        runSpacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
+                          if (store.offer != null)
+                            OfferBadge(text: offerHeadline(s, store.offer!)),
                           if (store.deliveryFee != null)
                             _Meta(
                               icon: Ph.moped,

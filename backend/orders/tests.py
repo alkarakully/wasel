@@ -236,6 +236,97 @@ class OfferAndCommissionTests(PricingTestBase):
         self.make_offer(vendor=None, type=Offer.Type.FIXED, value=3250)
         self.assertEqual(self.commission_of_placed_order(), Decimal(3488))
 
+    def test_buy_one_get_one_free_makes_every_second_unit_free(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        # Two large kebabs with bread at 10500 each: one is free.
+        self.assertEqual(self.quote().json()["discount"], "10500")
+        # With different options, the cheaper units are the free ones: 8000 regular, 2 x 10000 large.
+        items = [
+            {"product": self.kebab.pk, "quantity": 1, "modifiers": [self.regular.pk]},
+            {"product": self.kebab.pk, "quantity": 2, "modifiers": [self.large.pk]},
+        ]
+        self.assertEqual(self.quote(items=items).json()["discount"], "8000")
+
+    def test_buy_one_get_one_free_needs_two_of_the_item(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        one = [{"product": self.kebab.pk, "quantity": 1, "modifiers": [self.regular.pk]}]
+        self.assertEqual(self.quote(items=one).json()["discount"], "0")
+        self.make_offer(type=Offer.Type.BOGO, product=self.tomatoes, title="Other item")
+        self.assertEqual(self.quote(items=[{"product": self.tomatoes.pk, "quantity": "2"}]).json()["discount"], "0")
+
+    def test_store_funded_buy_one_get_one_lowers_commission_base(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        # 15% of (23250 - 10500) = 1912.5, rounded half up.
+        self.assertEqual(self.commission_of_placed_order(), Decimal(1913))
+
+    def assertAddsUp(self, body):
+        """total = subtotal + fees + tip - discount, and the line deals sum to items_discount."""
+        money = {k: Decimal(body[k]) for k in ("subtotal", "delivery_fee", "service_fee", "tip", "discount", "total_amount")}
+        self.assertEqual(
+            money["total_amount"],
+            money["subtotal"] + money["delivery_fee"] + money["service_fee"] + money["tip"] - money["discount"],
+        )
+        self.assertEqual(sum(Decimal(line["discount"]) for line in body["items"]), Decimal(body["items_discount"]))
+
+    def test_every_item_with_a_deal_gets_it_in_the_same_order(self):
+        burger = Product.objects.create(vendor=self.vendor, name_ar="برغر", price=6000)
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        self.make_offer(type=Offer.Type.BOGO, product=burger, title="Burger 1+1")
+        items = [
+            {"product": self.kebab.pk, "quantity": 2, "modifiers": [self.regular.pk]},
+            {"product": burger.pk, "quantity": 3},
+        ]
+        body = self.quote(items=items).json()
+        # 2 x 8000 kebab: one free; 3 x 6000 burger: one free.
+        self.assertEqual([line["discount"] for line in body["items"]], ["8000", "6000"])
+        self.assertEqual((body["items_discount"], body["discount"]), ("14000", "14000"))
+        self.assertAddsUp(body)
+
+    def test_store_percent_offer_applies_to_the_food_left_after_deals(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        percent = self.make_offer(type=Offer.Type.PERCENT, value=10, title="10%")
+        body = self.quote().json()
+        # Subtotal 23250, kebab deal 10500, then 10% of the 12750 left = 1275.
+        self.assertEqual((body["items_discount"], body["discount"], body["offer"]), ("10500", "11775", percent.pk))
+        self.assertAddsUp(body)
+        order = Order.objects.get(pk=self.place().json()["id"])
+        self.assertEqual((order.discount, order.store_discount), (Decimal(11775), Decimal(11775)))
+        # Commission on what the store really sells the food for: 15% of (12750 - 1275) = 1721.25.
+        self.assertEqual(order.commission_amount, Decimal(1721))
+
+    def test_wasel_pays_for_its_offer_and_the_store_for_its_deal(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Wasel 2000")
+        order = Order.objects.get(pk=self.place().json()["id"])
+        self.assertEqual((order.discount, order.store_discount), (Decimal(12500), Decimal(10500)))
+        # Wasel's 2000 doesn't lower commission: 15% of 12750.
+        self.assertEqual(order.commission_amount, Decimal(1913))
+        item = order.items.get(product=self.kebab)
+        self.assertEqual((item.discount, item.deal.type), (Decimal(10500), Offer.Type.BOGO))
+        self.assertEqual(order.total_amount, order.calculate_total())
+
+    def test_store_free_delivery_comes_from_the_store_but_not_off_commission(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        self.make_offer(type=Offer.Type.FREE_DELIVERY, title="Free ride")
+        order = Order.objects.get(pk=self.place(at=FARTHER).json()["id"])
+        self.assertEqual(order.delivery_fee, Decimal(2250))
+        self.assertEqual((order.discount, order.store_discount), (Decimal(12750), Decimal(12750)))
+        self.assertEqual(order.commission_amount, Decimal(1913))  # 15% of the 12750 of food left
+
+    def test_store_report_takes_its_deals_off_the_payout(self):
+        self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Wasel 2000")
+        order = Order.objects.get(pk=self.place().json()["id"])
+        from vendors.reports import store_payout
+
+        money = store_payout(Order.objects.filter(pk=order.pk))
+        self.assertEqual(money["store_discounts"], Decimal(10500))
+        self.assertEqual(money["payout"], Decimal(23250 - 10500 - 1913))
+
+    def test_a_deal_cant_be_picked_as_the_order_offer(self):
+        deal = self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
+        self.assertError(self.quote(offer=deal.pk), "offer_not_applicable")
+
     def test_no_commission_during_free_period(self):
         Vendor.objects.update(commission_free_until=timezone.now() + timedelta(days=10))
         self.assertEqual(self.commission_of_placed_order(), Decimal(0))

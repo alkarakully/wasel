@@ -6,10 +6,21 @@ a customer sees before ordering is exactly what they are charged.
 
   total = subtotal + delivery_fee + service_fee + tip - discount
 
-Commission is charged on the food subtotal. When the vendor funds a discount
-(a percent or fixed offer on their own store) commission is charged on the
-discounted subtotal; platform-wide offers are funded by Wasel and don't
-reduce the vendor's commission.
+The discount has two parts:
+
+  item deals   each item with a running buy-one-get-one-free offer: every
+               second unit is free (the cheaper ones when options differ).
+               Several items can each have their own deal in one order.
+  order offer  at most one percent, fixed or free-delivery offer, the best the
+               cart qualifies for after item deals (or the one the customer
+               picked). It's worked out on the food left to pay for.
+
+Who pays: the store pays for deals on its own items and for its own offers
+(store_discount, taken from its payout); Wasel pays for platform-wide offers.
+
+Commission is charged on the food subtotal less what the store gives away on
+food (item deals and its percent or fixed offers). A store's free-delivery
+offer doesn't touch food, so it doesn't lower commission.
 """
 
 import math
@@ -40,6 +51,9 @@ class QuoteLine:
     modifiers: list
     unit_price: Decimal
     line_total: Decimal
+    # Buy one, get one free on this line's item: the deal and what it takes off.
+    deal: Offer = None
+    discount: Decimal = Decimal(0)
 
 
 @dataclass
@@ -50,7 +64,10 @@ class Quote:
     subtotal: Decimal = Decimal(0)
     delivery_fee: Decimal = Decimal(0)
     service_fee: Decimal = Decimal(0)
+    # Item deals plus the order offer; store_discount is the part the store pays.
     discount: Decimal = Decimal(0)
+    items_discount: Decimal = Decimal(0)
+    store_discount: Decimal = Decimal(0)
     tip: Decimal = Decimal(0)
     commission_amount: Decimal = Decimal(0)
     total_amount: Decimal = Decimal(0)
@@ -90,7 +107,7 @@ def has_wasel_plus(user, at):
 
 
 def offer_discount(offer, subtotal, delivery_fee):
-    """Discount this offer gives on the cart, or None if it doesn't apply."""
+    """What an order offer takes off `subtotal` (the food still to pay for), or None if it doesn't apply."""
     if subtotal < offer.min_order:
         return None
     if offer.type == Offer.Type.PERCENT:
@@ -99,7 +116,6 @@ def offer_discount(offer, subtotal, delivery_fee):
         return min(quantize(offer.value, offer.currency), subtotal)
     if offer.type == Offer.Type.FREE_DELIVERY:
         return delivery_fee if delivery_fee > 0 else None
-    # Bundle deals need a bundle definition, which isn't modelled yet.
     return None
 
 
@@ -157,9 +173,40 @@ def _price_lines(vendor, items):
     return lines
 
 
+def apply_item_deals(vendor, lines, subtotal, at):
+    """
+    Puts each running buy-one-get-one-free deal on its item's lines and returns the total.
+
+    Every second unit of the item is free, and when the units differ (other
+    options), the cheaper ones are the free ones. Only items sold by the
+    piece count: half a kilo free isn't a thing.
+    """
+    by_item = {}
+    deals = Offer.objects.filter(
+        vendor=vendor, type=Offer.Type.BOGO, starts_at__lte=at, ends_at__gte=at, product__isnull=False
+    ).order_by("starts_at", "pk")
+    for deal in deals:
+        by_item.setdefault(deal.product_id, deal)  # one deal per item; the oldest wins
+
+    total = Decimal(0)
+    for product_id, deal in by_item.items():
+        if subtotal < deal.min_order:
+            continue
+        mine = [line for line in lines if line.product.pk == product_id and line.product.unit_type == Product.UnitType.ITEM]
+        units = sorted((line.unit_price, i) for i, line in enumerate(mine) for _ in range(int(line.quantity)))
+        for price, i in units[: len(units) // 2]:
+            mine[i].deal = deal
+            mine[i].discount += price
+        total += sum((line.discount for line in mine), Decimal(0))
+    for line in lines:
+        line.discount = quantize(line.discount, vendor.currency)
+    return quantize(total, vendor.currency)
+
+
 def _pick_offer(vendor, offer_id, subtotal, delivery_fee, at):
     # The store's own offers, and Wasel's offers for the store's country (in its currency).
-    running = Offer.objects.filter(starts_at__lte=at, ends_at__gte=at).filter(
+    # Buy-one-get-one deals are per item and handled by apply_item_deals().
+    running = Offer.objects.filter(starts_at__lte=at, ends_at__gte=at).exclude(type=Offer.Type.BOGO).filter(
         Q(vendor=vendor) | Q(vendor__isnull=True, country=vendor.country)
     )
 
@@ -212,13 +259,15 @@ def build_quote(customer, vendor_id, items, delivery_point, offer_id=None, tip=0
         quote.delivery_fee = delivery_fee_for(distance_m, country)
     quote.service_fee = _price(country, "PLUS_SERVICE_FEE" if quote.wasel_plus else "SERVICE_FEE")
 
-    quote.offer, quote.discount = _pick_offer(vendor, offer_id, quote.subtotal, quote.delivery_fee, at)
+    quote.items_discount = apply_item_deals(vendor, quote.lines, quote.subtotal, at)
+    food_left = quote.subtotal - quote.items_discount
+    quote.offer, order_discount = _pick_offer(vendor, offer_id, food_left, quote.delivery_fee, at)
+    quote.discount = quote.items_discount + order_discount
 
-    vendor_funded = quote.offer is not None and quote.offer.vendor_id is not None and quote.offer.type in (
-        Offer.Type.PERCENT,
-        Offer.Type.FIXED,
-    )
-    commission_base = quote.subtotal - quote.discount if vendor_funded else quote.subtotal
+    store_offer = quote.offer is not None and quote.offer.vendor_id is not None
+    quote.store_discount = quote.items_discount + (order_discount if store_offer else Decimal(0))
+    store_food_offer = store_offer and quote.offer.type in (Offer.Type.PERCENT, Offer.Type.FIXED)
+    commission_base = food_left - (order_discount if store_food_offer else Decimal(0))
     quote.commission_amount = vendor.commission_for(commission_base, at)
 
     quote.total_amount = quote.subtotal + quote.delivery_fee + quote.service_fee + quote.tip - quote.discount

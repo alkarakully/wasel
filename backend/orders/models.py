@@ -55,7 +55,10 @@ class Order(models.Model):
     subtotal = money_field(default=0)
     delivery_fee = money_field(default=0)
     service_fee = money_field(default=0)
+    # Everything taken off: item deals plus the order offer.
     discount = money_field(default=0)
+    # The part of `discount` the store pays (its item deals and its own offer); comes off its payout.
+    store_discount = money_field(default=0)
     tip = money_field(default=0)
     # Snapshot of the vendor's commission at checkout; never recalculated.
     commission_amount = money_field(default=0)
@@ -106,6 +109,11 @@ class OrderItem(models.Model):
     quantity = models.DecimalField(max_digits=8, decimal_places=3, default=Decimal("1"))
     unit_price = money_field(help_text="Price at checkout, including chosen modifiers.")
     line_total = money_field()
+    # Buy one, get one free: the deal on this line and what it took off (line_total is before it).
+    deal = models.ForeignKey(
+        "vendors.Offer", on_delete=models.SET_NULL, null=True, blank=True, related_name="order_items"
+    )
+    discount = money_field(default=0)
 
     def __str__(self):
         return f"{self.quantity} × {self.product}"

@@ -17,7 +17,7 @@ from orders.models import Order
 from regions.regions import region
 from subscriptions.models import WaselPlusSubscription
 from vendors.models import Offer, Vendor
-from vendors.offers import check_offer, offer_state, offer_value
+from vendors.offers import check_offer, offer_state, offer_value, times_used
 
 from .access import ConsoleView
 from .audit import diff, record
@@ -225,7 +225,7 @@ class OfferInput(serializers.ModelSerializer):
         # A store's offer is in its store's country and currency; a platform-wide one names its country.
         vendor = data.get("vendor", getattr(self.instance, "vendor", None))
         data["country"] = vendor.country if vendor else data.get("country", getattr(self.instance, "country", "IQ"))
-        check_offer(data, self.instance, data["country"])
+        check_offer(data, self.instance, data["country"], vendor)
         return data
 
 
@@ -254,7 +254,7 @@ class OffersView(ConsoleView):
 
     def get(self, request):
         p, now = request.query_params, timezone.now()
-        offers = Offer.objects.select_related("vendor").annotate(order_count=Count("orders"))
+        offers = times_used(Offer.objects.select_related("vendor"))
         state = p.get("state")
         if state == "running":
             offers = offers.filter(starts_at__lte=now, ends_at__gt=now)
@@ -294,7 +294,7 @@ class OfferView(ConsoleView):
     def delete(self, request, pk):
         """An offer nobody used is deleted; a used one ends now, so old orders keep it."""
         offer = get_object_or_404(Offer, pk=pk)
-        if offer.orders.exists():
+        if offer.orders.exists() or offer.order_items.exists():
             offer.ends_at = min(offer.ends_at, timezone.now())
             offer.save(update_fields=["ends_at"])
             record(request, "offer.end", f"Ended offer {offer.title}", offer)

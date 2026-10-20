@@ -16,7 +16,6 @@ import re
 from decimal import Decimal
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, serializers
@@ -33,7 +32,7 @@ from regions.serializers import check_amount
 from . import access
 from .images import BadImage, remove_product_image, save_product_image
 from .models import Offer, Product, StoreInvite, StoreMember, Vendor
-from .offers import check_offer, end_or_delete, offer_state, offer_value
+from .offers import check_offer, end_or_delete, offer_state, offer_value, times_used
 from .onboarding import store_account_problem
 from .serializers import ProductSerializer
 
@@ -288,12 +287,13 @@ class ProductImageView(ProductView):
 
 
 class StoreOfferInput(serializers.ModelSerializer):
-    # Bundles need a bundle definition, which isn't modelled yet; home banners are Wasel's call.
-    type = serializers.ChoiceField(choices=[Offer.Type.PERCENT, Offer.Type.FIXED, Offer.Type.FREE_DELIVERY])
+    # Home banners are Wasel's call.
+    type = serializers.ChoiceField(choices=[Offer.Type.PERCENT, Offer.Type.FIXED, Offer.Type.FREE_DELIVERY, Offer.Type.BOGO])
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False, allow_null=True)
 
     class Meta:
         model = Offer
-        fields = ["title", "type", "value", "min_order", "starts_at", "ends_at"]
+        fields = ["title", "type", "value", "min_order", "starts_at", "ends_at", "product"]
 
     def validate_title(self, value):
         if not value.strip():
@@ -303,7 +303,7 @@ class StoreOfferInput(serializers.ModelSerializer):
     def validate(self, data):
         if data.get("type") == Offer.Type.FREE_DELIVERY:
             data["value"] = Decimal(0)
-        check_offer(data, self.instance, self.context["store"].country)
+        check_offer(data, self.instance, self.context["store"].country, self.context["store"])
         return data
 
 
@@ -318,6 +318,7 @@ def _offer_row(offer, now=None):
         "starts_at": offer.starts_at.isoformat(),
         "ends_at": offer.ends_at.isoformat(),
         "is_banner": offer.is_banner,
+        "product": offer.product_id,
         "state": offer_state(offer, now),
         "orders": getattr(offer, "order_count", None),
     }
@@ -333,7 +334,7 @@ class StoreOffersView(StoreView):
         if store is None:
             return _denied("offers")
         now = timezone.now()
-        offers = store.offers.annotate(order_count=Count("orders"))
+        offers = times_used(store.offers.all())
         return Response([_offer_row(o, now) for o in offers])
 
     def post(self, request, pk):

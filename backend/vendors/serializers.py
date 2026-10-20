@@ -97,8 +97,8 @@ class VendorSerializer(serializers.ModelSerializer):
         offers = getattr(vendor, "running_offers", None)
         if not offers:
             return None
-        # Percent first (the biggest), then amount off, then free delivery.
-        rank = {Offer.Type.PERCENT: 0, Offer.Type.FIXED: 1, Offer.Type.FREE_DELIVERY: 2}
+        # Percent first (the biggest), then buy-one-get-one, amount off, free delivery.
+        rank = {Offer.Type.PERCENT: 0, Offer.Type.BOGO: 1, Offer.Type.FIXED: 2, Offer.Type.FREE_DELIVERY: 3}
         best = min(offers, key=lambda o: (rank.get(o.type, 3), -o.value))
         return OfferSerializer(best).data
 
@@ -130,19 +130,25 @@ class VendorDetailSerializer(VendorSerializer):
 
     def get_offers(self, vendor):
         now = timezone.now()
-        running = vendor.offers.filter(starts_at__lte=now, ends_at__gte=now).order_by("ends_at")
+        running = vendor.offers.filter(starts_at__lte=now, ends_at__gte=now).select_related("product").order_by("ends_at")
         return OfferSerializer(running, many=True).data
 
 
 class OfferSerializer(MoneyMixin, serializers.ModelSerializer):
     money_fields = ("min_order",)
+    # Buy one, get one free: the item it's on.
+    product = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
         fields = [
             "id", "vendor", "country", "currency", "title", "type", "value", "min_order", "starts_at", "ends_at",
-            "is_banner",
+            "is_banner", "product",
         ]
+
+    def get_product(self, offer):
+        p = offer.product
+        return {"id": p.pk, "name_ar": p.name_ar, "name_ku": p.name_ku, "name_en": p.name_en} if p else None
 
     def to_representation(self, offer):
         data = super().to_representation(offer)

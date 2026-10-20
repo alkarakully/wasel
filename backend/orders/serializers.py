@@ -29,16 +29,24 @@ class OrderItemModifierSerializer(MoneyMixin, serializers.ModelSerializer):
 
 
 class OrderItemSerializer(MoneyMixin, serializers.ModelSerializer):
-    money_fields = ("unit_price", "line_total")
+    money_fields = ("unit_price", "line_total", "discount")
 
     modifiers = OrderItemModifierSerializer(many=True, read_only=True)
     # Names travel with the order so stores and captains see what to prepare.
     name = serializers.SerializerMethodField()
     unit_type = serializers.CharField(source="product.unit_type", read_only=True)
+    # Units free under a buy-one-get-one deal, so the kitchen knows the extra one is meant.
+    free_units = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ["id", "product", "name", "unit_type", "quantity", "unit_price", "line_total", "modifiers"]
+        fields = [
+            "id", "product", "name", "unit_type", "quantity", "unit_price", "line_total", "discount", "free_units",
+            "modifiers",
+        ]
+
+    def get_free_units(self, item):
+        return int((item.discount / item.unit_price).to_integral_value()) if item.discount and item.unit_price else 0
 
     def currency_for(self, item):
         return item.order.currency
@@ -206,6 +214,8 @@ def quote_to_dict(quote):
                 "modifiers": [modifier.pk for modifier in line.modifiers],
                 "unit_price": _money(line.unit_price),
                 "line_total": _money(line.line_total),
+                # Taken off by a buy-one-get-one deal on the item (part of "discount" below).
+                "discount": _money(line.discount),
             }
             for line in quote.lines
         ],
@@ -213,6 +223,7 @@ def quote_to_dict(quote):
         "delivery_fee": _money(quote.delivery_fee),
         "service_fee": _money(quote.service_fee),
         "discount": _money(quote.discount),
+        "items_discount": _money(quote.items_discount),
         "offer": quote.offer.pk if quote.offer else None,
         "tip": _money(quote.tip),
         "total_amount": _money(quote.total_amount),

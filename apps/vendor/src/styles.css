@@ -2952,3 +2952,16 @@ textarea.text-input {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Selects in forms: no vertical padding, so their text isn't clipped. */
+.form-grid select.text-input {
+  height: 48px;
+  padding-block: 0;
+  line-height: 1.3;
+}
+
+/* Items with free units under a buy-one-get-one deal. */
+.items .mods.free {
+  color: var(--gold-text);
+  font-weight: 600;
+}

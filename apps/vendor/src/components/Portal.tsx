@@ -240,7 +240,13 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
         {stores && stores.length === 0 ? (
           <p className="empty">{t('noStores')}</p>
         ) : section === 'offers' && store ? (
-          <OffersView api={api} storeId={store.id} currency={store.currency} onError={showError} />
+          <OffersView
+            api={api}
+            storeId={store.id}
+            currency={store.currency}
+            products={store.products}
+            onError={showError}
+          />
         ) : section === 'reports' && store ? (
           <ReportsView api={api} storeId={store.id} onError={showError} />
         ) : section === 'billing' && store ? (

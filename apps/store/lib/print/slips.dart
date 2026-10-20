@@ -81,9 +81,12 @@ class OrderSlips {
           SlipLine(
             qty(item),
             item.name(s.lang),
-            item.modifiers
-                .map((m) => localizedName(s.lang, m['ar']!, m['ku']!, m['en']!))
-                .join('، '),
+            [
+              ...item.modifiers.map(
+                (m) => localizedName(s.lang, m['ar']!, m['ku']!, m['en']!),
+              ),
+              if (item.freeUnits > 0) s.t('freeUnits', {'n': item.freeUnits}),
+            ].join('، '),
           ),
       ],
       itemsCount: s.t('itemsCount', {'n': count}),

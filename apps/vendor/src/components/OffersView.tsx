@@ -1,7 +1,7 @@
 import { PencilSimple, Plus, SealPercent, StopCircle, X } from '@phosphor-icons/react'
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react'
 
-import { Api, type OfferInput, type OfferType, type StoreOffer } from '../lib/api'
+import { Api, type OfferInput, type OfferType, type Product, type StoreOffer } from '../lib/api'
 import { regionForCurrency } from '../lib/countries'
 import { useI18n } from '../lib/i18n'
 import { amountInput } from '../lib/strings'
@@ -10,10 +10,12 @@ interface Props {
   api: Api
   storeId: number
   currency: string
+  /** The store's menu, for buy-one-get-one-free offers. */
+  products: Product[]
   onError: (error: unknown) => void
 }
 
-const TYPES: OfferType[] = ['percent', 'fixed', 'free_delivery']
+const TYPES: OfferType[] = ['percent', 'fixed', 'free_delivery', 'bogo']
 const ORDER: Record<StoreOffer['state'], number> = {
   running: 0,
   scheduled: 1,
@@ -26,9 +28,13 @@ function localInput(date: Date): string {
   return shifted.toISOString().slice(0, 16)
 }
 
-/** The store's own discounts: percent or amount off, or free delivery, for a set time. */
-export function OffersView({ api, storeId, currency, onError }: Props) {
+/** The store's own discounts for a set time: percent or amount off, free delivery, or buy one get one free. */
+export function OffersView({ api, storeId, currency, products, onError }: Props) {
   const { t, lang, money } = useI18n()
+  const itemName = (id: number | null) => {
+    const product = products.find((p) => p.id === id)
+    return product ? (lang !== 'ar' && product[`name_${lang}`]) || product.name_ar : '—'
+  }
   const [offers, setOffers] = useState<StoreOffer[] | null>(null)
   const [editing, setEditing] = useState<StoreOffer | 'new' | null>(null)
 
@@ -51,7 +57,9 @@ export function OffersView({ api, storeId, currency, onError }: Props) {
         ? t('offerPercent', { value: offer.value })
         : offer.type === 'fixed'
           ? t('offerFixed', { value: money(offer.value, offer.currency) })
-          : t('offerFree')
+          : offer.type === 'bogo'
+            ? t('offerBogo', { item: itemName(offer.product) })
+            : t('offerFree')
     return Number(offer.min_order) > 0
       ? `${deal} · ${t('offerMin', { value: money(offer.min_order, offer.currency) })}`
       : deal
@@ -83,6 +91,7 @@ export function OffersView({ api, storeId, currency, onError }: Props) {
             api={api}
             storeId={storeId}
             currency={currency}
+            products={products}
             onSaved={saved}
             onCancel={() => setEditing(null)}
           />
@@ -108,6 +117,7 @@ export function OffersView({ api, storeId, currency, onError }: Props) {
                   api={api}
                   storeId={storeId}
                   currency={currency}
+                  products={products}
                   offer={offer}
                   onSaved={saved}
                   onCancel={() => setEditing(null)}
@@ -171,20 +181,24 @@ interface FormProps {
   api: Api
   storeId: number
   currency: string
+  products: Product[]
   offer?: StoreOffer
   onSaved: () => void
   onCancel: () => void
 }
 
-function OfferForm({ api, storeId, currency, offer, onSaved, onCancel }: FormProps) {
-  const { t, error } = useI18n()
+function OfferForm({ api, storeId, currency, products, offer, onSaved, onCancel }: FormProps) {
+  const { t, error, lang } = useI18n()
+  // Buy one, get one free works on items sold by the piece.
+  const pieces = products.filter((p) => p.unit_type === 'item')
   const decimals = regionForCurrency(currency).decimals
   const [values, setValues] = useState<OfferInput>(() => {
     if (offer) {
       return {
         title: offer.title,
         type: offer.type,
-        value: offer.type === 'free_delivery' ? '' : offer.value,
+        product: offer.product,
+        value: offer.type === 'free_delivery' || offer.type === 'bogo' ? '' : offer.value,
         min_order: offer.min_order,
         starts_at: localInput(new Date(offer.starts_at)),
         ends_at: localInput(new Date(offer.ends_at)),
@@ -194,6 +208,7 @@ function OfferForm({ api, storeId, currency, offer, onSaved, onCancel }: FormPro
     return {
       title: '',
       type: 'percent',
+      product: null,
       value: '',
       min_order: '0',
       starts_at: localInput(now),
@@ -205,7 +220,13 @@ function OfferForm({ api, storeId, currency, offer, onSaved, onCancel }: FormPro
   const set = (key: keyof OfferInput) => (value: string) => setValues((v) => ({ ...v, [key]: value }))
 
   const value = Number(values.value)
-  const valueOk = values.type === 'free_delivery' || (values.type === 'percent' ? value > 0 && value <= 100 : value > 0)
+  const valueOk =
+    values.type === 'free_delivery' ||
+    (values.type === 'bogo'
+      ? values.product != null
+      : values.type === 'percent'
+        ? value > 0 && value <= 100
+        : value > 0)
   const datesOk = values.starts_at !== '' && values.ends_at !== '' && values.ends_at > values.starts_at
   const valid = values.title.trim() !== '' && valueOk && datesOk
 
@@ -216,7 +237,8 @@ function OfferForm({ api, storeId, currency, offer, onSaved, onCancel }: FormPro
     setProblem(null)
     const body: OfferInput = {
       ...values,
-      value: values.type === 'free_delivery' ? '0' : values.value,
+      value: values.type === 'free_delivery' || values.type === 'bogo' ? '0' : values.value,
+      product: values.type === 'bogo' ? values.product : null,
       min_order: values.min_order || '0',
       starts_at: new Date(values.starts_at).toISOString(),
       ends_at: new Date(values.ends_at).toISOString(),
@@ -263,7 +285,26 @@ function OfferForm({ api, storeId, currency, offer, onSaved, onCancel }: FormPro
             ))}
           </div>
         </fieldset>
-        {values.type !== 'free_delivery' && (
+        {values.type === 'bogo' && (
+          <label>
+            {t('bogoItem')}
+            <select
+              className="text-input"
+              required
+              value={values.product ?? ''}
+              onChange={(e) => setValues((v) => ({ ...v, product: e.target.value ? Number(e.target.value) : null }))}
+            >
+              <option value="">{t('chooseItem')}</option>
+              {pieces.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {(lang !== 'ar' && p[`name_${lang}`]) || p.name_ar}
+                </option>
+              ))}
+            </select>
+            <span className="muted small">{t('bogoHelp')}</span>
+          </label>
+        )}
+        {values.type !== 'free_delivery' && values.type !== 'bogo' && (
           <label>
             {values.type === 'percent' ? t('percentOff') : `${t('amountOff')} · ${currency}`}
             <input

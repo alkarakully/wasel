@@ -206,6 +206,15 @@ class _OrderCardState extends State<OrderCard>
                             item.name(s.lang),
                             style: const TextStyle(fontSize: 17),
                           ),
+                          if (item.freeUnits > 0)
+                            Text(
+                              s.t('freeUnits', {'n': item.freeUnits}),
+                              style: TextStyle(
+                                color: t.goldText,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           if (item.modifiers.isNotEmpty)
                             Text(
                               item.modifiers

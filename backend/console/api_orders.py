@@ -170,6 +170,8 @@ def order_detail(o):
         "service_fee": money(o.service_fee, o.currency),
         "tip": money(o.tip, o.currency),
         "discount": money(o.discount, o.currency),
+        # The part of the discount the store pays (its deals and offers); the rest is Wasel's.
+        "store_discount": money(o.store_discount, o.currency),
         "commission": money(o.commission_amount, o.currency),
         "time_zone": o.vendor.region.time_zone,
         "estimated_ready_at": iso(o.estimated_ready_at),

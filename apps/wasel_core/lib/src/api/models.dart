@@ -258,15 +258,18 @@ class Offer {
     required this.value,
     this.minOrder = 0,
     this.currency = 'IQD',
+    this.product,
   });
   final int id;
   final String title;
 
-  /// "percent", "fixed" (an amount in [currency]) or "free_delivery".
+  /// "percent", "fixed" (an amount in [currency]), "free_delivery", or
+  /// "bogo" (buy one [product], get one free).
   final String type;
   final double value;
   final num minOrder;
   final String currency;
+  final DishMatch? product;
 
   factory Offer.fromJson(Map<String, dynamic> json) => Offer(
     id: json['id'],
@@ -275,6 +278,9 @@ class Offer {
     value: double.parse(json['value'].toString()),
     minOrder: _money(json['min_order'] ?? 0),
     currency: json['currency'] ?? 'IQD',
+    product: json['product'] is Map<String, dynamic>
+        ? DishMatch.fromJson(json['product'])
+        : null,
   );
 }
 
@@ -288,12 +294,16 @@ class Quote {
     required this.total,
     required this.waselPlus,
     this.currency = 'IQD',
+    this.itemsDiscount = 0,
   });
   final String currency;
   final num subtotal;
   final num deliveryFee;
   final num serviceFee;
+
+  /// Everything taken off; [itemsDiscount] of it is buy-one-get-one deals.
   final num discount;
+  final num itemsDiscount;
   final num tip;
   final num total;
   final bool waselPlus;
@@ -303,6 +313,7 @@ class Quote {
     deliveryFee: _money(json['delivery_fee']),
     serviceFee: _money(json['service_fee']),
     discount: _money(json['discount']),
+    itemsDiscount: _money(json['items_discount'] ?? 0),
     tip: _money(json['tip']),
     total: _money(json['total_amount']),
     waselPlus: json['wasel_plus'] ?? false,
@@ -419,12 +430,16 @@ class OrderItem {
     required this.quantity,
     required this.unitType,
     this.modifiers = const [],
+    this.freeUnits = 0,
   });
 
   /// Name per language: ar, ku, en.
   final Map<String, String> names;
   final double quantity;
   final String unitType;
+
+  /// Of [quantity], how many are free under a buy-one-get-one deal.
+  final int freeUnits;
 
   /// Chosen options, each as a name per language.
   final List<Map<String, String>> modifiers;
@@ -447,6 +462,7 @@ class OrderItem {
       quantity: double.parse('${json['quantity']}'),
       unitType: json['unit_type'] ?? 'item',
       modifiers: [for (final m in json['modifiers'] ?? []) names(m['name'])],
+      freeUnits: json['free_units'] ?? 0,
     );
   }
 }

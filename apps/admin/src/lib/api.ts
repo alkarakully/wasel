@@ -120,6 +120,8 @@ export interface OrderDetail extends Omit<OrderRow, 'alerts'> {
   service_fee: Money
   tip: Money
   discount: Money
+  /** The part of `discount` the store pays; the rest is Wasel's. */
+  store_discount?: Money
   commission: Money
   estimated_ready_at: string | null
   time_zone: string
@@ -272,7 +274,7 @@ export interface Offer {
   country: string
   currency: string
   title: string
-  type: 'percent' | 'fixed' | 'free_delivery' | 'bundle'
+  type: 'percent' | 'fixed' | 'free_delivery' | 'bogo'
   value: string
   min_order: Money
   starts_at: string

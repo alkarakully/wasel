@@ -198,7 +198,7 @@ class Offer(models.Model):
         PERCENT = "percent", "Percent off"
         FIXED = "fixed", "Fixed amount off"
         FREE_DELIVERY = "free_delivery", "Free delivery"
-        BUNDLE = "bundle", "Bundle deal"
+        BOGO = "bogo", "Buy one, get one free"
 
     # Null vendor means a platform-wide offer, for every store in `country`.
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, null=True, blank=True, related_name="offers")
@@ -206,6 +206,10 @@ class Offer(models.Model):
     country = models.CharField(max_length=2, choices=REGION_CHOICES, default="IQ")
     title = models.CharField(max_length=150)
     type = models.CharField(max_length=15, choices=Type.choices)
+    # Buy one, get one free: the menu item it's on (sold per item, from the offer's store).
+    product = models.ForeignKey(
+        "Product", on_delete=models.SET_NULL, null=True, blank=True, related_name="offers"
+    )
     value = models.DecimalField(max_digits=15, decimal_places=3, default=0)
     min_order = money_field(default=0)
     starts_at = models.DateTimeField()

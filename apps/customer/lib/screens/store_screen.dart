@@ -21,6 +21,12 @@ class _StoreScreenState extends State<StoreScreen> {
     widget.storeId,
   );
 
+  /// Items on a running buy-one-get-one-free offer.
+  Set<int> _bogoItems(VendorDetail store) => {
+    for (final offer in store.offers)
+      if (offer.type == 'bogo' && offer.product != null) offer.product!.id,
+  };
+
   Future<void> _open(VendorDetail store, Product product) async {
     final line = await showModalBottomSheet<CartLine>(
       context: context,
@@ -29,6 +35,7 @@ class _StoreScreenState extends State<StoreScreen> {
       builder: (_) => ProductSheet(
         product: product,
         currency: store.currency,
+        bogo: _bogoItems(store).contains(product.id),
         imageUrl: context.read<ApiClient>().mediaUrl(product.image),
       ),
     );
@@ -93,6 +100,7 @@ class _StoreScreenState extends State<StoreScreen> {
           }
 
           final api = context.read<ApiClient>();
+          final bogo = _bogoItems(store);
           final sections = <String, List<Product>>{};
           for (final product in store.products) {
             sections.putIfAbsent(product.menuSection, () => []).add(product);
@@ -158,6 +166,7 @@ class _StoreScreenState extends State<StoreScreen> {
                             child: _ProductRow(
                               product: product,
                               imageUrl: api.mediaUrl(product.image),
+                              bogo: bogo.contains(product.id),
                               currency: store.currency,
                               enabled: store.isOpen && product.isAvailable,
                               onTap: () => _open(store, product),
@@ -434,7 +443,11 @@ class _StoreOffers extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            offerHeadline(s, offer),
+                            offer.type == 'bogo' && offer.product != null
+                                ? s.t('offerBogoOn', {
+                                    'item': offer.product!.name(s.lang),
+                                  })
+                                : offerHeadline(s, offer),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -529,12 +542,16 @@ class _ProductRow extends StatelessWidget {
     required this.imageUrl,
     required this.currency,
     required this.enabled,
+    this.bogo = false,
     required this.onTap,
   });
   final Product product;
   final String? imageUrl;
   final String currency;
   final bool enabled;
+
+  /// On a buy-one-get-one-free offer.
+  final bool bogo;
   final VoidCallback onTap;
 
   @override
@@ -553,13 +570,23 @@ class _ProductRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    product.name(s.lang),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: enabled ? t.ink : t.muted,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          product.name(s.lang),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: enabled ? t.ink : t.muted,
+                          ),
+                        ),
+                      ),
+                      if (bogo) ...[
+                        const SizedBox(width: 8),
+                        OfferBadge(text: s.t('bogoBadge')),
+                      ],
+                    ],
                   ),
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 2),

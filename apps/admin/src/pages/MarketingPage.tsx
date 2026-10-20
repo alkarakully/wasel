@@ -235,7 +235,7 @@ function OfferDrawer({ offer, onClose, onSaved }: { offer: Offer | null; onClose
             label={t('type')}
             value={form.type}
             onChange={set('type')}
-            options={(['percent', 'fixed', 'free_delivery', 'bundle'] as const).map((v) => ({
+            options={(['percent', 'fixed', 'free_delivery'] as const).map((v) => ({
               value: v,
               label: t(`offer_${v}` as StringKey),
             }))}

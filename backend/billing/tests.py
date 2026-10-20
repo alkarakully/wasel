@@ -46,6 +46,8 @@ class StoreTestCase(TestCase):
             delivery_location=BAGHDAD,
             subtotal=subtotal,
             discount=discount,
+            # As checkout records it: the store pays for its own offers.
+            store_discount=discount if offer is not None and offer.vendor_id else 0,
             offer=offer,
             commission_amount=commission,
             total_amount=subtotal - discount + 2000,

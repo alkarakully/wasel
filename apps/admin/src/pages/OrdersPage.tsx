@@ -411,7 +411,15 @@ function OrderDrawer({
               )}
               {Number(data.discount) > 0 && (
                 <div>
-                  <dt>{t('discount')}</dt>
+                  <dt>
+                    {t('discount')}
+                    {Number(data.store_discount) > 0 && (
+                      <span className="sub">
+                        {' '}
+                        · {t('store_pays', { amount: money(data.store_discount!, data.currency) })}
+                      </span>
+                    )}
+                  </dt>
                   <dd>−{money(data.discount, data.currency)}</dd>
                 </div>
               )}

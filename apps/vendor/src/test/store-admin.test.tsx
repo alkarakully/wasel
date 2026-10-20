@@ -108,6 +108,7 @@ describe('Offers', () => {
       starts_at: '2026-10-01T09:00:00Z',
       ends_at: '2026-12-01T09:00:00Z',
       is_banner: false,
+      product: null,
       state: 'running',
       orders: 3,
     }
@@ -118,7 +119,7 @@ describe('Offers', () => {
       endOffer: vi.fn(async () => null),
     })
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    inEnglish(<OffersView api={api} storeId={1} currency="IQD" onError={vi.fn()} />)
+    inEnglish(<OffersView api={api} storeId={1} currency="IQD" products={store.products} onError={vi.fn()} />)
 
     const rows = await screen.findAllByRole('listitem')
     expect(rows.map((row) => row.querySelector('.product-name')?.textContent)).toEqual(['Friday deal', 'Summer'])
@@ -144,7 +145,7 @@ describe('Offers', () => {
 
   it('free delivery needs no value', async () => {
     const api = fakeApi({ offers: vi.fn(async () => []), addOffer: vi.fn(async () => ({})) })
-    inEnglish(<OffersView api={api} storeId={1} currency="IQD" onError={vi.fn()} />)
+    inEnglish(<OffersView api={api} storeId={1} currency="IQD" products={store.products} onError={vi.fn()} />)
     expect(await screen.findByText(/No offers yet/)).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'New offer' }))
     await userEvent.type(screen.getByLabelText('Offer name'), 'Free ride')
@@ -295,5 +296,35 @@ describe('Billing', () => {
     const dialog = await screen.findByRole('dialog')
     expect(await within(dialog).findByText('#7')).toBeInTheDocument()
     expect(within(dialog).getByText('7,650 IQD')).toBeInTheDocument()
+  })
+
+  it('buy one get one free is on a menu item and needs no amount', async () => {
+    const bogo = {
+      id: 8,
+      title: 'Kebab 1+1',
+      type: 'bogo',
+      value: '0',
+      min_order: '0',
+      currency: 'IQD',
+      starts_at: '2026-10-01T09:00:00Z',
+      ends_at: '2026-12-01T09:00:00Z',
+      is_banner: false,
+      product: 10,
+      state: 'running',
+      orders: 0,
+    }
+    const api = fakeApi({ offers: vi.fn(async () => [bogo]), addOffer: vi.fn(async () => ({})) })
+    inEnglish(<OffersView api={api} storeId={1} currency="IQD" products={store.products} onError={vi.fn()} />)
+    expect(await screen.findByText('Buy 1, get 1 free: Kebab')).toBeTruthy()
+
+    await userEvent.click(screen.getByRole('button', { name: 'New offer' }))
+    await userEvent.type(screen.getByLabelText('Offer name'), 'Laban 1+1')
+    await userEvent.click(screen.getByRole('button', { name: 'Buy 1, get 1 free' }))
+    expect(screen.queryByLabelText(/Percent off/)).toBeNull()
+    const save = screen.getByRole('button', { name: 'Save' }) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+    await userEvent.selectOptions(screen.getByLabelText(/^Item/), '11')
+    await userEvent.click(save)
+    expect(api.addOffer).toHaveBeenCalledWith(1, expect.objectContaining({ type: 'bogo', product: 11, value: '0' }))
   })
 })

@@ -48,6 +48,7 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
             delivery_fee=quote.delivery_fee,
             service_fee=quote.service_fee,
             discount=quote.discount,
+            store_discount=quote.store_discount,
             tip=quote.tip,
             commission_amount=quote.commission_amount,
             total_amount=quote.total_amount,
@@ -61,6 +62,8 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
                 quantity=line.quantity,
                 unit_price=line.unit_price,
                 line_total=line.line_total,
+                deal=line.deal,
+                discount=line.discount,
             )
             OrderItemModifier.objects.bulk_create(
                 OrderItemModifier(order_item=order_item, modifier=modifier, price_delta=modifier.price_delta)

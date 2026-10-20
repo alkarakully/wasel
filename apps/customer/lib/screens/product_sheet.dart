@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wasel_core/wasel_core.dart';
 
 import '../state/cart.dart';
+import '../widgets/store_card.dart';
 
 /// Choose options and quantity, then add to the cart.
 /// Required groups are pick-one; optional groups allow several.
@@ -11,11 +12,15 @@ class ProductSheet extends StatefulWidget {
     required this.product,
     this.currency = 'IQD',
     this.imageUrl,
+    this.bogo = false,
   });
   final Product product;
 
   /// The product photo's full address, if it has one.
   final String? imageUrl;
+
+  /// On a buy-one-get-one-free offer.
+  final bool bogo;
 
   /// The store's currency.
   final String currency;
@@ -98,6 +103,21 @@ class _ProductSheetState extends State<ProductSheet> {
               ),
               style: TextStyle(color: t.muted, fontSize: 16),
             ),
+            if (widget.bogo) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  OfferBadge(text: s.t('bogoBadge')),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      s.t('bogoNote'),
+                      style: TextStyle(color: t.goldText, fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             if (product.description(s.lang).isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
