@@ -4,6 +4,7 @@ import 'package:wasel_core/wasel_core.dart';
 
 import '../state/cart.dart';
 import '../widgets/cart_bar.dart';
+import '../widgets/store_card.dart';
 import 'product_sheet.dart';
 
 /// A store's menu, grouped by section.
@@ -389,16 +390,6 @@ class _StoreOffers extends StatelessWidget {
   const _StoreOffers({required this.store});
   final VendorDetail store;
 
-  String _deal(S s, Offer offer) => switch (offer.type) {
-    'percent' => s.t('offerPercent', {
-      'value': offer.value.toStringAsFixed(offer.value % 1 == 0 ? 0 : 1),
-    }),
-    'fixed' => s.t('offerFixed', {
-      'value': s.money(offer.value, offer.currency),
-    }),
-    _ => s.t('offerFree'),
-  };
-
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
@@ -434,7 +425,7 @@ class _StoreOffers extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Gold.c400.withValues(alpha: 0.22),
                       ),
-                      child: Icon(Ph.sparkle, size: 22, color: Gold.c700),
+                      child: Icon(Ph.sealPercent, size: 22, color: Gold.c700),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -443,7 +434,7 @@ class _StoreOffers extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _deal(s, offer),
+                            offerHeadline(s, offer),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(

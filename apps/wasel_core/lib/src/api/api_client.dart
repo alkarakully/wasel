@@ -137,11 +137,26 @@ class ApiClient {
 
   // --- Stores ----------------------------------------------------------------
 
-  Future<List<Vendor>> vendors({required GeoPoint at, String? cuisine}) async {
+  /// Stores that deliver to [at]. [type] and [cuisine] filter, [offersOnly]
+  /// keeps stores running an offer, and [search] matches names and menus.
+  Future<List<Vendor>> vendors({
+    required GeoPoint at,
+    String? type,
+    String? cuisine,
+    bool offersOnly = false,
+    String? search,
+  }) async {
     final data = await _send(
       'GET',
       '/api/vendors/',
-      query: {'lat': '${at.lat}', 'lng': '${at.lng}', 'cuisine': ?cuisine},
+      query: {
+        'lat': '${at.lat}',
+        'lng': '${at.lng}',
+        'type': ?type,
+        'cuisine': ?cuisine,
+        if (offersOnly) 'offers': '1',
+        if (search != null && search.isNotEmpty) 'q': search,
+      },
     );
     return [for (final v in data['results']) Vendor.fromJson(v)];
   }

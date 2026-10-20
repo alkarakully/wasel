@@ -65,12 +65,20 @@ class Vendor {
     this.deliveryFee,
     this.country = 'IQ',
     this.currency = 'IQD',
+    this.offer,
+    this.matches = const [],
   });
   final int id;
   final String name;
   final String type;
   final String cuisine;
   final bool isOpen;
+
+  /// The store's headline offer running now (store lists only).
+  final Offer? offer;
+
+  /// In a search, dishes on the menu that matched.
+  final List<DishMatch> matches;
 
   /// Where the store trades; its prices and fees are in [currency].
   final String country;
@@ -90,6 +98,31 @@ class Vendor {
         : _money(json['delivery_fee']),
     country: json['country'] ?? 'IQ',
     currency: json['currency'] ?? 'IQD',
+    offer: json['offer'] == null ? null : Offer.fromJson(json['offer']),
+    matches: [for (final m in json['matches'] ?? []) DishMatch.fromJson(m)],
+  );
+}
+
+/// A dish that matched a search, shown under its store.
+class DishMatch {
+  DishMatch({
+    required this.id,
+    required this.nameAr,
+    this.nameKu = '',
+    this.nameEn = '',
+  });
+  final int id;
+  final String nameAr;
+  final String nameKu;
+  final String nameEn;
+
+  String name(String lang) => localizedName(lang, nameAr, nameKu, nameEn);
+
+  factory DishMatch.fromJson(Map<String, dynamic> json) => DishMatch(
+    id: json['id'],
+    nameAr: json['name_ar'],
+    nameKu: json['name_ku'] ?? '',
+    nameEn: json['name_en'] ?? '',
   );
 }
 

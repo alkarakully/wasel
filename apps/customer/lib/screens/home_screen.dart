@@ -6,7 +6,9 @@ import 'package:wasel_core/wasel_core.dart';
 
 import '../state/session.dart';
 import '../widgets/cart_bar.dart';
+import '../widgets/store_card.dart';
 import 'orders_screen.dart';
+import 'search_screen.dart';
 import 'store_screen.dart';
 
 const cuisines = [
@@ -18,7 +20,8 @@ const cuisines = [
   'drinks',
 ];
 
-/// Stores that deliver to the customer's spot, open ones first.
+/// Stores that deliver to the customer's spot, open ones first: search,
+/// kinds of store, cuisines for restaurants, and offers nearby.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -26,23 +29,43 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
+typedef _HomeData = ({
+  List<Vendor> stores,
+  List<Offer> banners,
+  List<Vendor> withOffers,
+});
+
 class _HomeScreenState extends State<HomeScreen> {
+  String? _type;
   String? _cuisine;
-  Future<(List<Vendor>, List<Offer>)>? _load;
+  Future<_HomeData>? _load;
   GeoPoint? _loadedFor;
 
   void _reload() {
     final session = context.read<Session>();
     final api = context.read<ApiClient>();
-    _loadedFor = session.deliveryPoint;
+    final at = session.deliveryPoint;
+    _loadedFor = at;
     _load = (() async {
       final results = await Future.wait([
-        api.vendors(at: session.deliveryPoint, cuisine: _cuisine),
+        api.vendors(at: at, type: _type, cuisine: _cuisine),
         api.bannerOffers(),
+        api.vendors(at: at, type: _type, offersOnly: true),
       ]);
-      return (results[0] as List<Vendor>, results[1] as List<Offer>);
+      return (
+        stores: results[0] as List<Vendor>,
+        banners: results[1] as List<Offer>,
+        withOffers: results[2] as List<Vendor>,
+      );
     })();
   }
+
+  void _pickType(String? type) => setState(() {
+    _type = type;
+    // Cuisines only narrow restaurants.
+    if (type != null && type != 'restaurant') _cuisine = null;
+    _reload();
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final session = context.watch<Session>();
     // Reload when the phone's location arrives after the first load.
     if (_load == null || _loadedFor != session.deliveryPoint) _reload();
+    final showCuisines = _type == null || _type == 'restaurant';
 
     return Scaffold(
       backgroundColor: t.canvas,
@@ -70,38 +94,66 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding: const EdgeInsets.only(bottom: 28),
                 children: [
                   _Header(session: session),
+                  const _SearchBar(),
+                  _IconRail(
+                    key: const Key('type-rail'),
+                    items: [
+                      (null, s.t('all'), Ph.storefront),
+                      for (final type in storeTypes)
+                        (type, s.t('type_$type'), CuisineArt.iconForType(type)),
+                    ],
+                    selected: _type,
+                    onSelected: _pickType,
+                  ),
                   if (snapshot.hasError)
-                    _Message(
+                    ListMessage(
                       text: s.t('err_network'),
                       onRetry: () => setState(_reload),
                     )
                   else ...[
-                    _OfferBanners(offers: data?.$2 ?? const []),
-                    _SectionTitle(s.t('craving')),
-                    _CuisineRail(
-                      selected: _cuisine,
-                      onSelected: (value) => setState(() {
-                        _cuisine = value;
-                        _reload();
-                      }),
+                    _OfferBanners(offers: data?.banners ?? const []),
+                    if (showCuisines) ...[
+                      _SectionTitle(s.t('craving')),
+                      _IconRail(
+                        key: const Key('cuisine-rail'),
+                        items: [
+                          (null, s.t('all'), Ph.forkKnife),
+                          for (final cuisine in cuisines)
+                            (
+                              cuisine,
+                              s.t(cuisine),
+                              CuisineArt.iconFor(cuisine),
+                            ),
+                        ],
+                        selected: _cuisine,
+                        onSelected: (value) => setState(() {
+                          _cuisine = value;
+                          _reload();
+                        }),
+                      ),
+                    ],
+                    if (data != null && data.withOffers.isNotEmpty) ...[
+                      _SectionTitle(s.t('offersNear')),
+                      _OfferRow(stores: data.withOffers),
+                    ],
+                    _SectionTitle(
+                      _type == null ? s.t('nearbyStores') : s.t('type_$_type'),
                     ),
-                    _SectionTitle(s.t('nearbyStores')),
                     if (data == null)
-                      Shimmer(
-                        child: Column(
-                          children: [
-                            for (var i = 0; i < 4; i++) const _StoreSkeleton(),
-                          ],
-                        ),
+                      const StoreSkeletons()
+                    else if (data.stores.isEmpty)
+                      ListMessage(
+                        text: s.t('noStores'),
+                        icon: _type == null
+                            ? Ph.storefront
+                            : CuisineArt.iconForType(_type!),
                       )
-                    else if (data.$1.isEmpty)
-                      _Message(text: s.t('noStores'))
                     else
-                      for (final (i, store) in data.$1.indexed)
+                      for (final (i, store) in data.stores.indexed)
                         Reveal(
-                          key: ValueKey('store-${store.id}-$_cuisine'),
+                          key: ValueKey('store-${store.id}-$_type-$_cuisine'),
                           index: i,
-                          child: _StoreCard(store: store),
+                          child: StoreCard(store: store),
                         ),
                   ],
                 ],
@@ -109,6 +161,132 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Looks like a search field; opens the search screen.
+class _SearchBar extends StatelessWidget {
+  const _SearchBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final t = WaselTheme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
+      child: Semantics(
+        button: true,
+        label: s.t('searchHint'),
+        child: Pressable(
+          scale: 0.99,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SearchScreen()),
+          ),
+          child: Container(
+            key: const Key('search-bar'),
+            height: 52,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: ShapeDecoration(
+              color: t.surface,
+              shape: StadiumBorder(side: BorderSide(color: t.hairline)),
+              shadows: t.raised,
+            ),
+            child: Row(
+              children: [
+                Icon(Ph.magnifyingGlass, size: 22, color: t.muted),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    s.t('searchHint'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 15, color: t.muted),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Stores running an offer, as a sideways row of compact cards.
+class _OfferRow extends StatelessWidget {
+  const _OfferRow({required this.stores});
+  final List<Vendor> stores;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = S.of(context);
+    final t = WaselTheme.of(context);
+    return SizedBox(
+      height: 96,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: stores.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, i) {
+          final store = stores[i];
+          return Reveal(
+            index: i,
+            child: Pressable(
+              scale: 0.98,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => StoreScreen(storeId: store.id),
+                ),
+              ),
+              child: Container(
+                width: 250,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: t.surface,
+                  borderRadius: BorderRadius.circular(Radii.lg),
+                  border: Border.all(color: Gold.c400.withValues(alpha: 0.5)),
+                  boxShadow: t.raised,
+                ),
+                child: Row(
+                  children: [
+                    CuisineArt(
+                      cuisine: store.cuisine,
+                      type: store.type,
+                      size: 74,
+                      radius: Radii.md,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            store.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (store.offer != null)
+                            OfferBadge(text: offerHeadline(s, store.offer!)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -463,15 +641,21 @@ class _Banner extends StatelessWidget {
   }
 }
 
-/// Cuisine picker: an icon tile per cuisine, the chosen one glazed.
-class _CuisineRail extends StatelessWidget {
-  const _CuisineRail({required this.selected, required this.onSelected});
+/// A sideways picker of icon tiles (kinds of store, cuisines); the chosen
+/// one is glazed. A null key means "all".
+class _IconRail extends StatelessWidget {
+  const _IconRail({
+    super.key,
+    required this.items,
+    required this.selected,
+    required this.onSelected,
+  });
+  final List<(String?, String, IconData)> items;
   final String? selected;
   final ValueChanged<String?> onSelected;
 
   @override
   Widget build(BuildContext context) {
-    final s = S.of(context);
     final t = WaselTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
@@ -480,14 +664,14 @@ class _CuisineRail extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 14),
         children: [
-          for (final cuisine in [null, ...cuisines])
+          for (final (key, label, icon) in items)
             Semantics(
               button: true,
-              selected: selected == cuisine,
+              selected: selected == key,
               child: Pressable(
-                onTap: () => onSelected(cuisine),
+                onTap: () => onSelected(key),
                 child: SizedBox(
-                  width: 78,
+                  width: 84,
                   child: Column(
                     children: [
                       AnimatedContainer(
@@ -497,40 +681,34 @@ class _CuisineRail extends StatelessWidget {
                         height: 60,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(Radii.md + 4),
-                          gradient: selected == cuisine
+                          gradient: selected == key
                               ? GlazePanel.gradient
                               : null,
-                          color: selected == cuisine ? null : t.surface,
+                          color: selected == key ? null : t.surface,
                           border: Border.all(
-                            color: selected == cuisine
+                            color: selected == key
                                 ? Colors.transparent
                                 : t.hairline,
                           ),
-                          boxShadow: selected == cuisine
-                              ? t.floating
-                              : t.raised,
+                          boxShadow: selected == key ? t.floating : t.raised,
                         ),
                         child: Icon(
-                          cuisine == null
-                              ? Ph.forkKnife
-                              : CuisineArt.iconFor(cuisine),
+                          icon,
                           size: 28,
-                          color: selected == cuisine
-                              ? Gold.c400
-                              : scheme.primary,
+                          color: selected == key ? Gold.c400 : scheme.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        s.t(cuisine ?? 'all'),
+                        label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 13,
-                          fontWeight: selected == cuisine
+                          fontWeight: selected == key
                               ? FontWeight.w700
                               : FontWeight.w500,
-                          color: selected == cuisine ? t.ink : t.muted,
+                          color: selected == key ? t.ink : t.muted,
                         ),
                       ),
                     ],
@@ -538,236 +716,6 @@ class _CuisineRail extends StatelessWidget {
                 ),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StoreCard extends StatelessWidget {
-  const _StoreCard({required this.store});
-  final Vendor store;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = S.of(context);
-    final t = WaselTheme.of(context);
-    final meta = TextStyle(color: t.muted, fontSize: 13);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-      child: Opacity(
-        opacity: store.isOpen ? 1 : 0.55,
-        child: Pressable(
-          scale: 0.98,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => StoreScreen(storeId: store.id)),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: t.surface,
-              borderRadius: BorderRadius.circular(Radii.lg),
-              border: Border.all(color: t.hairline),
-              boxShadow: t.raised,
-            ),
-            child: Row(
-              children: [
-                CuisineArt(
-                  cuisine: store.cuisine,
-                  type: store.type,
-                  size: 76,
-                  radius: Radii.md,
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              store.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _OpenBadge(open: store.isOpen),
-                        ],
-                      ),
-                      if (store.cuisine.isNotEmpty)
-                        Text(s.t(store.cuisine), style: meta),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 14,
-                        runSpacing: 4,
-                        children: [
-                          if (store.deliveryFee != null)
-                            _Meta(
-                              icon: Ph.moped,
-                              text: s.t('deliveryFee', {
-                                'fee': s.money(
-                                  store.deliveryFee!,
-                                  store.currency,
-                                ),
-                              }),
-                            ),
-                          if (store.distanceKm != null)
-                            _Meta(
-                              icon: Ph.navigationArrow,
-                              text: s.t('km', {
-                                'km': store.distanceKm!.toStringAsFixed(1),
-                              }),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Meta extends StatelessWidget {
-  const _Meta({required this.icon, required this.text});
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 16, color: t.muted),
-        const SizedBox(width: 4),
-        Text(text, style: TextStyle(fontSize: 13, color: t.ink)),
-      ],
-    );
-  }
-}
-
-class _OpenBadge extends StatelessWidget {
-  const _OpenBadge({required this.open});
-  final bool open;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
-    final color = open ? t.success : t.muted;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 7,
-          height: 7,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: 5),
-        Text(
-          S.of(context).t(open ? 'open' : 'closed'),
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _StoreSkeleton extends StatelessWidget {
-  const _StoreSkeleton();
-
-  @override
-  Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
-    Widget bone(double w, double h, [double r = 6]) => Container(
-      width: w,
-      height: h,
-      decoration: BoxDecoration(
-        color: t.sunk,
-        borderRadius: BorderRadius.circular(r),
-      ),
-    );
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 5, 16, 5),
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: t.surface,
-          borderRadius: BorderRadius.circular(Radii.lg),
-          border: Border.all(color: t.hairline),
-        ),
-        child: Row(
-          children: [
-            bone(76, 76, Radii.md),
-            const SizedBox(width: 14),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                bone(140, 14),
-                const SizedBox(height: 10),
-                bone(80, 12),
-                const SizedBox(height: 12),
-                bone(170, 12),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Message extends StatelessWidget {
-  const _Message({required this.text, this.onRetry});
-  final String text;
-  final VoidCallback? onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
-      child: Column(
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(color: t.sunk, shape: BoxShape.circle),
-            child: Icon(
-              onRetry == null ? Ph.storefront : Ph.warningCircle,
-              size: 30,
-              color: t.muted,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 15, color: t.muted, height: 1.5),
-          ),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: Text(S.of(context).t('retry')),
-            ),
-          ],
         ],
       ),
     );

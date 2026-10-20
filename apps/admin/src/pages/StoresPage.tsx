@@ -28,6 +28,7 @@ import type { StringKey } from '../lib/strings'
 import { useAction, useLoad } from '../lib/useLoad'
 
 const CUISINES = ['popular', 'eastern', 'western', 'fast_food', 'sweets', 'drinks']
+const STORE_TYPES = ['restaurant', 'supermarket', 'cafe', 'pharmacy', 'convenience', 'flowers']
 
 export function StoresPage({ id, canWrite }: { id: string; canWrite: boolean }) {
   const { t, money, num, pct } = useI18n()
@@ -222,7 +223,7 @@ function NewStoreDrawer({ onClose, onCreated }: { onClose: () => void; onCreated
             label={t('type')}
             value={form.type}
             onChange={set('type')}
-            options={['restaurant', 'supermarket'].map((v) => ({ value: v, label: t(`type_${v}` as StringKey) }))}
+            options={STORE_TYPES.map((v) => ({ value: v, label: t(`type_${v}` as StringKey) }))}
           />
           <SelectField
             label={t('cuisine')}
@@ -474,7 +475,7 @@ function StoreDetails({
             label={t('type')}
             value={form.type}
             onChange={set('type')}
-            options={['restaurant', 'supermarket'].map((v) => ({ value: v, label: t(`type_${v}` as StringKey) }))}
+            options={STORE_TYPES.map((v) => ({ value: v, label: t(`type_${v}` as StringKey) }))}
           />
           <SelectField
             label={t('cuisine')}

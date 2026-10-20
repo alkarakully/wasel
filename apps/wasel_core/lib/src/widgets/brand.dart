@@ -432,14 +432,23 @@ class CuisineArt extends StatelessWidget {
     'drinks': (Ph.coffee, [Color(0xFF1A2A7C), Color(0xFF0B123A)]),
     'popular': (Ph.fire, [Color(0xFF2F48B0), Color(0xFF0B123A)]),
     'supermarket': (Ph.basket, [Color(0xFF4560C7), Color(0xFF131F5C)]),
+    'cafe': (Ph.coffee, [Color(0xFF6A80DA), Color(0xFF1A2A7C)]),
+    'pharmacy': (Ph.pill, [Color(0xFF2F48B0), Color(0xFF0B123A)]),
+    'convenience': (Ph.shoppingCart, [Color(0xFF4560C7), Color(0xFF1A2A7C)]),
+    'flowers': (Ph.flower, [Color(0xFF6A80DA), Color(0xFF131F5C)]),
   };
 
   static IconData iconFor(String cuisine) =>
       (_art[cuisine] ?? _art['eastern']!).$1;
 
+  /// A store type's icon ("restaurant", "pharmacy", ...).
+  static IconData iconForType(String type) =>
+      type == 'restaurant' ? Ph.forkKnife : (_art[type]?.$1 ?? Ph.storefront);
+
   @override
   Widget build(BuildContext context) {
-    final key = type == 'supermarket' ? 'supermarket' : cuisine;
+    // Restaurants show their cuisine; every other kind of store shows its kind.
+    final key = type == 'restaurant' ? cuisine : type;
     final (icon, colors) =
         _art[key] ?? (Ph.forkKnife, const [Lapis.c600, Lapis.c900]);
     return ClipRRect(

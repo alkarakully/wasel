@@ -1,4 +1,4 @@
-import { Basket, ForkKnife, PaperPlaneTilt } from '@phosphor-icons/react'
+import { PaperPlaneTilt } from '@phosphor-icons/react'
 import { lazy, Suspense, useState, type FormEvent } from 'react'
 
 import {
@@ -10,6 +10,7 @@ import {
   type StoreType,
 } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { STORE_TYPES } from '../lib/storeTypes'
 import type { LatLng } from './LocationPicker'
 
 // The map library is big; load it only when the form opens.
@@ -92,12 +93,7 @@ export function StoreForm({ mode, from, askName = mode === 'first', onSubmit, on
 
       <fieldset className="kind">
         <legend>{t('storeType')}</legend>
-        {(
-          [
-            ['restaurant', ForkKnife],
-            ['supermarket', Basket],
-          ] as const
-        ).map(([option, Icon]) => (
+        {STORE_TYPES.map(([option, Icon]) => (
           <label key={option} className="kind-option">
             <input type="radio" name="type" checked={type === option} onChange={() => setType(option)} />
             <Icon size={28} weight="light" aria-hidden="true" />

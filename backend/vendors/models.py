@@ -14,6 +14,10 @@ class Vendor(models.Model):
     class Type(models.TextChoices):
         RESTAURANT = "restaurant", "Restaurant"
         SUPERMARKET = "supermarket", "Supermarket"
+        CAFE = "cafe", "Cafés & sweets"
+        PHARMACY = "pharmacy", "Pharmacy"
+        CONVENIENCE = "convenience", "Convenience & household"
+        FLOWERS = "flowers", "Flowers & gifts"
 
     class Cuisine(models.TextChoices):
         POPULAR = "popular", "Popular"

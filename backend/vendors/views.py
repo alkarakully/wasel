@@ -10,17 +10,20 @@ from rest_framework.views import APIView
 
 from . import access
 from .models import Offer, Product, Vendor
+from .search import search
 from .serializers import OfferSerializer, VendorDetailSerializer, VendorSerializer
 
 
 class VendorViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    Restaurants and supermarkets.
+    Restaurants, supermarkets, cafés, pharmacies, convenience and flower shops.
 
     `?lat=..&lng=..` limits the list to vendors that deliver to that spot,
-    nearest first. `?type=` and `?cuisine=` filter further. Open vendors
-    always come before closed ones. Stores waiting for approval (or
-    rejected) are never listed.
+    nearest first. `?type=` and `?cuisine=` filter further, `?offers=1` keeps
+    stores running an offer, and `?q=` searches store names and menus (each
+    result then lists the dishes that matched). Open vendors always come
+    before closed ones, and in a search, stores named like the query before
+    the rest. Stores waiting for approval (or rejected) are never listed.
     """
 
     def get_serializer_class(self):
@@ -34,6 +37,14 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(type=vendor_type)
         if cuisine := params.get("cuisine"):
             queryset = queryset.filter(cuisine=cuisine)
+        now = timezone.now()
+        running = Offer.objects.filter(starts_at__lte=now, ends_at__gte=now)
+        if params.get("offers") == "1":
+            queryset = queryset.filter(offers__in=running).distinct()
+        query = params.get("q", "").strip()[:100]
+        if query:
+            queryset = search(queryset, query)
+        first = ["-is_open", "-name_match"] if query else ["-is_open"]
 
         lat, lng = params.get("lat"), params.get("lng")
         if lat and lng:
@@ -44,10 +55,17 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = (
                 queryset.annotate(distance=Distance("location", point))
                 .filter(distance__lte=F("delivery_radius_km") * 1000)
-                .order_by("-is_open", "distance")
+                .order_by(*first, "distance")
             )
         else:
-            queryset = queryset.order_by("-is_open", "name")
+            queryset = queryset.order_by(*first, "name")
+
+        if self.action == "list":
+            queryset = queryset.prefetch_related(Prefetch("offers", queryset=running, to_attr="running_offers"))
+            if query:
+                queryset = queryset.prefetch_related(
+                    Prefetch("products", queryset=Product.objects.filter(is_archived=False), to_attr="menu")
+                )
 
         if self.action == "retrieve":
             queryset = queryset.prefetch_related(

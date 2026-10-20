@@ -153,7 +153,7 @@ export interface Invite {
   created_at: string
 }
 
-export type StoreType = 'restaurant' | 'supermarket'
+export type StoreType = 'restaurant' | 'supermarket' | 'cafe' | 'pharmacy' | 'convenience' | 'flowers'
 export const CUISINES = ['popular', 'eastern', 'western', 'fast_food', 'sweets', 'drinks'] as const
 export type Cuisine = (typeof CUISINES)[number]
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected'
@@ -396,7 +396,8 @@ export class Api {
   updateOffer = (storeId: number, offerId: number, offer: Partial<OfferInput>) =>
     this.send<StoreOffer>('PATCH', `/api/vendors/${storeId}/offers/${offerId}/`, offer)
   /** Deletes an offer nobody used; one already on orders ends now instead. */
-  endOffer = (storeId: number, offerId: number) => this.send<null>('DELETE', `/api/vendors/${storeId}/offers/${offerId}/`)
+  endOffer = (storeId: number, offerId: number) =>
+    this.send<null>('DELETE', `/api/vendors/${storeId}/offers/${offerId}/`)
   setHours = (storeId: number, hours: OpeningHours) =>
     this.send<{ id: number; opening_hours: OpeningHours }>('PUT', `/api/vendors/${storeId}/hours/`, hours)
 

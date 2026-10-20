@@ -313,4 +313,34 @@ class Ph {
     fontPackage: _package,
     matchTextDirection: false,
   );
+  static const pill = IconData(
+    0xe700,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const flower = IconData(
+    0xe75e,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const shoppingCart = IconData(
+    0xe41e,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const sealPercent = IconData(
+    0xe60a,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const gift = IconData(
+    0xe276,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
 }

@@ -1,8 +1,9 @@
-import { Basket, Check, ForkKnife, X } from '@phosphor-icons/react'
+import { Check, X } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { Api, ApiError, type Invite } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { storeTypeIcon } from '../lib/storeTypes'
 
 interface Props {
   api: Api
@@ -33,7 +34,7 @@ export function InviteList({ api, invites, onAnswered }: Props) {
   return (
     <ul className="invites">
       {invites.map((invite) => {
-        const Icon = invite.store.type === 'supermarket' ? Basket : ForkKnife
+        const Icon = storeTypeIcon(invite.store.type)
         return (
           <li key={invite.id} className="invite">
             <span className="invite-icon glaze" aria-hidden="true">

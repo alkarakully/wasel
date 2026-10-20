@@ -6,6 +6,7 @@ from regions.regions import as_api
 from regions.serializers import MoneyMixin
 
 from .models import Offer, Product, ProductModifier, Vendor
+from .search import matching_products
 
 
 class ProductModifierSerializer(MoneyMixin, serializers.ModelSerializer):
@@ -56,6 +57,10 @@ class VendorSerializer(serializers.ModelSerializer):
     # Only filled when the list is asked for a delivery spot (?lat=&lng=).
     distance_km = serializers.SerializerMethodField()
     delivery_fee = serializers.SerializerMethodField()
+    # The store's headline offer running now, for a badge on its card (list only).
+    offer = serializers.SerializerMethodField()
+    # In a search (?q=), up to three dishes that matched (list only).
+    matches = serializers.SerializerMethodField()
 
     class Meta:
         model = Vendor
@@ -73,6 +78,8 @@ class VendorSerializer(serializers.ModelSerializer):
             "opening_hours",
             "distance_km",
             "delivery_fee",
+            "offer",
+            "matches",
         ]
 
     def get_distance_km(self, vendor):
@@ -85,6 +92,25 @@ class VendorSerializer(serializers.ModelSerializer):
         if distance is None:
             return None
         return as_api(delivery_fee_for(distance.m, vendor.country), vendor.currency)
+
+    def get_offer(self, vendor):
+        offers = getattr(vendor, "running_offers", None)
+        if not offers:
+            return None
+        # Percent first (the biggest), then amount off, then free delivery.
+        rank = {Offer.Type.PERCENT: 0, Offer.Type.FIXED: 1, Offer.Type.FREE_DELIVERY: 2}
+        best = min(offers, key=lambda o: (rank.get(o.type, 3), -o.value))
+        return OfferSerializer(best).data
+
+    def get_matches(self, vendor):
+        menu = getattr(vendor, "menu", None)
+        query = self.context["request"].query_params.get("q", "") if "request" in self.context else ""
+        if menu is None or not query:
+            return []
+        return [
+            {"id": p.id, "name_ar": p.name_ar, "name_ku": p.name_ku, "name_en": p.name_en}
+            for p in matching_products(menu, query)
+        ]
 
     def get_latitude(self, vendor):
         return vendor.location.y
@@ -99,7 +125,8 @@ class VendorDetailSerializer(VendorSerializer):
     offers = serializers.SerializerMethodField()
 
     class Meta(VendorSerializer.Meta):
-        fields = VendorSerializer.Meta.fields + ["products", "offers"]
+        # A store page lists every offer and the menu, so the card-only fields stay out.
+        fields = [f for f in VendorSerializer.Meta.fields if f not in ("offer", "matches")] + ["products", "offers"]
 
     def get_offers(self, vendor):
         now = timezone.now()

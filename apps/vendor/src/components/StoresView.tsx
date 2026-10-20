@@ -1,8 +1,9 @@
-import { Basket, CheckCircle, ForkKnife, Plus, Storefront } from '@phosphor-icons/react'
+import { CheckCircle, Plus, Storefront } from '@phosphor-icons/react'
 import { useCallback, useEffect, useState } from 'react'
 
 import { Api, type ApplicationInput, type Applications } from '../lib/api'
 import { useI18n } from '../lib/i18n'
+import { storeTypeIcon } from '../lib/storeTypes'
 import { StatusChip } from './Onboarding'
 import { StoreForm } from './StoreForm'
 
@@ -57,7 +58,7 @@ export function StoresView({ api, onError }: Props) {
         )}
         <ul className="applications">
           {data?.applications.map((store) => {
-            const Icon = store.type === 'supermarket' ? Basket : ForkKnife
+            const Icon = storeTypeIcon(store.type)
             return (
               <li key={store.id}>
                 <Icon size={28} weight="light" aria-hidden="true" className="store-icon" />

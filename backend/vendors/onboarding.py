@@ -133,7 +133,8 @@ class ApplicationSerializer(serializers.Serializer):
         return value.strip()
 
     def validate(self, data):
-        if data["type"] == Vendor.Type.SUPERMARKET:
+        # Only restaurants have a cuisine.
+        if data["type"] != Vendor.Type.RESTAURANT:
             data["cuisine"] = ""
         # The spot must be in a country Wasel runs in, so a slip of the map doesn't put the store abroad.
         country = data.get("country") or where(data["latitude"], data["longitude"])

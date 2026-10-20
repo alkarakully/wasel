@@ -141,7 +141,7 @@ class _InviteTile extends StatelessWidget {
             child: GlazePanel(
               child: Center(
                 child: Icon(
-                  invite.storeType == 'supermarket' ? Ph.basket : Ph.forkKnife,
+                  CuisineArt.iconForType(invite.storeType),
                   color: Gold.c400,
                   size: 28,
                 ),
