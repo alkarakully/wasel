@@ -1,5 +1,10 @@
+import binascii
+import os
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils import timezone
 
 from .phone import InvalidPhone, country_of, normalize_phone, other_phone
@@ -38,7 +43,7 @@ class UserManager(BaseUserManager):
         if password:
             user.set_password(password)
         else:
-            # Customers and captains log in by WhatsApp/SMS code, not password.
+            # People sign up with a login code; they can set a password afterwards.
             user.set_unusable_password()
         user.save(using=self._db)
         return user
@@ -61,6 +66,8 @@ class User(AbstractBaseUser, PermissionsMixin):
         ENGLISH = "en", "English"
 
     phone = models.CharField(max_length=20, unique=True)
+    # A second way to sign in, once confirmed with a code sent to it. Stored lower-case.
+    email = models.EmailField(null=True, blank=True)
     name = models.CharField(max_length=150, blank=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CUSTOMER)
     # Where the account is from: its phone's country. The wallet is in this country's currency.
@@ -78,26 +85,48 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     date_joined = models.DateTimeField(default=timezone.now)
+    # Password sign-in locks for a while after too many wrong passwords.
+    failed_logins = models.PositiveSmallIntegerField(default=0)
+    locked_until = models.DateTimeField(null=True, blank=True)
 
     objects = UserManager()
 
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = ["name"]
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(Lower("email"), name="unique_email_ignoring_case"),
+        ]
+
     def __str__(self):
         return f"{self.name or self.phone} ({self.role})"
 
 
 class PhoneOTP(models.Model):
-    """A one-time login code sent to a phone number. Only a hash of the code is stored."""
+    """
+    A one-time code sent by WhatsApp to a phone number or by email to an
+    address. Only a hash of the code is stored.
+
+    A "login" code signs in (and on a phone, signs up). An "add_email" code
+    confirms an address a signed-in person wants to add to their account.
+    """
 
     class Channel(models.TextChoices):
         WHATSAPP = "whatsapp", "WhatsApp"
-        SMS = "sms", "SMS"
+        EMAIL = "email", "Email"
 
-    phone = models.CharField(max_length=20, db_index=True)
+    class Purpose(models.TextChoices):
+        LOGIN = "login", "Sign in"
+        ADD_EMAIL = "add_email", "Confirm a new email"
+
+    # The phone number (E.164) or the email address (lower-case) the code went to.
+    phone = models.CharField(max_length=254, db_index=True)
     code_hash = models.CharField(max_length=64)
     channel = models.CharField(max_length=10, choices=Channel.choices)
+    purpose = models.CharField(max_length=10, choices=Purpose.choices, default=Purpose.LOGIN)
+    # Who asked to add the email (add_email codes only).
+    user = models.ForeignKey("User", on_delete=models.CASCADE, null=True, blank=True, related_name="+")
     attempts = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
@@ -108,6 +137,25 @@ class PhoneOTP(models.Model):
 
     def __str__(self):
         return f"Code for {self.phone} via {self.channel}"
+
+
+class AuthToken(models.Model):
+    """
+    An API sign-in for one device. Each sign-in gets its own token, so
+    logging out on one phone or tablet leaves the others signed in.
+    """
+
+    key = models.CharField(max_length=40, primary_key=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="auth_tokens")
+    created = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.key:
+            self.key = binascii.hexlify(os.urandom(20)).decode()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Sign-in for {self.user} ({self.created:%Y-%m-%d})"
 
 
 class WalletTransaction(models.Model):

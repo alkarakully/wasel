@@ -6,7 +6,7 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.gis.geos import Point
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
-from rest_framework.authtoken.models import Token
+from accounts.models import AuthToken as Token
 from rest_framework.test import APIClient
 
 from accounts.models import User

@@ -1,10 +1,11 @@
-import { BellRinging, BellSlash, Printer, SignOut, Storefront } from '@phosphor-icons/react'
+import { BellRinging, BellSlash, Key, Printer, SignOut, Storefront } from '@phosphor-icons/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { OrderAlarm } from '../lib/alarm'
 import { Api, ApiError, type Invite, type Lang, type Order, type Store, type StoreRole, type User } from '../lib/api'
 import { useI18n } from '../lib/i18n'
 import { useLiveOrders } from '../lib/useLiveOrders'
+import { AccountDialog } from './AccountDialog'
 import { BillingView } from './BillingView'
 import { Board } from './Board'
 import { HoursEditor } from './HoursEditor'
@@ -20,6 +21,8 @@ import { TeamView } from './TeamView'
 interface Props {
   api: Api
   user: User
+  /** After the account changed (email added, password set). */
+  onUserChanged: (user: User) => void
   onLogout: () => void
   onUnauthorized: () => void
   setLang: (lang: Lang) => void
@@ -35,12 +38,13 @@ const TABS: Record<StoreRole, Tab[]> = {
 }
 
 /** Signed-in store team: live order board, menu, and for owners and managers reports, billing and the team. */
-export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) {
+export function Portal({ api, user, onUserChanged, onLogout, onUnauthorized, setLang }: Props) {
   const { t, error: errorMessage } = useI18n()
   const [tab, setTab] = useState<Tab>('orders')
   const [stores, setStores] = useState<Store[] | null>(null)
   const [storeId, setStoreId] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [accountOpen, setAccountOpen] = useState(false)
   const { orders, loaded, connected, reload, upsert } = useLiveOrders(api, onUnauthorized)
 
   // Printing: render the slips for one order, open the print dialog, then clear them.
@@ -191,12 +195,19 @@ export function Portal({ api, user, onLogout, onUnauthorized, setLang }: Props) 
             </button>
           )}
           <LanguageSwitch setLang={setLang} />
+          <button type="button" className="icon-button" onClick={() => setAccountOpen(true)} title={t('account')}>
+            <Key size={20} weight="light" aria-hidden="true" />
+            <span className="sr-only">{t('account')}</span>
+          </button>
           <button type="button" className="icon-button" onClick={onLogout} title={`${t('logout')} (${user.phone})`}>
             <SignOut size={20} weight="light" aria-hidden="true" />
             <span className="sr-only">{t('logout')}</span>
           </button>
         </div>
       </header>
+      {accountOpen && (
+        <AccountDialog api={api} user={user} onChanged={onUserChanged} onClose={() => setAccountOpen(false)} />
+      )}
 
       <div className="banners">
         {!soundReady && newOrders.length > 0 && (

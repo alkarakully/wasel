@@ -261,6 +261,10 @@ export interface Billing {
 export interface User {
   id: number
   phone: string
+  /** A second way to sign in, once confirmed with a code. */
+  email?: string | null
+  /** Whether password sign-in is set up. */
+  has_password?: boolean
   name: string
   role: 'customer' | 'captain' | 'vendor'
 }
@@ -335,6 +339,7 @@ export class Api {
       if (data?.error) code = data.error
       else if (data?.phone) code = 'invalid_phone'
       else if (data?.code) code = 'invalid_code'
+      else if (data?.email) code = 'invalid_email'
       else if (data?.reason) code = 'reason_required'
       throw new ApiError(code, response.status, data?.retry_after)
     }
@@ -343,14 +348,28 @@ export class Api {
 
   // Auth
   /** `country` says how to read a local number (Iraq by default); numbers with a + code say it themselves. */
-  requestCode = (phone: string, channel: 'whatsapp' | 'sms', country = 'IQ') =>
-    this.send<{ phone: string; channel: string; resend_in: number }>('POST', '/api/auth/otp/request/', {
-      phone,
-      channel,
+  /** A code by WhatsApp to a phone, or by email to an address already on an account. */
+  requestCode = (to: { phone?: string; email?: string }, country = 'IQ') =>
+    this.send<{ phone: string | null; email: string | null; channel: string; resend_in: number }>(
+      'POST',
+      '/api/auth/otp/request/',
+      { ...to, country },
+    )
+  /** Checks a code sent to `to` (a phone or an email) and signs in. */
+  verifyCode = (to: string, code: string, country = 'IQ') =>
+    this.send<{ token: string; user: User }>('POST', '/api/auth/otp/verify/', {
+      [to.includes('@') ? 'email' : 'phone']: to,
+      code,
       country,
     })
-  verifyCode = (phone: string, code: string, country = 'IQ') =>
-    this.send<{ token: string; user: User }>('POST', '/api/auth/otp/verify/', { phone, code, country })
+  /** A phone number (read in `country`) or an email, and a password. */
+  passwordLogin = (login: string, password: string, country = 'IQ') =>
+    this.send<{ token: string; user: User }>('POST', '/api/auth/password/login/', { login, password, country })
+  /** Sets or changes the password; the server signs out the other devices. */
+  setPassword = (password: string) => this.send<User>('POST', '/api/auth/password/', { password })
+  addEmail = (email: string) => this.send<{ email: string; resend_in: number }>('POST', '/api/auth/email/', { email })
+  confirmEmail = (email: string, code: string) => this.send<User>('POST', '/api/auth/email/verify/', { email, code })
+  removeEmail = () => this.send<User>('DELETE', '/api/auth/email/')
   me = () => this.send<User>('GET', '/api/auth/me/')
   logout = () => this.send<null>('POST', '/api/auth/logout/')
 

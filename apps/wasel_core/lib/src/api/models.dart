@@ -34,9 +34,17 @@ class User {
     required this.role,
     required this.languagePref,
     this.country = 'IQ',
+    this.email,
+    this.hasPassword = false,
   });
   final int id;
   final String phone;
+
+  /// A second way to sign in, once confirmed with a code.
+  final String? email;
+
+  /// Whether password sign-in is set up.
+  final bool hasPassword;
   final String name;
   final String role;
   final String languagePref;
@@ -51,6 +59,8 @@ class User {
     role: json['role'],
     languagePref: json['language_pref'] ?? 'ar',
     country: json['country'] ?? 'IQ',
+    email: json['email'],
+    hasPassword: json['has_password'] ?? false,
   );
 }
 

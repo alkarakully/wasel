@@ -199,8 +199,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   PopupMenuButton<String>(
                     tooltip: '',
                     position: PopupMenuPosition.under,
-                    onSelected: (value) =>
-                        value == 'logout' ? session.signOut() : null,
+                    onSelected: (value) => value == 'logout'
+                        ? session.signOut()
+                        : Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const AccountScreen(),
+                            ),
+                          ),
                     itemBuilder: (_) => [
                       PopupMenuItem(
                         enabled: false,
@@ -212,6 +218,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       const PopupMenuItem(
                         enabled: false,
                         child: LanguageSwitch(),
+                      ),
+                      PopupMenuItem(
+                        value: 'account',
+                        child: Row(
+                          children: [
+                            const Icon(Ph.key, size: 20),
+                            const SizedBox(width: 10),
+                            Text(s.t('account')),
+                          ],
+                        ),
                       ),
                       PopupMenuItem(
                         value: 'logout',

@@ -158,7 +158,7 @@ class AccessTests(ConsoleCase):
         self.assertEqual(self.client.get("/api/console/overview/").status_code, 403)
 
     def test_app_tokens_dont_open_the_console(self):
-        from rest_framework.authtoken.models import Token
+        from accounts.models import AuthToken as Token
 
         token = Token.objects.create(user=self.admin.user)
         response = self.client.get("/api/console/overview/", HTTP_AUTHORIZATION=f"Token {token.key}")

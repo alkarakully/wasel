@@ -23,10 +23,10 @@ class RecordingSender:
     def __init__(self, channel):
         self.channel = channel
 
-    def send(self, phone, code):
+    def send(self, to, code, lang="ar"):
         if self.channel in self.failing:
             raise otp.SendError(f"{self.channel} is down")
-        self.sent.append((self.channel, phone, code))
+        self.sent.append((self.channel, to, code))
 
 
 class WhatsAppTestSender(RecordingSender):
@@ -34,9 +34,9 @@ class WhatsAppTestSender(RecordingSender):
         super().__init__("whatsapp")
 
 
-class SmsTestSender(RecordingSender):
+class EmailTestSender(RecordingSender):
     def __init__(self):
-        super().__init__("sms")
+        super().__init__("email")
 
 
 TEST_OTP = {
@@ -46,7 +46,7 @@ TEST_OTP = {
     "MAX_ATTEMPTS": 5,
     "SENDERS": {
         "whatsapp": "accounts.tests.WhatsAppTestSender",
-        "sms": "accounts.tests.SmsTestSender",
+        "email": "accounts.tests.EmailTestSender",
     },
 }
 
@@ -118,14 +118,13 @@ class OtpFlowTests(TestCase):
         self.assertNotEqual(otp_row.code_hash, self.last_code())
         self.assertNotIn(self.last_code(), otp_row.code_hash)
 
-    def test_falls_back_to_sms_when_whatsapp_fails(self):
-        RecordingSender.failing = {"whatsapp"}
-        response = self.request_code()
-        self.assertEqual(response.json()["channel"], "sms")
-        self.assertEqual(RecordingSender.sent[-1][0], "sms")
+    def test_sms_is_gone(self):
+        response = self.request_code(channel="sms")
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("channel", response.json())
 
-    def test_both_channels_failing_returns_503_and_stores_nothing(self):
-        RecordingSender.failing = {"whatsapp", "sms"}
+    def test_whatsapp_failing_returns_503_and_stores_nothing(self):
+        RecordingSender.failing = {"whatsapp"}
         response = self.request_code()
         self.assertEqual(response.status_code, 503)
         self.assertFalse(PhoneOTP.objects.exists())
@@ -145,7 +144,7 @@ class OtpFlowTests(TestCase):
     def test_hourly_limit_per_phone(self):
         for _ in range(5):
             PhoneOTP.objects.create(
-                phone=PHONE, code_hash="x", channel="sms", expires_at=timezone.now()
+                phone=PHONE, code_hash="x", channel="whatsapp", expires_at=timezone.now()
             )
         PhoneOTP.objects.update(created_at=timezone.now() - timedelta(minutes=5))
         response = self.request_code()

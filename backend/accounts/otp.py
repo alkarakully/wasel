@@ -1,9 +1,14 @@
 """
-Phone login with one-time codes sent by WhatsApp (default) or SMS.
+One-time codes, sent by WhatsApp to a phone number or by email to an address.
+
+  Sign in   a phone number (which also signs up a new customer), or an email
+            already confirmed on an account.
+  Add email a signed-in person confirms an address before it becomes a way
+            to sign in.
 
 Codes are 6 digits, valid for a few minutes, stored only as an HMAC, and
-locked after too many wrong guesses. If WhatsApp delivery fails the code is
-sent by SMS instead.
+locked after too many wrong guesses. There is no SMS: if WhatsApp can't be
+reached, people with an email on their account can sign in with that.
 """
 
 import hashlib
@@ -62,19 +67,55 @@ class AccountDisabled(OTPError):
     code = "account_disabled"
 
 
+class NoAccount(OTPError):
+    """No account has this email confirmed; sign up with a phone number first."""
+
+    code = "no_account_for_email"
+
+
+class EmailTaken(OTPError):
+    code = "email_taken"
+
+
 # --- Senders -----------------------------------------------------------------
 
 
 class ConsoleSender:
     """Development only: writes the code to the server log."""
 
-    def send(self, phone, code):
-        logger.warning("[DEV] Wasel login code for %s: %s", phone, code)
+    def send(self, to, code, lang="ar"):
+        logger.warning("[DEV] Wasel login code for %s: %s", to, code)
 
 
 class UnconfiguredSender:
-    def send(self, phone, code):
+    def send(self, to, code, lang="ar"):
         raise SendError("No sender is configured for this channel.")
+
+
+EMAIL_TEXT = {
+    "ar": ("رمز الدخول إلى واصل: {code}", "رمز الدخول إلى واصل هو {code}\nيبقى صالحاً {minutes} دقائق. لا تشاركه مع أحد."),
+    "ku": ("کۆدی چوونەژوورەوەی واصل: {code}", "کۆدی چوونەژوورەوەی واصل {code}ـە\nبۆ {minutes} خولەک کار دەکات. لەگەڵ کەس بەشی مەکە."),
+    "en": ("Your Wasel code: {code}", "Your Wasel code is {code}\nIt works for {minutes} minutes. Don't share it with anyone."),
+}
+
+
+class EmailSender:
+    """Sends the code by email through the SMTP server in settings (EMAIL_HOST...)."""
+
+    def send(self, to, code, lang="ar"):
+        from django.core.mail import send_mail
+
+        subject, body = EMAIL_TEXT.get(lang, EMAIL_TEXT["ar"])
+        minutes = settings.OTP["CODE_TTL_SECONDS"] // 60
+        try:
+            send_mail(
+                subject.format(code=code),
+                body.format(code=code, minutes=minutes),
+                settings.DEFAULT_FROM_EMAIL,
+                [to],
+            )
+        except Exception as error:  # SMTP and socket errors alike
+            raise SendError(f"Email to {to} failed: {error}") from error
 
 
 class WhatsAppCloudSender:
@@ -85,7 +126,7 @@ class WhatsAppCloudSender:
     authentication template (WHATSAPP_TEMPLATE) with a copy-code button.
     """
 
-    def send(self, phone, code):
+    def send(self, phone, code, lang="ar"):
         config = settings.WHATSAPP
         url = f"https://graph.facebook.com/{config['API_VERSION']}/{config['PHONE_NUMBER_ID']}/messages"
         payload = {
@@ -146,75 +187,116 @@ class SentCode:
     resend_in: int
 
 
-def request_code(phone, channel=PhoneOTP.Channel.WHATSAPP, country=None):
-    """Create and send a login code. `phone` must already be normalized."""
+def _send(to, channel, purpose, user=None, lang="ar"):
+    """Create and send a code to `to` (a normalized phone or a lower-case email)."""
     config = settings.OTP
     now = timezone.now()
 
-    latest = PhoneOTP.objects.filter(phone=phone).first()
+    latest = PhoneOTP.objects.filter(phone=to).first()
     if latest:
         wait = config["RESEND_SECONDS"] - int((now - latest.created_at).total_seconds())
         if wait > 0:
             raise TooSoon(wait)
 
-    sent_last_hour = PhoneOTP.objects.filter(phone=phone, created_at__gte=now - timedelta(hours=1)).count()
+    sent_last_hour = PhoneOTP.objects.filter(phone=to, created_at__gte=now - timedelta(hours=1)).count()
     if sent_last_hour >= config["MAX_PER_HOUR"]:
-        raise TooManyRequests("Too many codes requested for this number. Try again later.")
+        raise TooManyRequests("Too many codes requested. Try again later.")
 
     code = _new_code()
-    # WhatsApp first when asked for; SMS is always the fallback.
-    channels = [channel] if channel == PhoneOTP.Channel.SMS else [channel, PhoneOTP.Channel.SMS]
-    for attempt in channels:
-        try:
-            get_sender(attempt).send(phone, code)
-        except SendError as error:
-            logger.warning("Sending code to %s by %s failed: %s", phone, attempt, error)
-            continue
-        PhoneOTP.objects.create(
-            phone=phone,
-            code_hash=_hash(phone, code),
-            channel=attempt,
-            expires_at=now + timedelta(seconds=config["CODE_TTL_SECONDS"]),
-        )
-        return SentCode(attempt, config["CODE_TTL_SECONDS"], config["RESEND_SECONDS"])
-
-    raise DeliveryFailed("We could not send a code to this number. Try again later.")
+    try:
+        get_sender(channel).send(to, code, lang)
+    except SendError as error:
+        logger.warning("Sending a code to %s by %s failed: %s", to, channel, error)
+        raise DeliveryFailed("We could not send a code. Try again later.") from error
+    PhoneOTP.objects.create(
+        phone=to,
+        code_hash=_hash(to, code),
+        channel=channel,
+        purpose=purpose,
+        user=user,
+        expires_at=now + timedelta(seconds=config["CODE_TTL_SECONDS"]),
+    )
+    return SentCode(channel, config["CODE_TTL_SECONDS"], config["RESEND_SECONDS"])
 
 
-def verify_code(phone, code, country=None):
-    """
-    Check a code and return (user, created). Creates a customer account the
-    first time a number logs in. Raises InvalidCode for any failure so callers
-    cannot tell a wrong code from an expired or locked one.
-    """
+def _check(to, code, purpose, user=None):
+    """Use up a matching code; False for a wrong, expired or locked one (all look the same)."""
     now = timezone.now()
-    # Raise only after the transaction commits, so a wrong guess still
-    # counts towards the attempt limit.
+    # Commit before answering, so a wrong guess still counts towards the attempt limit.
     with transaction.atomic():
         otp = (
             PhoneOTP.objects.select_for_update()
-            .filter(phone=phone, used_at__isnull=True, expires_at__gt=now)
+            .filter(phone=to, purpose=purpose, user=user, used_at__isnull=True, expires_at__gt=now)
             .first()
         )
         if otp is None or otp.attempts >= settings.OTP["MAX_ATTEMPTS"]:
-            valid = False
-        elif hmac.compare_digest(otp.code_hash, _hash(phone, str(code).strip())):
+            return False
+        if hmac.compare_digest(otp.code_hash, _hash(to, str(code).strip())):
             otp.used_at = now
             otp.save(update_fields=["used_at"])
-            valid = True
-        else:
-            PhoneOTP.objects.filter(pk=otp.pk).update(attempts=F("attempts") + 1)
-            valid = False
+            return True
+        PhoneOTP.objects.filter(pk=otp.pk).update(attempts=F("attempts") + 1)
+        return False
 
-    if not valid:
+
+def account_for_email(email):
+    return User.objects.filter(email__iexact=email).first()
+
+
+def request_code(phone=None, email=None, channel=PhoneOTP.Channel.WHATSAPP, country=None):
+    """Send a sign-in code: by WhatsApp to a (normalized) phone, or by email to a confirmed address."""
+    if email:
+        user = account_for_email(email)
+        if user is None:
+            raise NoAccount("No account uses this email. Sign in with your phone number, then add your email.")
+        return _send(email.lower(), PhoneOTP.Channel.EMAIL, PhoneOTP.Purpose.LOGIN, lang=user.language_pref)
+    user = User.objects.filter(phone=phone).first()
+    return _send(phone, PhoneOTP.Channel.WHATSAPP, PhoneOTP.Purpose.LOGIN, lang=user.language_pref if user else "ar")
+
+
+def verify_code(phone=None, code="", email=None, country=None):
+    """
+    Check a sign-in code and return (user, created). A phone number's first
+    sign-in creates a customer account. Raises InvalidCode for any failure,
+    so callers can't tell a wrong code from an expired or locked one.
+    """
+    if not _check(email.lower() if email else phone, code, PhoneOTP.Purpose.LOGIN):
         raise InvalidCode("The code is wrong or has expired.")
 
-    user = User.objects.filter(phone=phone).first()
-    if user is None:
-        # The account belongs to the number's country (its wallet currency).
-        user = User.objects.create_user(phone=phone, country=country_of(phone))
-        start_wasel_plus_trial(user)
-        return user, True
+    if email:
+        user = account_for_email(email)
+        if user is None:
+            raise InvalidCode("The code is wrong or has expired.")
+    else:
+        user = User.objects.filter(phone=phone).first()
+        if user is None:
+            # The account belongs to the number's country (its wallet currency).
+            user = User.objects.create_user(phone=phone, country=country_of(phone))
+            start_wasel_plus_trial(user)
+            return user, True
     if not user.is_active:
         raise AccountDisabled("This account has been disabled.")
     return user, False
+
+
+def request_email_code(user, email):
+    """Send a code to an address the signed-in `user` wants to add."""
+    email = email.lower()
+    other = account_for_email(email)
+    if other is not None and other.pk != user.pk:
+        raise EmailTaken("Another account already uses this email.")
+    return _send(email, PhoneOTP.Channel.EMAIL, PhoneOTP.Purpose.ADD_EMAIL, user=user, lang=user.language_pref)
+
+
+def confirm_email(user, email, code):
+    """Check the code and make `email` a way for `user` to sign in."""
+    email = email.lower()
+    if not _check(email, code, PhoneOTP.Purpose.ADD_EMAIL, user=user):
+        raise InvalidCode("The code is wrong or has expired.")
+    with transaction.atomic():
+        other = User.objects.select_for_update().filter(email__iexact=email).exclude(pk=user.pk).first()
+        if other is not None:
+            raise EmailTaken("Another account already uses this email.")
+        user.email = email
+        user.save(update_fields=["email"])
+    return user

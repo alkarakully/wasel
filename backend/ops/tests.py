@@ -46,7 +46,7 @@ class AccessTests(OpsTestCase):
 
     def test_app_tokens_dont_open_ops(self):
         """Staff use the admin session; a phone app's token is not enough."""
-        from rest_framework.authtoken.models import Token
+        from accounts.models import AuthToken as Token
 
         self.client.logout()
         token = Token.objects.create(user=self.staff)

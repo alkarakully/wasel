@@ -51,6 +51,12 @@ class BaseSession extends ChangeNotifier {
     await onSignedIn();
   }
 
+  /// After the account changed (email added, password set).
+  void updateUser(User updated) {
+    user = updated;
+    notifyListeners();
+  }
+
   Future<void> signOut() async {
     await onSigningOut();
     try {

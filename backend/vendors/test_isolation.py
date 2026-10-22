@@ -13,7 +13,7 @@ from channels.testing import WebsocketCommunicator
 from django.contrib.gis.geos import Point
 from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
-from rest_framework.authtoken.models import Token
+from accounts.models import AuthToken as Token
 from rest_framework.test import APIClient
 
 from accounts.models import User
@@ -206,7 +206,7 @@ class SocketIsolationTests(TransactionTestCase):
         self.sockets = []
 
     async def connect(self, user):
-        token = await database_sync_to_async(lambda: Token.objects.get_or_create(user=user)[0].key)()
+        token = await database_sync_to_async(lambda: Token.objects.create(user=user).key)()
         socket = WebsocketCommunicator(application, f"/ws/orders/?token={token}")
         connected, _ = await socket.connect()
         self.assertTrue(connected)

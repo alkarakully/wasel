@@ -6,9 +6,7 @@ sockets and the app reconnects with the right groups (or is refused).
 
 from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
-from rest_framework.authtoken.models import Token
-
-from accounts.models import User
+from accounts.models import AuthToken, User
 from vendors import access
 from vendors.models import StoreMember, Vendor
 
@@ -38,7 +36,7 @@ def account_changed(sender, instance, created, **kwargs):
         revoke_sockets(instance.pk)
 
 
-@receiver(post_delete, sender=Token)
+@receiver(post_delete, sender=AuthToken)
 def signed_out(sender, instance, **kwargs):
     # Logging out deletes the token; a socket opened with it must not live on.
     revoke_sockets(instance.user_id)

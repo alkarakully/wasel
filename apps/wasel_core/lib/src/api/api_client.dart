@@ -89,43 +89,93 @@ class ApiClient {
         return ApiException('invalid_phone', status);
       }
       if (data.containsKey('code')) return ApiException('invalid_code', status);
+      if (data.containsKey('email')) {
+        return ApiException('invalid_email', status);
+      }
     }
     return ApiException(status == 401 ? 'unauthorized' : 'generic', status);
   }
 
   // --- Auth ------------------------------------------------------------------
 
-  /// Returns the normalized phone, the channel used and seconds until resend.
+  /// Sends a sign-in code by WhatsApp to a phone, or by email to an address
+  /// already confirmed on an account. Returns where it went (the normalized
+  /// phone, or the email), the channel and seconds until a resend.
   /// [country] says how to read a local number (a +code number says it itself).
-  Future<({String phone, String channel, int resendIn})> requestCode(
-    String phone,
-    String channel, {
+  Future<({String to, String channel, int resendIn})> requestCode({
+    String? phone,
+    String? email,
     String country = 'IQ',
   }) async {
     final data = await _send(
       'POST',
       '/api/auth/otp/request/',
-      body: {'phone': phone, 'channel': channel, 'country': country},
+      body: {'phone': ?phone, 'email': ?email, 'country': country},
     );
     return (
-      phone: data['phone'] as String,
+      to: (data['email'] ?? data['phone']) as String,
       channel: data['channel'] as String,
       resendIn: data['resend_in'] as int,
     );
   }
 
+  /// Checks a code sent to [to] (a phone or an email) and signs in.
   Future<({String token, User user})> verifyCode(
-    String phone,
+    String to,
     String code, {
     String country = 'IQ',
   }) async {
     final data = await _send(
       'POST',
       '/api/auth/otp/verify/',
-      body: {'phone': phone, 'code': code, 'country': country},
+      body: {
+        to.contains('@') ? 'email' : 'phone': to,
+        'code': code,
+        'country': country,
+      },
     );
     return (token: data['token'] as String, user: User.fromJson(data['user']));
   }
+
+  /// Signs in with a phone number (read in [country]) or an email, and a password.
+  Future<({String token, User user})> passwordLogin(
+    String login,
+    String password, {
+    String country = 'IQ',
+  }) async {
+    final data = await _send(
+      'POST',
+      '/api/auth/password/login/',
+      body: {'login': login, 'password': password, 'country': country},
+    );
+    return (token: data['token'] as String, user: User.fromJson(data['user']));
+  }
+
+  /// Sets or changes the password; the server signs out the other devices.
+  Future<User> setPassword(String password) async => User.fromJson(
+    await _send('POST', '/api/auth/password/', body: {'password': password}),
+  );
+
+  /// Sends a code to an email the signed-in person wants to add; seconds until resend.
+  Future<int> addEmail(String email) async {
+    final data = await _send(
+      'POST',
+      '/api/auth/email/',
+      body: {'email': email},
+    );
+    return data['resend_in'] as int;
+  }
+
+  Future<User> confirmEmail(String email, String code) async => User.fromJson(
+    await _send(
+      'POST',
+      '/api/auth/email/verify/',
+      body: {'email': email, 'code': code},
+    ),
+  );
+
+  Future<User> removeEmail() async =>
+      User.fromJson(await _send('DELETE', '/api/auth/email/'));
 
   Future<User> me() async => User.fromJson(await _send('GET', '/api/auth/me/'));
 

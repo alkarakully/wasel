@@ -343,4 +343,52 @@ class Ph {
     fontPackage: _package,
     matchTextDirection: false,
   );
+  static const deviceMobile = IconData(
+    0xe1e0,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const envelopeSimple = IconData(
+    0xe218,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const eye = IconData(
+    0xe220,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const eyeSlash = IconData(
+    0xe224,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const key = IconData(
+    0xe2d6,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const lockSimple = IconData(
+    0xe308,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const pencilSimple = IconData(
+    0xe3b4,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
+  static const trash = IconData(
+    0xe4a6,
+    fontFamily: _font,
+    fontPackage: _package,
+    matchTextDirection: false,
+  );
 }

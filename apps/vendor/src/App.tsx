@@ -95,7 +95,14 @@ export default function App() {
         <div className="splash" aria-hidden="true" />
       ) : user && step ? (
         step.kind === 'portal' ? (
-          <Portal api={api} user={user} onLogout={logout} onUnauthorized={signOut} setLang={setLang} />
+          <Portal
+            api={api}
+            user={user}
+            onUserChanged={setUser}
+            onLogout={logout}
+            onUnauthorized={signOut}
+            setLang={setLang}
+          />
         ) : step.kind === 'invites' ? (
           <InvitesStep key="invites" {...stepProps!} invites={step.invites} />
         ) : step.kind === 'waiting' ? (

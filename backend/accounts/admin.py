@@ -28,7 +28,8 @@ def clean_phone_field(form, staff=False):
 class UserCreationForm(forms.ModelForm):
     """
     Add an account. Customers, captains and store owners sign in with a
-    WhatsApp/SMS code, so the password is only for staff using this admin.
+    WhatsApp or email code (and may set their own password in the apps), so a
+    password here is only for staff using this admin.
     """
 
     password1 = forms.CharField(

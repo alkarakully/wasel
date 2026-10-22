@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { Board } from '../components/Board'
 import { Login } from '../components/Login'
@@ -136,6 +136,8 @@ describe('MenuView', () => {
   })
 })
 
+const ownerUser = () => ({ id: 1, phone: '+9647701234567', name: '', role: 'vendor' })
+
 /** A fetch stand-in answering the login flow; `routes` adds or overrides answers by URL part. */
 function loginFetch(role: string, routes: Record<string, unknown> = {}) {
   const answers: Record<string, unknown> = {
@@ -146,7 +148,7 @@ function loginFetch(role: string, routes: Record<string, unknown> = {}) {
     'store-applications': { can_apply: true, reason: null, applications: [] },
     ...routes,
   }
-  return vi.fn(async (url: string) => {
+  return vi.fn(async (url: string, _init?: RequestInit) => {
     const key = Object.keys(answers).find((part) => url.includes(part))
     const body = key ? answers[key] : null
     return new Response(body ? JSON.stringify(body) : null, { status: body ? 200 : 204 })
@@ -164,6 +166,8 @@ async function signIn(join = false) {
 }
 
 describe('Login', () => {
+  afterEach(() => localStorage.clear())
+
   it('refuses accounts that are not stores, pointing to joining', async () => {
     const fetchMock = loginFetch('customer')
     vi.stubGlobal('fetch', fetchMock)
@@ -184,6 +188,8 @@ describe('Login', () => {
     const onSignedIn = vi.fn()
     inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
     await signIn(true)
+    // A code sign-in offers a password first.
+    await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
 
     await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
     expect(onSignedIn).toHaveBeenCalledWith('t', expect.objectContaining({ role: 'customer' }), { kind: 'apply' }, true)
@@ -202,6 +208,43 @@ describe('Login', () => {
     vi.unstubAllGlobals()
   })
 
+  it('signs in with an email and a password, without a password offer', async () => {
+    const fetchMock = loginFetch('vendor', {
+      'password/login': { token: 't', user: { ...ownerUser(), has_password: true } },
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const onSignedIn = vi.fn()
+    inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'With a password' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Email' }))
+    await userEvent.type(screen.getByLabelText('Email'), 'ali@example.com')
+    await userEvent.type(screen.getByLabelText('Password'), 'kebab-and-tea-42')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
+    const call = fetchMock.mock.calls.find(([url]) => String(url).includes('password/login'))!
+    expect(JSON.parse(String(call[1]!.body))).toEqual({
+      login: 'ali@example.com',
+      password: 'kebab-and-tea-42',
+      country: expect.any(String),
+    })
+    vi.unstubAllGlobals()
+  })
+
+  it('after a code sign-in, saves a password if one is chosen', async () => {
+    const fetchMock = loginFetch('customer', { 'auth/password/': { ...ownerUser(), has_password: true } })
+    vi.stubGlobal('fetch', fetchMock)
+    const onSignedIn = vi.fn()
+    inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
+    await signIn(true)
+    await userEvent.type(await screen.findByLabelText('New password'), 'kebab-and-tea-42')
+    await userEvent.click(screen.getByRole('button', { name: 'Save password' }))
+
+    await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
+    expect(onSignedIn.mock.calls[0][1].has_password).toBe(true)
+    vi.unstubAllGlobals()
+  })
+
   it('shows team invites first, even to a brand-new number', async () => {
     const invite = {
       id: 4,
@@ -214,6 +257,7 @@ describe('Login', () => {
     const onSignedIn = vi.fn()
     inLang(<Login api={new Api(null)} onSignedIn={onSignedIn} setLang={vi.fn()} />)
     await signIn()
+    await userEvent.click(await screen.findByRole('button', { name: 'Not now' }))
     await vi.waitFor(() => expect(onSignedIn).toHaveBeenCalled())
     expect(onSignedIn.mock.calls[0][2]).toEqual({ kind: 'invites', invites: [invite] })
     vi.unstubAllGlobals()
@@ -273,7 +317,7 @@ describe('other countries', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
     expect(await screen.findByText('+966 501234567')).toBeInTheDocument()
     const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
-    expect(JSON.parse(String(init.body))).toEqual({ phone: '050 123 4567', channel: 'whatsapp', country: 'SA' })
+    expect(JSON.parse(String(init.body))).toEqual({ phone: '050 123 4567', country: 'SA' })
     vi.unstubAllGlobals()
   })
 })

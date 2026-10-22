@@ -144,7 +144,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "accounts.authentication.DeviceTokenAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -157,10 +157,22 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "otp_request": "10/hour",
         "otp_verify": "30/hour",
+        # Phone/email + password sign-in, per IP; accounts also lock after 5 wrong passwords.
+        "password_login": "30/hour",
         # Platform admin sign-in, per IP; accounts also lock after 5 wrong passwords.
         "console_login": "30/hour",
     },
 }
+
+# Email for login codes: any SMTP provider (Gmail/Workspace, Zoho, Mailgun, Brevo, SES SMTP...).
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "1") == "1"
+EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "0") == "1"
+EMAIL_TIMEOUT = 15
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Wasel <no-reply@localhost>")
 
 # Phone login codes.
 OTP = {
@@ -176,8 +188,14 @@ OTP = {
             if DEBUG
             else "accounts.otp.UnconfiguredSender"
         ),
-        # No SMS provider chosen yet; codes go to the server log in development.
-        "sms": "accounts.otp.ConsoleSender" if DEBUG else "accounts.otp.UnconfiguredSender",
+        # Through the SMTP server above; to the server log in development without one.
+        "email": (
+            "accounts.otp.EmailSender"
+            if os.environ.get("EMAIL_HOST")
+            else "accounts.otp.ConsoleSender"
+            if DEBUG
+            else "accounts.otp.UnconfiguredSender"
+        ),
     },
 }
 

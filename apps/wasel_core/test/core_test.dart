@@ -37,13 +37,18 @@ ApiClient fakeApi(List<String> log, {String role = 'customer'}) => ApiClient(
           }),
           200,
         );
-      case '/api/auth/otp/verify/':
+      case '/api/auth/otp/verify/' || '/api/auth/password/login/':
         return http.Response(
           jsonEncode({
             'token': 'abc',
             'is_new_user': false,
             'user': {...user, 'role': role},
           }),
+          200,
+        );
+      case '/api/auth/password/':
+        return http.Response(
+          jsonEncode({...user, 'role': role, 'has_password': true}),
           200,
         );
       default:
@@ -60,12 +65,23 @@ Widget wrap(Widget child, BaseSession session) => MultiProvider(
   child: MaterialApp(theme: waselTheme(Brightness.light), home: child),
 );
 
+/// Scrolls [key] into view and taps it.
+Future<void> tapKey(WidgetTester tester, String key) async {
+  await tester.ensureVisible(find.byKey(Key(key)));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(Key(key)));
+  await tester.pumpAndSettle();
+}
+
 Future<void> logIn(WidgetTester tester) async {
   await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
-  await tester.tap(find.byKey(const Key('send-code')));
-  await tester.pumpAndSettle();
+  await tapKey(tester, 'send-code');
   await tester.enterText(find.byKey(const Key('code')), '482913');
   await tester.pumpAndSettle();
+  // After a code sign-in, someone without a password is offered one.
+  if (find.byKey(const Key('not-now')).evaluate().isNotEmpty) {
+    await tapKey(tester, 'not-now');
+  }
 }
 
 void main() {
@@ -112,8 +128,7 @@ void main() {
     expect(find.text('+966'), findsOneWidget);
 
     await tester.enterText(find.byKey(const Key('phone')), '050 123 4567');
-    await tester.tap(find.byKey(const Key('send-code')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'send-code');
     expect(log.first, contains('"country":"SA"'));
     expect(log.first, contains('"phone":"050 123 4567"'));
     final prefs = await SharedPreferences.getInstance();
@@ -153,13 +168,13 @@ void main() {
     await tester.pumpWidget(wrap(const LoginScreen(), session));
 
     await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
-    await tester.tap(find.byKey(const Key('send-code')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'send-code');
     await tester.enterText(
       find.byKey(const Key('code')),
       'Wasel login code for +9647701234567: ٤٨٢٩١٣',
     );
     await tester.pumpAndSettle();
+    await tapKey(tester, 'not-now');
 
     expect(session.signedIn, isTrue);
     expect(log.last, contains('"code":"482913"'));
@@ -206,8 +221,85 @@ void main() {
       wrap(const LoginScreen(), BaseSession(api)..lang = 'en'),
     );
     await tester.enterText(find.byKey(const Key('phone')), '12345');
-    await tester.tap(find.byKey(const Key('send-code')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'send-code');
     expect(find.textContaining("That number isn't valid"), findsOneWidget);
+  });
+
+  testWidgets('after a code sign-in, a password can be set for next time', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
+    await tapKey(tester, 'send-code');
+    await tester.enterText(find.byKey(const Key('code')), '482913');
+    await tester.pumpAndSettle();
+    expect(find.text('Want a password?'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('new-password')),
+      'kebab-and-tea-42',
+    );
+    await tapKey(tester, 'save-password');
+
+    expect(log.last, contains('POST /api/auth/password/'));
+    expect(log.last, contains('kebab-and-tea-42'));
+    expect(session.signedIn, isTrue);
+    expect(session.user!.hasPassword, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('"Not now" keeps the password offer away on this device', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+    await logIn(tester);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('wasel_password_offer_skipped'), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('sign in with an email and password', (tester) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.tap(find.text('With a password'));
+    await tester.pumpAndSettle();
+    await tapKey(tester, 'by-email');
+    await tester.enterText(find.byKey(const Key('email')), 'ali@example.com');
+    await tester.enterText(
+      find.byKey(const Key('password')),
+      'kebab-and-tea-42',
+    );
+    await tapKey(tester, 'sign-in');
+
+    expect(log.last, startsWith('POST /api/auth/password/login/'));
+    expect(log.last, contains('"login":"ali@example.com"'));
+    expect(session.signedIn, isTrue);
+    // No password offer after a password sign-in.
+    expect(find.text('Want a password?'), findsNothing);
+  });
+
+  testWidgets('a code can go to the account email instead of WhatsApp', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tapKey(tester, 'by-email');
+    await tester.enterText(find.byKey(const Key('email')), 'ali@example.com');
+    await tapKey(tester, 'send-code');
+    expect(log.last, contains('"email":"ali@example.com"'));
+    expect(log.last, isNot(contains('"phone"')));
+    await tester.pumpWidget(const SizedBox());
   });
 }

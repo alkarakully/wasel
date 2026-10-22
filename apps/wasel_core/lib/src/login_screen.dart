@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api/api_client.dart';
 import 'api/models.dart';
 import 'countries.dart';
+import 'password_sheet.dart';
 import 'strings.dart';
 import 'session.dart';
 import 'theme.dart';
@@ -17,7 +18,10 @@ import 'widgets/icons.dart';
 import 'widgets/language_switch.dart';
 import 'widgets/motion.dart';
 
-/// Phone login: number and channel, then the 6-digit code.
+/// Sign-in with a code (WhatsApp to a phone, or email to a confirmed
+/// address) or with a password (phone number or email). A phone's first
+/// code sign-in also creates the account; afterwards the app offers to set
+/// a password for next time.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({
     super.key,
@@ -42,12 +46,19 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _phone = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   final _code = TextEditingController();
-  String _channel = 'whatsapp';
+  // 'code' or 'password'.
+  String _mode = 'code';
+  // Where a code goes, or what to sign in with: 'phone' or 'email'.
+  String _by = 'phone';
   // The phone's country: Iraq at first, then the last one picked here.
   String _country = 'IQ';
   static const _countryKey = 'wasel_phone_country';
-  String? _sentTo; // normalized phone once a code is sent
+  // Once tapped "Not now", the password offer doesn't come back on this device.
+  static const _offerSkippedKey = 'wasel_password_offer_skipped';
+  String? _sentTo; // normalized phone or email once a code is sent
   String _sentBy = 'whatsapp';
   String? _error;
   bool _busy = false;
@@ -80,6 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _timer?.cancel();
     _phone.dispose();
+    _email.dispose();
+    _password.dispose();
     _code.dispose();
     super.dispose();
   }
@@ -93,19 +106,27 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  Future<void> _sendCode({String? phone}) async {
+  void _switch({String? mode, String? by}) => setState(() {
+    _mode = mode ?? _mode;
+    _by = by ?? _by;
+    _error = null;
+  });
+
+  Future<void> _sendCode({String? to}) async {
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
+      final email = to != null ? to.contains('@') : _by == 'email';
+      final address = to ?? (email ? _email.text.trim() : _phone.text);
       final sent = await context.read<ApiClient>().requestCode(
-        phone ?? _phone.text,
-        _channel,
+        phone: email ? null : address,
+        email: email ? address : null,
         country: _country,
       );
       setState(() {
-        _sentTo = sent.phone;
+        _sentTo = sent.to;
         _sentBy = sent.channel;
         _code.clear();
       });
@@ -120,17 +141,47 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _verify() async {
     if (_code.text.length != 6 || _busy) return;
+    await _signIn(
+      () => context.read<ApiClient>().verifyCode(
+        _sentTo!,
+        _code.text,
+        country: _country,
+      ),
+      byCode: true,
+    );
+    if (_error != null) {
+      _code.selection = TextSelection(
+        baseOffset: 0,
+        extentOffset: _code.text.length,
+      );
+    }
+  }
+
+  Future<void> _passwordSignIn() async {
+    if (_password.text.isEmpty || _busy) return;
+    final login = _by == 'email' ? _email.text.trim() : _phone.text;
+    await _signIn(
+      () => context.read<ApiClient>().passwordLogin(
+        login,
+        _password.text,
+        country: _country,
+      ),
+    );
+  }
+
+  /// Signs in with [attempt]'s token if this app takes the account; after a
+  /// code sign-in, offers a password to someone who has none.
+  Future<void> _signIn(
+    Future<({String token, User user})> Function() attempt, {
+    bool byCode = false,
+  }) async {
     setState(() {
       _busy = true;
       _error = null;
     });
+    final api = context.read<ApiClient>();
     try {
-      final api = context.read<ApiClient>();
-      final result = await api.verifyCode(
-        _sentTo!,
-        _code.text,
-        country: _country,
-      );
+      final result = await attempt();
       var admitted = widget.acceptUser?.call(result.user) ?? true;
       if (admitted && widget.admitUser != null) {
         api.token = result.token;
@@ -152,21 +203,34 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() => _error = widget.rejectedError);
         return;
       }
+      var user = result.user;
+      final prefs = await SharedPreferences.getInstance();
+      if (byCode &&
+          !user.hasPassword &&
+          prefs.getBool(_offerSkippedKey) != true &&
+          mounted) {
+        api.token = result.token;
+        // The sign-in itself is done; don't spin behind the sheet.
+        setState(() => _busy = false);
+        final updated = await showSetPasswordSheet(context, api, offer: true);
+        api.token = null;
+        if (updated == null) await prefs.setBool(_offerSkippedKey, true);
+        user = updated ?? user;
+      }
       if (mounted) {
-        await context.read<BaseSession>().signIn(result.token, result.user);
+        await context.read<BaseSession>().signIn(result.token, user);
       }
     } on ApiException catch (error) {
       setState(() => _error = 'err_${error.code}');
-      _code.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _code.text.length,
-      );
+      if (error.code == 'locked' && error.retryAfter != null) {
+        _countdown(error.retryAfter!);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
   }
 
-  String _formatPhone(String e164) => displayPhone(e164);
+  String _formatAddress(String to) => to.contains('@') ? to : displayPhone(to);
 
   @override
   Widget build(BuildContext context) {
@@ -196,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen> {
           key: ValueKey(_sentTo == null),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: _sentTo == null
-              ? _phoneStep(s, theme)
+              ? _startStep(s, theme)
               : _codeStep(s, theme),
         ),
       ),
@@ -314,8 +378,87 @@ class _LoginScreenState extends State<LoginScreen> {
     ),
   );
 
-  List<Widget> _phoneStep(S s, ThemeData theme) {
+  Widget _phoneField(S s, ThemeData theme, {VoidCallback? onSubmitted}) {
     final t = WaselTheme.of(context);
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: TextField(
+        key: const Key('phone'),
+        controller: _phone,
+        keyboardType: TextInputType.phone,
+        autofillHints: const [AutofillHints.telephoneNumberNational],
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+        decoration: InputDecoration(
+          prefixIcon: Semantics(
+            button: true,
+            label:
+                '${s.t('phoneCountry')}: ${countryFor(_country).name(s.lang)}',
+            excludeSemantics: true,
+            child: InkWell(
+              key: const Key('phone-country'),
+              onTap: _busy ? null : _pickCountry,
+              borderRadius: const BorderRadius.horizontal(
+                left: Radius.circular(14),
+              ),
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CountryBadge(_country),
+                    const SizedBox(width: 6),
+                    Text(
+                      '+${countryFor(_country).dial}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Ph.caretDown, size: 14, color: t.muted),
+                    const SizedBox(width: 8),
+                    Container(width: 1, height: 22, color: t.hairline),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          hintText: _country == 'IQ' ? '0770 123 4567' : null,
+          errorText: _mode == 'code' && _error != null ? s.t(_error!) : null,
+          errorMaxLines: 2,
+        ),
+        onChanged: (_) {
+          if (_error != null) setState(() => _error = null);
+        },
+        onSubmitted: (_) => onSubmitted?.call(),
+      ),
+    );
+  }
+
+  Widget _emailField(S s, {VoidCallback? onSubmitted}) => TextField(
+    key: const Key('email'),
+    controller: _email,
+    keyboardType: TextInputType.emailAddress,
+    autocorrect: false,
+    textDirection: TextDirection.ltr,
+    autofillHints: const [AutofillHints.email],
+    style: const TextStyle(fontSize: 17),
+    decoration: InputDecoration(
+      prefixIcon: const Icon(Ph.envelopeSimple, size: 20),
+      hintText: s.t('emailHint'),
+      errorText: _mode == 'code' && _error != null ? s.t(_error!) : null,
+      errorMaxLines: 3,
+    ),
+    onChanged: (_) {
+      if (_error != null) setState(() => _error = null);
+    },
+    onSubmitted: (_) => onSubmitted?.call(),
+  );
+
+  List<Widget> _startStep(S s, ThemeData theme) {
+    final t = WaselTheme.of(context);
+    final code = _mode == 'code';
     return [
       Text(
         s.t('loginTitle'),
@@ -325,95 +468,109 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       const SizedBox(height: 6),
-      Text(s.t('loginLead'), style: TextStyle(color: t.muted, height: 1.5)),
-      const SizedBox(height: 24),
-      _label(s.t('phone')),
-      Directionality(
-        textDirection: TextDirection.ltr,
-        child: TextField(
-          key: const Key('phone'),
-          controller: _phone,
-          keyboardType: TextInputType.phone,
-          autofillHints: const [AutofillHints.telephoneNumberNational],
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
-          decoration: InputDecoration(
-            prefixIcon: Semantics(
-              button: true,
-              label:
-                  '${s.t('phoneCountry')}: ${countryFor(_country).name(s.lang)}',
-              excludeSemantics: true,
-              child: InkWell(
-                key: const Key('phone-country'),
-                onTap: _busy ? null : _pickCountry,
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(14),
-                ),
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CountryBadge(_country),
-                      const SizedBox(width: 6),
-                      Text(
-                        '+${countryFor(_country).dial}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(Ph.caretDown, size: 14, color: t.muted),
-                      const SizedBox(width: 8),
-                      Container(width: 1, height: 22, color: t.hairline),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            hintText: _country == 'IQ' ? '0770 123 4567' : null,
-            errorText: _error == null ? null : s.t(_error!),
-            errorMaxLines: 2,
-          ),
-          onChanged: (_) {
-            if (_error != null) setState(() => _error = null);
-          },
-          onSubmitted: (_) => _sendCode(),
-        ),
+      Text(
+        s.t(code ? 'loginLeadCode' : 'loginLeadPassword'),
+        style: TextStyle(color: t.muted, height: 1.5),
       ),
-      const SizedBox(height: 8),
-      Text(s.t('phoneHelp'), style: TextStyle(fontSize: 13, color: t.muted)),
+      const SizedBox(height: 18),
+      SegmentedButton<String>(
+        key: const Key('login-mode'),
+        showSelectedIcon: false,
+        segments: [
+          ButtonSegment(value: 'code', label: Text(s.t('byCode'))),
+          ButtonSegment(value: 'password', label: Text(s.t('byPassword'))),
+        ],
+        selected: {_mode},
+        onSelectionChanged: (picked) => _switch(mode: picked.first),
+      ),
       const SizedBox(height: 22),
-      _label(s.t('sendBy')),
+      _label(code ? s.t('sendBy') : s.t('phoneOrEmail')),
       Row(
         children: [
           Expanded(
             child: _ChannelTile(
-              icon: Ph.whatsappLogo,
-              label: s.t('whatsapp'),
-              selected: _channel == 'whatsapp',
-              onTap: () => setState(() => _channel = 'whatsapp'),
+              key: const Key('by-phone'),
+              icon: code ? Ph.whatsappLogo : Ph.deviceMobile,
+              label: code ? s.t('whatsapp') : s.t('phone'),
+              selected: _by == 'phone',
+              onTap: () => _switch(by: 'phone'),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: _ChannelTile(
-              icon: Ph.chatText,
-              label: s.t('sms'),
-              selected: _channel == 'sms',
-              onTap: () => setState(() => _channel = 'sms'),
+              key: const Key('by-email'),
+              icon: Ph.envelopeSimple,
+              label: s.t('email'),
+              selected: _by == 'email',
+              onTap: () => _switch(by: 'email'),
             ),
           ),
         ],
       ),
+      const SizedBox(height: 16),
+      AutofillGroup(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_by == 'phone') ...[
+              _label(s.t('phone')),
+              _phoneField(
+                s,
+                theme,
+                onSubmitted: code ? () => _sendCode() : _passwordSignIn,
+              ),
+              if (code) ...[
+                const SizedBox(height: 8),
+                Text(
+                  s.t('phoneHelp'),
+                  style: TextStyle(fontSize: 13, color: t.muted),
+                ),
+              ],
+            ] else ...[
+              _label(s.t('emailAddress')),
+              _emailField(
+                s,
+                onSubmitted: code ? () => _sendCode() : _passwordSignIn,
+              ),
+              if (code) ...[
+                const SizedBox(height: 8),
+                Text(
+                  s.t('emailCodeHelp'),
+                  style: TextStyle(fontSize: 13, color: t.muted, height: 1.4),
+                ),
+              ],
+            ],
+            if (!code) ...[
+              const SizedBox(height: 16),
+              _label(s.t('password')),
+              PasswordField(
+                controller: _password,
+                errorText: _error == null ? null : s.t(_error!),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+                onSubmitted: (_) => _passwordSignIn(),
+              ),
+            ],
+          ],
+        ),
+      ),
       const SizedBox(height: 28),
       PillButton(
-        key: const Key('send-code'),
-        label: s.t('sendCode'),
+        key: Key(code ? 'send-code' : 'sign-in'),
+        label: s.t(code ? 'sendCode' : 'signIn'),
         busy: _busy,
-        onPressed: () => _sendCode(),
+        onPressed: code ? () => _sendCode() : _passwordSignIn,
       ),
+      if (!code) ...[
+        const SizedBox(height: 8),
+        TextButton(
+          key: const Key('forgot-password'),
+          onPressed: () => _switch(mode: 'code'),
+          child: Text(s.t('forgotPassword'), textAlign: TextAlign.center),
+        ),
+      ],
     ];
   }
 
@@ -429,7 +586,9 @@ class _LoginScreenState extends State<LoginScreen> {
             _error = null;
           }),
           icon: Icon(rtl ? Ph.arrowRight : Ph.arrowLeft, size: 18),
-          label: Text(s.t('changeNumber')),
+          label: Text(
+            s.t(_sentTo!.contains('@') ? 'changeAddress' : 'changeNumber'),
+          ),
         ),
       ),
       const SizedBox(height: 8),
@@ -443,7 +602,7 @@ class _LoginScreenState extends State<LoginScreen> {
       const SizedBox(height: 6),
       Text(
         s.t('codeLead', {
-          'phone': '\u2066${_formatPhone(_sentTo!)}\u2069',
+          'phone': '\u2066${_formatAddress(_sentTo!)}\u2069',
           'channel': s.t(_sentBy),
         }),
         style: TextStyle(color: t.muted, height: 1.5),
@@ -495,7 +654,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               )
             : TextButton(
-                onPressed: _busy ? null : () => _sendCode(phone: _sentTo),
+                onPressed: _busy ? null : () => _sendCode(to: _sentTo),
                 child: Text(s.t('resend')),
               ),
       ),
@@ -506,6 +665,7 @@ class _LoginScreenState extends State<LoginScreen> {
 /// One choice of delivery channel for the code.
 class _ChannelTile extends StatelessWidget {
   const _ChannelTile({
+    super.key,
     required this.icon,
     required this.label,
     required this.selected,

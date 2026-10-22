@@ -26,7 +26,9 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
 ### A. Wasel Customer App (Mobile: iOS & Android)
 * **Languages:** Arabic, Kurdish (Sorani/Kurmanji) and English, with full right-to-left layout.
 * **Sign-Up & Login:**
-  * Phone number with a one-time code sent by **WhatsApp** (default) or SMS.
+  * A one-time code by **WhatsApp** to the phone, or by **email** once one is added to the account.
+  * Or a phone number or email with a **password**, which the apps offer to set after the first code sign-in.
+  * Signed in once per device until logging out there.
   * Saved addresses (home, work) with a map pin, since Iraqi street addresses are often imprecise.
 * **Home Screen (Talabatey-style):**
   * **Set location first**; everything shown is limited to restaurants that deliver to that spot.
@@ -253,7 +255,7 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 
 ### Phase 2: Core Backend & Auth (Weeks 4–7)
 * Set up the Django REST Framework project, PostgreSQL + PostGIS (GeoDjango), Redis, Celery and Django Channels.
-* Build phone-number authentication (WhatsApp OTP with SMS fallback).
+* Build sign-in: WhatsApp or email codes, and phone or email with a password.
 * Implement Vendor, Product Catalog, Offers and User API endpoints.
 
 ### Phase 3: Order Engine, Payments & Commission (Weeks 8–11)

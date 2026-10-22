@@ -3,12 +3,12 @@ from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from django.contrib.auth.models import AnonymousUser
-from rest_framework.authtoken.models import Token
+from .models import AuthToken
 
 
 @database_sync_to_async
 def _user_for_token(key):
-    token = Token.objects.select_related("user").filter(key=key).first()
+    token = AuthToken.objects.select_related("user").filter(key=key).first()
     if token is None or not token.user.is_active:
         return AnonymousUser()
     return token.user

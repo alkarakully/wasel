@@ -25,7 +25,7 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
 
 - A Linux server with Docker and the Compose plugin, ports 80 and 443 open.
 - A domain whose DNS points at the server.
-- For login codes in production: a WhatsApp Business (Meta Cloud API) number with an approved authentication template. No SMS provider is connected yet, so WhatsApp is required.
+- For login codes in production: a WhatsApp Business (Meta Cloud API) number with an approved authentication template, and an SMTP account for email codes (see `backend/README.md`, "Signing in"). There are no SMS codes.
 
 ## First deploy
 
@@ -138,6 +138,7 @@ All settings live in `deploy/.env` (see `.env.example`):
 | `DJANGO_LOG_LEVEL` | `WARNING` by default; `INFO` for more detail |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name and credentials |
 | `WHATSAPP_*` | WhatsApp login codes (see `backend/README.md`) |
+| `EMAIL_*`, `DEFAULT_FROM_EMAIL` | Email login codes through any SMTP provider (see `backend/README.md`) |
 | `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | Map styles for the tracking page (optional) |
 | `HTTP_PORT`, `HTTPS_PORT` | Host ports for nginx (80/443) |
 

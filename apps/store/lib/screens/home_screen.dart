@@ -150,6 +150,28 @@ class _TopBar extends StatelessWidget {
         const LanguageSwitch(),
         const SizedBox(width: 8),
         Tooltip(
+          message: s.t('account'),
+          child: Pressable(
+            key: const Key('account'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const AccountScreen()),
+            ),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: t.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: t.hairline),
+                boxShadow: t.raised,
+              ),
+              child: Icon(Ph.key, size: 20, color: t.ink),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Tooltip(
           message: s.t('logout'),
           child: Pressable(
             onTap: () => context.read<StoreSession>().signOut(),

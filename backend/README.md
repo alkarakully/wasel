@@ -116,7 +116,7 @@ docker compose run --rm web python manage.py test
 
 | App | Models |
 | :--- | :--- |
-| `accounts` | `User` (phone login, role: customer/captain/vendor), `PhoneOTP`, `WalletTransaction` |
+| `accounts` | `User` (phone, optional email and password, role: customer/captain/vendor), `PhoneOTP` (WhatsApp and email codes), `AuthToken` (one per signed-in device), `WalletTransaction` |
 | `subscriptions` | `WaselPlusSubscription` |
 | `vendors` | `Vendor`, `StoreMember`, `Product`, `ProductModifier`, `Offer` |
 | `orders` | `Order`, `OrderItem`, `OrderItemModifier`, `Rating` |
@@ -125,17 +125,33 @@ docker compose run --rm web python manage.py test
 
 Money fields are whole Iraqi dinars. `Vendor.commission_for(subtotal)` applies the vendor's commission rate, or 0 during its commission-free period.
 
-## Phone login
+## Signing in
 
-Customers, captains and vendors log in with their phone number and a 6-digit code. The test page is at http://localhost:8000/login/ (Arabic, Kurdish and English).
+Customers, captains and store teams sign in with a 6-digit code or a password. There is no SMS. The test page is at http://localhost:8000/login/ (Arabic, Kurdish and English).
 
-1. `POST /api/auth/otp/request/` with `{"phone": "07701234567", "channel": "whatsapp"}` sends a code. `channel` is `whatsapp` (default) or `sms`; if WhatsApp fails the code goes by SMS, and the response says which was used.
-2. `POST /api/auth/otp/verify/` with `{"phone": "...", "code": "123456"}` returns `{"token", "is_new_user", "user"}`. A first login creates a customer account.
-3. Send `Authorization: Token <token>` on later requests. `GET`/`PATCH /api/auth/me/` reads or updates name and language; `POST /api/auth/logout/` deletes the token.
+**With a code**
 
-Rules: codes last 5 minutes, one code per minute and 5 per hour per number, 5 wrong guesses lock a code, and only a hash of the code is stored. Requests are also limited per IP (10 code requests and 30 checks per hour).
+1. `POST /api/auth/otp/request/` with `{"phone": "07701234567", "country": "IQ"}` sends a code by WhatsApp. With `{"email": "ali@example.com"}` it sends one by email, but only to an email already confirmed on an account (`no_account_for_email`, 404, otherwise). The response says where it went and by which channel.
+2. `POST /api/auth/otp/verify/` with `{"phone" or "email", "code": "123456"}` returns `{"token", "is_new_user", "user"}`. A phone number's first sign-in creates a customer account; every account has a phone number.
 
-In development (`DJANGO_DEBUG=1`) codes are written to the server log:
+**With a password**
+
+People sign up with a code, then the apps offer to set a password. Forgot it? Sign in with a code and set a new one.
+
+- `POST /api/auth/password/login/` with `{"login": phone or email, "password", "country"}` returns the same as a code sign-in. A wrong password and an unknown account give the same `invalid_login`. Five wrong passwords lock password sign-in for 15 minutes (`locked`, 429, with `retry_after`); codes still work.
+- `POST /api/auth/password/` (signed in) with `{"password"}` sets or changes it, after Django's password checks (`weak_password`). It signs out the account's other devices.
+
+**Email on the account** (signed in)
+
+- `POST /api/auth/email/` with `{"email"}` sends a code to it; `POST /api/auth/email/verify/` with `{"email", "code"}` adds it. An email belongs to one account (`email_taken`, 409). `DELETE /api/auth/email/` removes it.
+
+**Sessions**
+
+Send `Authorization: Token <token>` on later requests. Each sign-in is its own device: the token lasts until that device logs out (`POST /api/auth/logout/` ends only that device). `GET`/`PATCH /api/auth/me/` reads or updates name and language, and shows `email` and `has_password`.
+
+Rules: codes last 5 minutes, one code per minute and 5 per hour per phone or email, 5 wrong guesses lock a code, and only a hash of the code is stored. Requests are also limited per IP (10 code requests, 30 code checks and 30 password sign-ins per hour).
+
+In development (`DJANGO_DEBUG=1`) codes, WhatsApp and email alike, are written to the server log:
 
 ```bash
 docker compose logs web | grep "login code"
@@ -150,7 +166,15 @@ To send real WhatsApp codes, create an authentication template with a copy-code 
 | `WHATSAPP_TEMPLATE` | Template name (default `wasel_login_code`) |
 | `WHATSAPP_TEMPLATE_LANGUAGE` | Template language (default `ar`) |
 
-No SMS provider is connected yet. With `DJANGO_DEBUG` off, SMS sending fails until one is added in `accounts/otp.py`.
+To send real email codes, point these at any SMTP provider (Gmail or Google Workspace, Zoho, Mailgun, Brevo, Amazon SES SMTP...):
+
+| Variable | Meaning |
+| :--- | :--- |
+| `EMAIL_HOST` | SMTP server; email codes stay in the log until it's set |
+| `EMAIL_PORT` | Default `587` |
+| `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP login |
+| `EMAIL_USE_TLS` / `EMAIL_USE_SSL` | `1` for STARTTLS (default) / `1` for SSL on port 465 |
+| `DEFAULT_FROM_EMAIL` | Sender, e.g. `Wasel <no-reply@example.com>` |
 
 ## API (so far)
 
@@ -303,4 +327,4 @@ Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) 
 
 **Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
 
-Not built yet: Wasel Plus billing, an SMS provider and card payments.
+Not built yet: Wasel Plus billing and card payments.
