@@ -8,6 +8,9 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<!-- Debug builds on a real device talk to the API on the developer's Mac over Wi-Fi. -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connects to the Wasel server on your local network during development.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets debug builds reach the local API over http://localhost. -->
