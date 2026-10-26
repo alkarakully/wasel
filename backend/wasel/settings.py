@@ -202,6 +202,10 @@ OTP = {
 # Cart limits. Fees, tips and Wasel Plus thresholds are per country, in its
 # currency (regions/regions.py); tune them here per country, e.g.
 # REGIONS = {"SA": {"SERVICE_FEE": "1.5"}, "IQ": {"DELIVERY_BASE_FEE": 2000}}.
+# How customers may pay. Cash on delivery only for now; the Wasel Wallet
+# ("wallet") can be switched back on here (comma-separated) without app changes.
+PAYMENT_METHODS = [m.strip() for m in os.environ.get("PAYMENT_METHODS", "cod").split(",") if m.strip()]
+
 ORDER_PRICING = {
     "MAX_ITEM_QUANTITY": 50,
     "MAX_KG": 50,

@@ -18,7 +18,8 @@ class CartScreen extends StatefulWidget {
 
 class _CartScreenState extends State<CartScreen> {
   final _address = TextEditingController();
-  String _payment = 'cod';
+  // Cash on delivery only for now.
+  static const _payment = 'cod';
   num _tip = 0;
   Quote? _quote;
   String? _error;
@@ -220,36 +221,23 @@ class _CartScreenState extends State<CartScreen> {
               ],
             ),
           ),
+          // Cash on delivery is the only way to pay for now (the server's
+          // PAYMENT_METHODS); the wallet and cards can come back later.
           _Section(
             title: s.t('payment'),
-            icon: Ph.wallet,
-            child: Column(
-              children: [
-                for (final (value, icon) in [
-                  ('cod', Ph.money),
-                  ('wallet', Ph.wallet),
-                  ('card', Ph.creditCard),
-                ]) ...[
-                  _Choice(
-                    selected: _payment == value,
-                    onTap: value == 'card'
-                        ? null
-                        : () => setState(() => _payment = value),
-                    child: Row(
-                      children: [
-                        Icon(icon, size: 22),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(s.t(value == 'cod' ? 'cash' : value)),
-                        ),
-                        if (_payment == value)
-                          Icon(Ph.checkCircle, color: scheme.primary),
-                      ],
-                    ),
-                  ),
-                  if (value != 'card') const SizedBox(height: 8),
+            icon: Ph.money,
+            child: _Choice(
+              key: const Key('pay-cash'),
+              selected: true,
+              onTap: null,
+              child: Row(
+                children: [
+                  const Icon(Ph.money, size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(s.t('cash'))),
+                  Icon(Ph.checkCircle, color: scheme.primary),
                 ],
-              ],
+              ),
             ),
           ),
           if (quote != null) BezelCard(child: _Breakdown(quote: quote)),
@@ -332,6 +320,7 @@ class _Section extends StatelessWidget {
 /// A selectable tile: tinted with a lapis edge when chosen.
 class _Choice extends StatelessWidget {
   const _Choice({
+    super.key,
     required this.selected,
     required this.child,
     this.onTap,

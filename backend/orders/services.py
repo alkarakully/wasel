@@ -1,5 +1,6 @@
 import secrets
 
+from django.conf import settings
 from django.contrib.gis.geos import Point
 from django.db import transaction
 from django.db.models import F
@@ -15,6 +16,9 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
     Price the cart and create the order with snapshots of every price.
     Wallet orders are paid immediately; cash and card orders stay pending.
     """
+    # Only the ways to pay Wasel takes right now (settings.PAYMENT_METHODS; cash only for now).
+    if payment_type not in settings.PAYMENT_METHODS:
+        raise PricingError("payment_not_available", "This way to pay isn't available. Pay cash on delivery.")
     point = Point(longitude, latitude, srid=4326)
 
     with transaction.atomic():

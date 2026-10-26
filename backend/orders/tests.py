@@ -1,5 +1,5 @@
 from django.contrib.gis.geos import Point
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
 
 from accounts.models import User
@@ -416,6 +416,16 @@ class PlaceOrderTests(PricingTestBase):
         self.client.force_authenticate(self.owner)
         self.assertIsNone(self.client.get(f"/api/orders/{order_id}/").json()["delivery_pin"])
 
+    def test_cash_on_delivery_is_the_only_way_to_pay_for_now(self):
+        self.customer.wallet_balance = 100000
+        self.customer.save(update_fields=["wallet_balance"])
+        for kind in ("wallet", "card"):
+            response = self.place(payment_type=kind)
+            self.assertError(response, "payment_not_available")
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(self.place(payment_type="cod").status_code, 201)
+
+    @override_settings(PAYMENT_METHODS=["cod", "wallet"])  # the wallet is off by default
     def test_wallet_payment_deducts_balance(self):
         User.objects.filter(pk=self.customer.pk).update(wallet_balance=30000)
         response = self.place(payment_type="wallet")
@@ -426,6 +436,7 @@ class PlaceOrderTests(PricingTestBase):
         transaction = WalletTransaction.objects.get(user=self.customer)
         self.assertEqual((transaction.type, transaction.amount), ("payment", Decimal(-25250)))
 
+    @override_settings(PAYMENT_METHODS=["cod", "wallet"])  # the wallet is off by default
     def test_wallet_with_too_little_balance_creates_nothing(self):
         User.objects.filter(pk=self.customer.pk).update(wallet_balance=1000)
         self.assertError(self.place(payment_type="wallet"), "insufficient_wallet_balance")
@@ -516,6 +527,7 @@ class StatusFlowTests(PricingTestBase):
         body = response.json()
         self.assertEqual((body["status"], body["cancelled_by"], body["cancel_reason"]), ("cancelled", "vendor", "Out of kebab today"))
 
+    @override_settings(PAYMENT_METHODS=["cod", "wallet"])  # the wallet is off by default
     def test_cancelled_wallet_order_is_refunded(self):
         User.objects.filter(pk=self.customer.pk).update(wallet_balance=30000)
         self.client.force_authenticate(self.customer)

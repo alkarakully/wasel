@@ -125,6 +125,7 @@ class KuwaitStoreTests(TestCase):
             **extra,
         }
 
+    @override_settings(PAYMENT_METHODS=["cod", "wallet"])  # the wallet is off by default
     def test_quote_order_refund_and_statement(self):
         self.assertEqual(self.customer.country, "KW")
         quote = self.client.post("/api/orders/quote/", self.cart(), format="json").json()
@@ -172,6 +173,7 @@ class KuwaitStoreTests(TestCase):
         self.assertEqual((statement.currency, statement.period_end), ("KWD", date(2026, 10, 17)))
         self.assertEqual(statement.payout, Decimal("2.125"))
 
+    @override_settings(PAYMENT_METHODS=["cod", "wallet"])  # the wallet is off by default
     def test_iraqi_wallet_cant_pay_a_kuwaiti_store(self):
         iraqi = User.objects.create_user("+9647700000999", wallet_balance=Decimal("100000"))
         self.client.force_authenticate(iraqi)

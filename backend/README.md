@@ -89,7 +89,7 @@ Everyone on the team gets the store's live order updates and new-order pushes.
 | `GET /api/vendors/{id}/billing/` | This week so far, totals due and paid, statements |
 | `GET /api/vendors/{id}/statements/{sid}/` | One week with every order; `?download=csv` for a spreadsheet |
 
-**Billing.** Wasel collects every payment (cash through captains, card and wallet in the app) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in the platform admin › Money › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
+**Billing.** Wasel collects every payment (cash through captains for now; the in-app wallet can be switched back on) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in the platform admin › Money › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
 
 ## Tenant isolation
 
@@ -191,7 +191,7 @@ To send real email codes, point these at any SMTP provider (Gmail or Google Work
 
 ## Placing orders
 
-Both endpoints take the same cart. Placing an order also needs `delivery_address` and optionally `payment_type` (`cod` default, `card`, `wallet`):
+Both endpoints take the same cart. Placing an order also needs `delivery_address` and optionally `payment_type`. Only the methods in `PAYMENT_METHODS` are taken: cash on delivery (`cod`) for now, with `wallet` ready to switch back on; anything else is refused with `payment_not_available`:
 
 ```json
 {
