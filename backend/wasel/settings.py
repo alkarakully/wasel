@@ -113,11 +113,29 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 DATABASES = {
-    "default": dj_database_url.config(
-        default="postgis://wasel:wasel@localhost:5432/wasel",
-        conn_max_age=60,
-    )
+    "default": dj_database_url.config(default="postgis://wasel:wasel@localhost:5432/wasel"),
 }
+# Sessions start in UTC, so Django doesn't have to set the time zone on every request.
+DATABASES["default"].setdefault("OPTIONS", {})["options"] = "-c TimeZone=UTC"
+# A new connection costs ~20 ms, and its first queries plan slowly (cold caches), so
+# every process keeps its connections open:
+#   web      a pool per process. Under ASGI each request runs in a fresh thread,
+#            which without a pool opened a connection per request and ran the
+#            database out of connections under load.
+#   Celery   one task at a time per process: one persistent connection, checked
+#            before reuse. Without it every task opened its own.
+# DB_POOL=1 or 0 overrides the choice.
+CELERY_PROCESS = os.path.basename(sys.argv[0]) == "celery"
+if os.environ.get("DB_POOL", "0" if CELERY_PROCESS else "1") == "1":
+    DATABASES["default"]["CONN_MAX_AGE"] = 0  # required by the pool
+    DATABASES["default"]["OPTIONS"]["pool"] = {
+        "min_size": 2,
+        "max_size": int(os.environ.get("DB_POOL_SIZE", "10")),
+        "timeout": 10,
+    }
+else:
+    DATABASES["default"]["CONN_MAX_AGE"] = 600
+    DATABASES["default"]["CONN_HEALTH_CHECKS"] = True
 
 AUTH_USER_MODEL = "accounts.User"
 

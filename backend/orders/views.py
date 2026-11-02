@@ -9,6 +9,8 @@ from rest_framework.views import APIView
 
 from accounts.models import User
 
+from vendors import access
+
 from . import dispatch, realtime, workflow
 from .models import CaptainLocation, DispatchOffer, Order
 from .pricing import PricingError, build_quote
@@ -64,11 +66,13 @@ class OrderViewSet(mixins.CreateModelMixin, viewsets.ReadOnlyModelViewSet):
         # ?status=received,preparing narrows the list (the store board uses it).
         if statuses := self.request.query_params.get("status"):
             orders = orders.filter(status__in=statuses.split(","))
+        # The user's stores first (one small query), so the order query needs no
+        # joins or DISTINCT: it was the most expensive query to plan under load.
+        mine = Q(customer=user) | Q(captain=user)
+        if store_ids := access.store_ids_for(user):
+            mine |= Q(vendor_id__in=store_ids)
         return (
-            orders.filter(
-                Q(customer=user) | Q(captain=user) | Q(vendor__owner=user) | Q(vendor__members__user=user)
-            )
-            .distinct()
+            orders.filter(mine)
             .select_related("vendor", "customer", "captain__location")
             .prefetch_related("items__product", "items__modifiers__modifier")
         )

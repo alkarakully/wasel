@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.contrib.gis.db import models
+from django.contrib.postgres.indexes import GinIndex
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.utils import timezone
 
@@ -50,6 +51,9 @@ class Vendor(models.Model):
     location = models.PointField(geography=True)
     delivery_radius_km = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("5"))
     is_open = models.BooleanField(default=False)
+    # The store's name and its menu (names, descriptions, sections) folded for
+    # search (vendors/search.py), kept current when the store or a dish changes.
+    search_text = models.TextField(blank=True, default="", editable=False)
     # e.g. {"sat": [["10:00", "23:00"]], "fri": [["14:00", "01:00"]]}
     opening_hours = models.JSONField(default=dict, blank=True)
     commission_rate = models.DecimalField(
@@ -61,6 +65,12 @@ class Vendor(models.Model):
     )
     commission_free_until = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            # Fast "contains this word" lookups on search_text (needs pg_trgm).
+            GinIndex(fields=["search_text"], name="vendor_search_trgm", opclasses=["gin_trgm_ops"]),
+        ]
 
     def __str__(self):
         return self.name

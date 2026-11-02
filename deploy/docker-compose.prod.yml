@@ -21,6 +21,16 @@ x-backend: &backend
 services:
   db:
     image: postgis/postgis:16-3.4
+    # Memory sized for a 16 GB / 4-core server shared with the app (about a quarter
+    # of RAM for PostgreSQL's own cache; the OS file cache gets most of the rest).
+    command: >
+      postgres
+      -c shared_buffers=4GB
+      -c effective_cache_size=10GB
+      -c work_mem=16MB
+      -c maintenance_work_mem=512MB
+      -c random_page_cost=1.1
+      -c max_connections=200
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}

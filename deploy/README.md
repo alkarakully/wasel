@@ -138,6 +138,8 @@ All settings live in `deploy/.env` (see `.env.example`):
 | `DJANGO_LOG_LEVEL` | `WARNING` by default; `INFO` for more detail |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Database name and credentials |
 | `WHATSAPP_*` | WhatsApp login codes (see `backend/README.md`) |
+| `WEB_CONCURRENCY` | Web processes (default 8, for 4 cores); each takes requests on its own |
+| `DB_POOL_SIZE` | Database connections kept open per web process (default 10) |
 | `PAYMENT_METHODS` | How customers pay: `cod` (cash on delivery, the default) or `cod,wallet` to let the Wasel Wallet pay too |
 | `EMAIL_*`, `DEFAULT_FROM_EMAIL` | Email login codes through any SMTP provider (see `backend/README.md`) |
 | `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | Map styles for the tracking page (optional) |

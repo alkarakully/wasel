@@ -7,7 +7,7 @@ Kurdish uses ک and ی where Arabic keyboards type ك and ي, so text and query
 are both folded to one spelling before comparing.
 """
 
-from django.db.models import BooleanField, Case, Exists, F, Func, OuterRef, Q, Value, When
+from django.db.models import BooleanField, Case, F, Func, Q, Value, When
 from django.db.models.functions import Lower
 
 from .models import Product, Vendor
@@ -60,15 +60,10 @@ def search(vendors, query):
     kinds = [kind for kind, words in KEYWORDS.items() if any(fold(word) in folded_query for word in words)]
 
     vendors = vendors.annotate(folded_name=_folded("name"))
-    products = Product.objects.filter(vendor=OuterRef("pk"), is_archived=False)
-    for i, field in enumerate(PRODUCT_FIELDS):
-        products = products.annotate(**{f"f{i}": _folded(field)})
 
     for term in terms:
-        in_products = Q()
-        for i in range(len(PRODUCT_FIELDS)):
-            in_products |= Q(**{f"f{i}__contains": term})
-        match = Q(folded_name__contains=term) | Exists(products.filter(in_products))
+        # search_text holds the folded name and menu, so one indexed column answers it.
+        match = Q(search_text__contains=term)
         # A word naming a kind of place ("pharmacy") also matches every place of that kind.
         for (field, value), words in KEYWORDS.items():
             if (field, value) in kinds and any(term in fold(word).split() for word in words):
@@ -82,6 +77,19 @@ def search(vendors, query):
     return vendors.annotate(
         name_match=Case(When(in_name, then=Value(True)), default=Value(False), output_field=BooleanField())
     )
+
+
+def search_text_for(vendor, products):
+    """The folded name and menu `search` looks in."""
+    parts = [vendor.name] + [getattr(p, field) for p in products for field in PRODUCT_FIELDS]
+    return fold(" ".join(part for part in parts if part))
+
+
+def refresh_search_text(vendor_ids):
+    """Rebuild search_text for these stores (after their name or menu changed)."""
+    for vendor in Vendor.objects.filter(pk__in=list(vendor_ids)).only("pk", "name"):
+        menu = Product.objects.filter(vendor_id=vendor.pk, is_archived=False).only(*PRODUCT_FIELDS)
+        Vendor.objects.filter(pk=vendor.pk).update(search_text=search_text_for(vendor, menu))
 
 
 def matching_products(products, query, limit=3):

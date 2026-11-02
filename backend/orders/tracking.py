@@ -11,6 +11,7 @@ active order.
 from datetime import timedelta
 
 from django.contrib.gis.geos import Point
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from . import realtime
@@ -24,15 +25,21 @@ MIN_INTERVAL = timedelta(seconds=2)
 def update_captain_location(captain, lat, lng, heading=None, speed=None):
     """Save the captain's position and push it to their active orders. Returns False if throttled."""
     now = timezone.now()
-    last = CaptainLocation.objects.filter(captain=captain).values_list("updated_at", flat=True).first()
-    if last and now - last < MIN_INTERVAL:
-        return False
+    fields = {"point": Point(lng, lat, srid=4326), "heading": heading, "speed": speed, "updated_at": now}
+    # One UPDATE does the throttle and the save: it only touches a position older
+    # than MIN_INTERVAL. This runs for every captain every few seconds, the most
+    # frequent write Wasel has.
+    saved = CaptainLocation.objects.filter(captain=captain, updated_at__lte=now - MIN_INTERVAL).update(**fields)
+    if not saved:
+        if CaptainLocation.objects.filter(captain=captain).exists():
+            return False  # too soon after the last one
+        try:
+            with transaction.atomic():
+                CaptainLocation.objects.create(captain=captain, **fields)
+        except IntegrityError:
+            return False  # another update made the first row at the same moment
 
-    location, _ = CaptainLocation.objects.update_or_create(
-        captain=captain,
-        defaults={"point": Point(lng, lat, srid=4326), "heading": heading, "speed": speed, "updated_at": now},
-    )
-    payload = location_payload(location)
+    payload = location_payload(CaptainLocation(captain=captain, **fields))
     for order_id, customer_id, vendor_id in Order.objects.filter(
         captain=captain, status__in=TRACKED_STATUSES
     ).values_list("pk", "customer_id", "vendor_id"):

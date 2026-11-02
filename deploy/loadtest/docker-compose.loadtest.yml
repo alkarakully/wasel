@@ -1,0 +1,104 @@
+# A production-like copy of Wasel, squeezed onto 4 CPU cores, to load-test.
+# From the repository root:
+#   docker compose -f deploy/loadtest/docker-compose.loadtest.yml up -d --build --force-recreate
+#   docker compose -f deploy/loadtest/docker-compose.loadtest.yml run --rm k6
+# See deploy/loadtest/README.md. Its database is separate from development's.
+
+name: wasel-loadtest
+
+x-backend: &backend
+  build: ../../backend
+  environment:
+    DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+    DJANGO_DEBUG: "0"
+    DJANGO_SECRET_KEY: loadtest-only-not-secret
+    DJANGO_ALLOWED_HOSTS: "*"
+    DJANGO_LOG_LEVEL: ERROR
+    LOADTEST: "1"
+    WEB_CONCURRENCY: ${WEB_CONCURRENCY:-8}
+  # Everything Wasel runs shares the same 4 cores, like one 4-core server.
+  cpuset: "0-3"
+  volumes:
+    - loadtest-data:/loadtest
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    cpuset: "0-3"
+    mem_limit: 3g
+    environment:
+      POSTGRES_DB: wasel
+      POSTGRES_USER: wasel
+      POSTGRES_PASSWORD: wasel
+    # Scaled to this test's memory; deploy/docker-compose.prod.yml sizes it for 16 GB.
+    command: >
+      postgres
+      -c shared_buffers=768MB
+      -c effective_cache_size=2GB
+      -c work_mem=16MB
+      -c random_page_cost=1.1
+      -c max_connections=200
+      -c shared_preload_libraries=pg_stat_statements
+      -c pg_stat_statements.track_planning=on
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wasel -d wasel"]
+      interval: 3s
+      retries: 30
+
+  redis:
+    image: redis:7.4-alpine
+    cpuset: "0-3"
+    mem_limit: 256m
+
+  setup:
+    <<: *backend
+    user: root
+    command: sh -c "python manage.py migrate --noinput && python manage.py seed_loadtest"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    <<: *backend
+    mem_limit: 3g
+    ports:
+      - "8090:8000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  worker:
+    <<: *backend
+    mem_limit: 768m
+    command: celery -A wasel worker -B -l warning --concurrency 2 --schedule /tmp/celerybeat-schedule
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
+  # The load generator, on the other cores so it doesn't steal Wasel's.
+  k6:
+    image: grafana/k6:0.55.0
+    profiles: ["k6"]
+    cpuset: "4-13"
+    volumes:
+      - loadtest-data:/loadtest:ro
+      - ./script.js:/script.js:ro
+      - ./results:/results
+    environment:
+      BASE: http://web:8000
+      PEAK: ${PEAK:-1000}
+      CAPTAINS: ${CAPTAINS:-300}
+      STORES: ${STORES:-150}
+      TRACKERS: ${TRACKERS:-300}
+      MINUTES: ${MINUTES:-2}
+    command: >
+      run --quiet --summary-trend-stats "avg,med,p(90),p(95),p(99),max"
+      --summary-export /results/summary-${RUN:-latest}.json /script.js
+
+volumes:
+  loadtest-data:

@@ -1,5 +1,6 @@
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
+from django.contrib.gis.measure import D
 from django.db.models import F, Prefetch, Q
 from django.utils import timezone
 from rest_framework import permissions, serializers, status, viewsets
@@ -11,6 +12,9 @@ from rest_framework.views import APIView
 from . import access
 from .models import Offer, Product, Vendor
 from .search import search
+
+# No store delivers farther (the admin allows up to 50 km).
+MAX_DELIVERY_RADIUS_KM = 50
 from .serializers import OfferSerializer, VendorDetailSerializer, VendorSerializer
 
 
@@ -53,7 +57,10 @@ class VendorViewSet(viewsets.ReadOnlyModelViewSet):
             except ValueError:
                 raise ValidationError("lat and lng must be numbers")
             queryset = (
-                queryset.annotate(distance=Distance("location", point))
+                # The map index narrows it to stores within the largest delivery
+                # radius first; then each store's own radius is checked.
+                queryset.filter(location__dwithin=(point, D(km=MAX_DELIVERY_RADIUS_KM)))
+                .annotate(distance=Distance("location", point))
                 .filter(distance__lte=F("delivery_radius_km") * 1000)
                 .order_by(*first, "distance")
             )
