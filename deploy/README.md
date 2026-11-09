@@ -6,16 +6,17 @@ One Linux server running Docker serves everything from one domain:
 | :--- | :--- |
 | `/` | Store portal (React, built into the nginx image) |
 | `/admin/` | Platform admin for the Wasel team (React, built into the nginx image) |
-| `/api/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Daphne) |
+| `/api/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Uvicorn) |
 | `/<DJANGO_ADMIN_PATH>/` | Django admin, superusers only, for emergencies |
-| `/ws/` | Live order socket (Daphne, kept open up to an hour between pings) |
+| `/ws/` | Live order socket (Uvicorn, kept open up to an hour between pings) |
 | `/static/` | Django static files, straight from nginx |
+| `/media/` | Product photos stores upload, straight from nginx |
 
 The mobile apps talk to the same domain: build them with `--dart-define=API_URL=https://your-domain`.
 
 ```
              ┌──────────── nginx :80/:443 (TLS, portal, static) ────────────┐
- internet ──►│  /api /ops /login /track /ws ──► web (Daphne :8000)          │
+ internet ──►│  /api /ops /login /track /ws ──► web (Uvicorn :8000)         │
              └──────────────────────────────────────────────────────────────┘
    web, worker (Celery), beat (Celery schedule) ──► db (PostGIS), redis
    migrate: runs once per deploy (migrations + static files)
@@ -89,7 +90,7 @@ git pull
 docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml up -d --build
 ```
 
-`migrate` runs again before the new `web` starts. Open sockets reconnect on their own. nginx looks up `web` again every 10 seconds, so a rebuilt `web` container takes traffic within seconds without restarting nginx (expect a few seconds of 502 while Daphne starts).
+`migrate` runs again before the new `web` starts. Open sockets reconnect on their own. nginx looks up `web` again every 10 seconds, so a rebuilt `web` container takes traffic within seconds without restarting nginx (expect a few seconds of 502 while Uvicorn starts).
 
 ## Checks
 

@@ -3,3 +3,5 @@ __pycache__/
 celerybeat-schedule*
 staticfiles/
 .env
+# Uploaded photos live on a volume, never in the image.
+media/
