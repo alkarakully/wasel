@@ -1,0 +1,129 @@
+# Wasel on one server, from images on Docker Hub (no source code needed).
+# Put this file and .env in one folder on the server, then:
+#   docker compose up -d
+# Images are built and pushed from the repository with deploy/hub/build-and-push.sh.
+
+name: wasel
+
+x-backend: &backend
+  image: ${DOCKERHUB_USER}/wasel-backend:${WASEL_TAG:-latest}
+  env_file: .env
+  environment:
+    DATABASE_URL: postgis://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    REDIS_URL: redis://redis:6379/0
+    CELERY_BROKER_URL: redis://redis:6379/1
+  volumes:
+    # Product photos stores upload; nginx serves them.
+    - media:/app/media
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    # Docker's default 64 MB is too small for parallel queries.
+    shm_size: 1g
+    # Memory comes from .env; the defaults suit a 16 GB server.
+    command: >
+      postgres
+      -c shared_buffers=${PG_SHARED_BUFFERS:-4GB}
+      -c effective_cache_size=${PG_EFFECTIVE_CACHE_SIZE:-10GB}
+      -c work_mem=${PG_WORK_MEM:-16MB}
+      -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM:-512MB}
+      -c random_page_cost=1.1
+      -c max_connections=200
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+
+  # Runs once per deploy: database migrations and static files for nginx.
+  migrate:
+    <<: *backend
+    command: sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
+    volumes:
+      - static:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  web:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz/', timeout=4)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    <<: *backend
+    command: celery -A wasel worker -l info --concurrency 2
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  # Exactly one beat process schedules the periodic jobs.
+  beat:
+    <<: *backend
+    command: celery -A wasel beat -l info --schedule /tmp/celerybeat-schedule
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+
+  # Store portal (/), platform admin (/admin/), TLS, and the proxy to Django.
+  nginx:
+    image: ${DOCKERHUB_USER}/wasel-nginx:${WASEL_TAG:-latest}
+    environment:
+      SERVER_NAME: ${SERVER_NAME}
+      # Must match Django's.
+      DJANGO_ADMIN_PATH: ${DJANGO_ADMIN_PATH}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - static:/var/www/static:ro
+      - media:/var/www/media:ro
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    depends_on:
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Let's Encrypt renewals; started with `--profile certbot` (see README).
+  certbot:
+    image: certbot/certbot:v4.1.1
+    profiles: ["certbot"]
+    volumes:
+      - letsencrypt:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: sh -c "while true; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h; done"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  static:
+  media:
+  letsencrypt:
+  certbot-www:
