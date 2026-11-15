@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/store_session.dart';
 
@@ -34,7 +34,7 @@ class _InvitesScreenState extends State<InvitesScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final session = context.watch<StoreSession>();
     final invites = session.invites ?? const <StoreInvite>[];
 
@@ -128,7 +128,7 @@ class _InviteTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final role = s.t('role_${invite.role}');
 
     final details = Row(

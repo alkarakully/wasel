@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 /// Streams the captain's GPS to the server while they are online.
 ///

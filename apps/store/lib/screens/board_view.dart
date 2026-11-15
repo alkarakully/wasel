@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/board.dart';
 import 'order_card.dart';
@@ -112,7 +112,7 @@ class _Column extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final orders = board.column(status);
     return Container(
       decoration: BoxDecoration(
@@ -180,7 +180,7 @@ class _ColumnIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final fresh = status == 'received';
     final icon = Icon(
@@ -214,7 +214,7 @@ class _Count extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final on = gold && count > 0;
     return Container(
       constraints: const BoxConstraints(minWidth: 26),
@@ -251,7 +251,7 @@ class _ColumnTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Row(
       children: [
@@ -324,7 +324,7 @@ class _PrintToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final on = board.autoPrint;
     return Padding(

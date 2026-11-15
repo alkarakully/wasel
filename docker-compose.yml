@@ -1,16 +1,19 @@
+# Development stack. Its own project name keeps its database apart from other stacks.
+name: nawsil
+
 services:
   db:
     image: postgis/postgis:16-3.4
     environment:
-      POSTGRES_DB: wasel
-      POSTGRES_USER: wasel
-      POSTGRES_PASSWORD: wasel
+      POSTGRES_DB: nawsil
+      POSTGRES_USER: nawsil
+      POSTGRES_PASSWORD: nawsil
     ports:
-      - "${WASEL_DB_PORT:-5432}:5432"
+      - "${NAWSIL_DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wasel -d wasel"]
+      test: ["CMD-SHELL", "pg_isready -U nawsil -d nawsil"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -25,14 +28,14 @@ services:
     user: root
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
-      DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
+      DATABASE_URL: postgis://nawsil:nawsil@db:5432/nawsil
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       DJANGO_DEBUG: "1"
       # Development only: phones on the same Wi-Fi reach the API at the Mac's address.
       DJANGO_ALLOWED_HOSTS: "*"
     ports:
-      - "${WASEL_WEB_PORT:-8000}:8000"
+      - "${NAWSIL_WEB_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -46,9 +49,9 @@ services:
   worker:
     build: ./backend
     user: root
-    command: celery -A wasel worker -B -l info
+    command: celery -A nawsil worker -B -l info
     environment:
-      DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
+      DATABASE_URL: postgis://nawsil:nawsil@db:5432/nawsil
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/1
       DJANGO_DEBUG: "1"

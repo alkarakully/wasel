@@ -4,7 +4,7 @@ from django.db import models
 
 class StaffProfile(models.Model):
     """
-    A Wasel team member who uses the platform admin. Staff sign in with email,
+    A Nawsil team member who uses the platform admin. Staff sign in with email,
     password and an authenticator code, separately from the phone-code login
     customers, captains and stores use. The role decides which areas they see.
     """

@@ -1,0 +1,305 @@
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nawsil_core/nawsil_core.dart';
+
+/// Phone-sized screen instead of the 800x600 test default.
+void usePhoneScreen(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1170, 2532);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.reset);
+}
+
+const user = {
+  'id': 1,
+  'phone': '+9647701234567',
+  'name': '',
+  'role': 'customer',
+  'language_pref': 'ar',
+};
+
+ApiClient fakeApi(List<String> log, {String role = 'customer'}) => ApiClient(
+  baseUrl: 'http://test',
+  client: MockClient((request) async {
+    log.add('${request.method} ${request.url.path} ${request.body}');
+    switch (request.url.path) {
+      case '/api/auth/otp/request/':
+        return http.Response(
+          jsonEncode({
+            'phone': '+9647701234567',
+            'channel': 'whatsapp',
+            'resend_in': 60,
+          }),
+          200,
+        );
+      case '/api/auth/otp/verify/' || '/api/auth/password/login/':
+        return http.Response(
+          jsonEncode({
+            'token': 'abc',
+            'is_new_user': false,
+            'user': {...user, 'role': role},
+          }),
+          200,
+        );
+      case '/api/auth/password/':
+        return http.Response(
+          jsonEncode({...user, 'role': role, 'has_password': true}),
+          200,
+        );
+      default:
+        return http.Response('', 204);
+    }
+  }),
+);
+
+Widget wrap(Widget child, BaseSession session) => MultiProvider(
+  providers: [
+    Provider.value(value: session.api),
+    ChangeNotifierProvider<BaseSession>.value(value: session),
+  ],
+  child: MaterialApp(theme: nawsilTheme(Brightness.light), home: child),
+);
+
+/// Scrolls [key] into view and taps it.
+Future<void> tapKey(WidgetTester tester, String key) async {
+  await tester.ensureVisible(find.byKey(Key(key)));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(Key(key)));
+  await tester.pumpAndSettle();
+}
+
+Future<void> logIn(WidgetTester tester) async {
+  await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
+  await tapKey(tester, 'send-code');
+  await tester.enterText(find.byKey(const Key('code')), '482913');
+  await tester.pumpAndSettle();
+  // After a code sign-in, someone without a password is offered one.
+  if (find.byKey(const Key('not-now')).evaluate().isNotEmpty) {
+    await tapKey(tester, 'not-now');
+  }
+}
+
+void main() {
+  setUp(() => SharedPreferences.setMockInitialValues({}));
+
+  test('money uses thousands separators and the local currency', () {
+    expect(S('en').money(18000), '18,000 IQD');
+    expect(S('ar').money(1250), '1,250 د.ع');
+    expect(S('en').money(-2325), '-2,325 IQD');
+  });
+
+  test('each currency keeps its own decimals', () {
+    expect(S('en').money(3.15, 'KWD'), '3.150 KWD');
+    expect(S('ar').money(3.15, 'KWD'), '3.150 د.ك');
+    expect(S('en').money(12.5, 'SAR'), '12.50 SAR');
+    expect(S('en').money(1500, 'IQD'), '1,500 IQD');
+    expect(displayPhone('+9647701234567'), '+964 770 123 4567');
+    expect(displayPhone('+966501234567'), '+966 501234567');
+    expect(countries.take(7).map((c) => c.code), [
+      'IQ',
+      'SA',
+      'AE',
+      'KW',
+      'QA',
+      'BH',
+      'OM',
+    ]);
+  });
+
+  testWidgets('a Saudi number signs in after picking the country', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.tap(find.byKey(const Key('phone-country')));
+    await tester.pumpAndSettle();
+    // Iraq on top, then the Gulf.
+    expect(find.byKey(const Key('country-IQ')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('country-SA')));
+    await tester.pumpAndSettle();
+    expect(find.text('+966'), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('phone')), '050 123 4567');
+    await tapKey(tester, 'send-code');
+    expect(log.first, contains('"country":"SA"'));
+    expect(log.first, contains('"phone":"050 123 4567"'));
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('nawsil_phone_country'), 'SA');
+    await tester.pumpWidget(const SizedBox()); // stop the resend countdown
+  });
+
+  test('app strings override shared ones and fall back to English', () {
+    S.addStrings({
+      'en': {'only_en': 'English only'},
+      'ar': {'retry': 'جرّب'},
+    });
+    expect(S('ar').t('retry'), 'جرّب');
+    expect(S('ku').t('only_en'), 'English only');
+    expect(S('en').t('orderNumber', {'id': 7}), 'Order #7');
+  });
+
+  testWidgets('login sends a code, then signs in with it', (tester) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await logIn(tester);
+    expect(session.signedIn, isTrue);
+    expect(session.user!.phone, '+9647701234567');
+    expect(log.last, contains('"code":"482913"'));
+    await tester.pumpWidget(const SizedBox()); // stop the resend countdown
+  });
+
+  testWidgets('a pasted message or Arabic digits still give the code', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
+    await tapKey(tester, 'send-code');
+    await tester.enterText(
+      find.byKey(const Key('code')),
+      'Nawsil login code for +9647701234567: ٤٨٢٩١٣',
+    );
+    await tester.pumpAndSettle();
+    await tapKey(tester, 'not-now');
+
+    expect(session.signedIn, isTrue);
+    expect(log.last, contains('"code":"482913"'));
+    await tester.pumpWidget(const SizedBox()); // stop the resend countdown
+  });
+
+  testWidgets('an app can refuse accounts it is not for', (tester) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(
+      wrap(
+        LoginScreen(
+          acceptUser: (u) => u.role == 'captain',
+          rejectedError: 'err_not_allowed',
+        ),
+        session,
+      ),
+    );
+
+    await logIn(tester);
+    expect(session.signedIn, isFalse);
+    expect(find.text("This account can't use this app."), findsOneWidget);
+    expect(log.last, startsWith('POST /api/auth/logout/'));
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('a rejected number shows the error under the field', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final api = ApiClient(
+      baseUrl: 'http://test',
+      client: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'phone': ['Enter an Iraqi mobile number'],
+          }),
+          400,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      wrap(const LoginScreen(), BaseSession(api)..lang = 'en'),
+    );
+    await tester.enterText(find.byKey(const Key('phone')), '12345');
+    await tapKey(tester, 'send-code');
+    expect(find.textContaining("That number isn't valid"), findsOneWidget);
+  });
+
+  testWidgets('after a code sign-in, a password can be set for next time', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.enterText(find.byKey(const Key('phone')), '0770 123 4567');
+    await tapKey(tester, 'send-code');
+    await tester.enterText(find.byKey(const Key('code')), '482913');
+    await tester.pumpAndSettle();
+    expect(find.text('Want a password?'), findsOneWidget);
+    await tester.enterText(
+      find.byKey(const Key('new-password')),
+      'kebab-and-tea-42',
+    );
+    await tapKey(tester, 'save-password');
+
+    expect(log.last, contains('POST /api/auth/password/'));
+    expect(log.last, contains('kebab-and-tea-42'));
+    expect(session.signedIn, isTrue);
+    expect(session.user!.hasPassword, isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('"Not now" keeps the password offer away on this device', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+    await logIn(tester);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getBool('nawsil_password_offer_skipped'), isTrue);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('sign in with an email and password', (tester) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tester.tap(find.text('With a password'));
+    await tester.pumpAndSettle();
+    await tapKey(tester, 'by-email');
+    await tester.enterText(find.byKey(const Key('email')), 'ali@example.com');
+    await tester.enterText(
+      find.byKey(const Key('password')),
+      'kebab-and-tea-42',
+    );
+    await tapKey(tester, 'sign-in');
+
+    expect(log.last, startsWith('POST /api/auth/password/login/'));
+    expect(log.last, contains('"login":"ali@example.com"'));
+    expect(session.signedIn, isTrue);
+    // No password offer after a password sign-in.
+    expect(find.text('Want a password?'), findsNothing);
+  });
+
+  testWidgets('a code can go to the account email instead of WhatsApp', (
+    tester,
+  ) async {
+    usePhoneScreen(tester);
+    final log = <String>[];
+    final session = BaseSession(fakeApi(log))..lang = 'en';
+    await tester.pumpWidget(wrap(const LoginScreen(), session));
+
+    await tapKey(tester, 'by-email');
+    await tester.enterText(find.byKey(const Key('email')), 'ali@example.com');
+    await tapKey(tester, 'send-code');
+    expect(log.last, contains('"email":"ali@example.com"'));
+    expect(log.last, isNot(contains('"phone"')));
+    await tester.pumpWidget(const SizedBox());
+  });
+}

@@ -46,7 +46,7 @@ class TotpTests(TestCase):
 class ConsoleCase(TestCase):
     def setUp(self):
         cache.clear()  # throttles
-        self.admin = create_staff("admin@wasel.iq", "Admin", StaffProfile.Role.ADMIN, PASSWORD)
+        self.admin = create_staff("admin@nawsil.com", "Admin", StaffProfile.Role.ADMIN, PASSWORD)
         self.customer = User.objects.create_user("+9647700000991", name="Zainab")
         self.captain = User.objects.create_user("+9647500000992", role=User.Role.CAPTAIN, name="Ali")
         self.owner = User.objects.create_user("+9647800000993", role=User.Role.VENDOR, name="Owner")
@@ -68,7 +68,7 @@ class ConsoleCase(TestCase):
         return client
 
     def staff(self, role, email=None):
-        return create_staff(email or f"{role}@wasel.iq", role.title(), role, PASSWORD)
+        return create_staff(email or f"{role}@nawsil.com", role.title(), role, PASSWORD)
 
     def post(self, url, data=None):
         return self.client.post(url, data or {}, content_type="application/json")
@@ -93,7 +93,7 @@ class ConsoleCase(TestCase):
 
 
 class SignInTests(ConsoleCase):
-    def login(self, email="admin@wasel.iq", password=PASSWORD):
+    def login(self, email="admin@nawsil.com", password=PASSWORD):
         return self.post("/api/console/auth/login/", {"email": email, "password": password})
 
     def verify(self, code):
@@ -103,7 +103,7 @@ class SignInTests(ConsoleCase):
         response = self.login()
         self.assertEqual(response.json()["next"], "setup")
         secret = response.json()["secret"]
-        self.assertIn("otpauth://totp/Wasel:admin%40wasel.iq", response.json()["uri"])
+        self.assertIn("otpauth://totp/Nawsil:admin%40nawsil.com", response.json()["uri"])
         # Password alone doesn't open anything.
         self.assertEqual(self.client.get("/api/console/overview/").status_code, 403)
 
@@ -113,7 +113,7 @@ class SignInTests(ConsoleCase):
         self.assertEqual(self.client.get("/api/console/overview/").status_code, 200)
         self.admin.refresh_from_db()
         self.assertTrue(self.admin.totp_enabled)
-        self.assertTrue(AuditEntry.objects.filter(action="auth.login", actor_email="admin@wasel.iq").exists())
+        self.assertTrue(AuditEntry.objects.filter(action="auth.login", actor_email="admin@nawsil.com").exists())
 
     def test_later_sign_ins_ask_for_a_code_and_codes_work_once(self):
         self.admin.totp_secret = totp.new_secret()
@@ -129,7 +129,7 @@ class SignInTests(ConsoleCase):
 
     def test_wrong_password_and_unknown_email_look_the_same(self):
         self.assertEqual(self.login(password="nope").json()["error"], "invalid_login")
-        self.assertEqual(self.login(email="who@wasel.iq").json()["error"], "invalid_login")
+        self.assertEqual(self.login(email="who@nawsil.com").json()["error"], "invalid_login")
 
     def test_five_wrong_passwords_lock_the_account(self):
         for _ in range(5):
@@ -186,7 +186,7 @@ class AccessTests(ConsoleCase):
         for role, method, url, allowed in cases:
             with self.subTest(role=role, url=url, method=method):
                 self.client.logout()
-                self.sign_in(self.staff(role, f"{role}-{method}-{abs(hash(url))}@wasel.iq"))
+                self.sign_in(self.staff(role, f"{role}-{method}-{abs(hash(url))}@nawsil.com"))
                 response = getattr(self.client, method)(url, {"name": "x"}, content_type="application/json") if method != "get" else self.client.get(url)
                 if allowed:
                     self.assertEqual(response.status_code, 200, response.content[:300])
@@ -260,7 +260,7 @@ class StoreTests(ConsoleCase):
         self.assertEqual(self.store.commission_rate, Decimal("10"))
         entry = AuditEntry.objects.get(action="store.update")
         self.assertEqual(entry.changes["commission_rate"], ["15.00", "10.00"])
-        self.assertEqual(entry.actor_email, "admin@wasel.iq")
+        self.assertEqual(entry.actor_email, "admin@nawsil.com")
 
     def test_menu_and_team(self):
         url = f"/api/console/stores/{self.store.pk}/menu/"
@@ -363,13 +363,13 @@ class PeopleTests(ConsoleCase):
 
     def test_staff_management_guards(self):
         response = self.post(
-            "/api/console/staff/", {"email": "Sara@Wasel.iq", "name": "Sara", "role": "support", "password": PASSWORD}
+            "/api/console/staff/", {"email": "Sara@Nawsil.com", "name": "Sara", "role": "support", "password": PASSWORD}
         )
         self.assertEqual(response.status_code, 201, response.content)
-        sara = StaffProfile.objects.get(email="sara@wasel.iq")
+        sara = StaffProfile.objects.get(email="sara@nawsil.com")
         self.assertTrue(sara.user.is_staff)
         self.assertFalse(sara.user.is_superuser)
-        self.assertEqual(self.post("/api/console/staff/", {"email": "x@wasel.iq", "name": "X", "role": "support", "password": "short"}).status_code, 400)
+        self.assertEqual(self.post("/api/console/staff/", {"email": "x@nawsil.com", "name": "X", "role": "support", "password": "short"}).status_code, 400)
 
         self.assertEqual(self.patch(f"/api/console/staff/{self.admin.pk}/", {"role": "support"}).json()["error"], "self_lockout")
         self.patch(f"/api/console/staff/{sara.pk}/", {"role": "finance"})
@@ -383,7 +383,7 @@ class PeopleTests(ConsoleCase):
         self.assertFalse(sara.totp_enabled)
 
     def test_keep_one_admin(self):
-        other = self.staff("admin", "second@wasel.iq")
+        other = self.staff("admin", "second@nawsil.com")
         self.sign_in(other)
         self.patch(f"/api/console/staff/{self.admin.pk}/", {"is_active": False})
         response = self.patch(f"/api/console/staff/{self.admin.pk}/", {"is_active": True})

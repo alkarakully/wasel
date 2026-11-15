@@ -27,7 +27,7 @@ from django.db.models import F
 from django.utils import timezone
 from django.utils.module_loading import import_string
 
-from subscriptions.services import start_wasel_plus_trial
+from subscriptions.services import start_nawsil_plus_trial
 
 from .models import PhoneOTP, User
 from .phone import country_of
@@ -84,7 +84,7 @@ class ConsoleSender:
     """Development only: writes the code to the server log."""
 
     def send(self, to, code, lang="ar"):
-        logger.warning("[DEV] Wasel login code for %s: %s", to, code)
+        logger.warning("[DEV] Nawsil login code for %s: %s", to, code)
 
 
 class UnconfiguredSender:
@@ -93,9 +93,9 @@ class UnconfiguredSender:
 
 
 EMAIL_TEXT = {
-    "ar": ("رمز الدخول إلى واصل: {code}", "رمز الدخول إلى واصل هو {code}\nيبقى صالحاً {minutes} دقائق. لا تشاركه مع أحد."),
-    "ku": ("کۆدی چوونەژوورەوەی واصل: {code}", "کۆدی چوونەژوورەوەی واصل {code}ـە\nبۆ {minutes} خولەک کار دەکات. لەگەڵ کەس بەشی مەکە."),
-    "en": ("Your Wasel code: {code}", "Your Wasel code is {code}\nIt works for {minutes} minutes. Don't share it with anyone."),
+    "ar": ("رمز الدخول إلى نوصل: {code}", "رمز الدخول إلى نوصل هو {code}\nيبقى صالحاً {minutes} دقائق. لا تشاركه مع أحد."),
+    "ku": ("کۆدی چوونەژوورەوەی نوصل: {code}", "کۆدی چوونەژوورەوەی نوصل {code}ـە\nبۆ {minutes} خولەک کار دەکات. لەگەڵ کەس بەشی مەکە."),
+    "en": ("Your Nawsil code: {code}", "Your Nawsil code is {code}\nIt works for {minutes} minutes. Don't share it with anyone."),
 }
 
 
@@ -272,7 +272,7 @@ def verify_code(phone=None, code="", email=None, country=None):
         if user is None:
             # The account belongs to the number's country (its wallet currency).
             user = User.objects.create_user(phone=phone, country=country_of(phone))
-            start_wasel_plus_trial(user)
+            start_nawsil_plus_trial(user)
             return user, True
     if not user.is_active:
         raise AccountDisabled("This account has been disabled.")

@@ -1,6 +1,6 @@
-# Wasel captain app (Flutter)
+# Nawsil captain app (Flutter)
 
-For delivery captains: log in, go online, take an order, pick it up, share GPS on the way, and finish with the customer's PIN. Arabic, Kurdish (Sorani) and English, light and dark. Shared code (API, login, theme, strings) lives in `../wasel_core`.
+For delivery captains: log in, go online, take an order, pick it up, share GPS on the way, and finish with the customer's PIN. Arabic, Kurdish (Sorani) and English, light and dark. Shared code (API, login, theme, strings) lives in `../nawsil_core`.
 
 ## Run against the local backend
 

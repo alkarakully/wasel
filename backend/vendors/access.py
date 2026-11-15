@@ -6,7 +6,7 @@ Who can do what at a store.
   cashier  orders (accept, reject, ready), stock switches, open/close
 
 The owner is Vendor.owner; everyone else is a StoreMember. A store that
-Wasel hasn't approved yet (pending or rejected) has no roles at all: nobody
+Nawsil hasn't approved yet (pending or rejected) has no roles at all: nobody
 can run it, and its owner only sees it as an application.
 """
 

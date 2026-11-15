@@ -1,5 +1,5 @@
 """
-The countries Wasel runs stores in, each with its own currency, clock and prices.
+The countries Nawsil runs stores in, each with its own currency, clock and prices.
 
 A store belongs to one of these; its orders, fees, statements and reports use
 that country's currency, time zone and first day of the week. Prices here can

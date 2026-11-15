@@ -20,7 +20,7 @@ class Order(models.Model):
     class PaymentType(models.TextChoices):
         COD = "cod", "Cash on delivery"
         CARD = "card", "Card"
-        WALLET = "wallet", "Wasel Wallet"
+        WALLET = "wallet", "Nawsil Wallet"
 
     class PaymentStatus(models.TextChoices):
         # Cash is collected by the captain; card waits for the payment gateway.
@@ -31,7 +31,7 @@ class Order(models.Model):
     class CancelledBy(models.TextChoices):
         CUSTOMER = "customer", "Customer"
         VENDOR = "vendor", "Vendor"
-        SUPPORT = "support", "Wasel support"
+        SUPPORT = "support", "Nawsil support"
 
     customer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="orders")
     vendor = models.ForeignKey("vendors.Vendor", on_delete=models.PROTECT, related_name="orders")

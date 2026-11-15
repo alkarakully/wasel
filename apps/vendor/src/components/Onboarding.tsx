@@ -74,7 +74,7 @@ export function InvitesStep({ invites, ...props }: StepProps & { invites: Invite
   )
 }
 
-/** Joining Wasel: the owner's name and their first store. */
+/** Joining Nawsil: the owner's name and their first store. */
 export function ApplyStep({ from, ...props }: StepProps & { from?: StoreApplication | null }) {
   const { t } = useI18n()
   const submit = async (input: ApplicationInput) => {
@@ -92,7 +92,7 @@ export function ApplyStep({ from, ...props }: StepProps & { from?: StoreApplicat
 
 const RECHECK_MS = 30000
 
-/** The store is with Wasel for review; checks back by itself and when the tab comes back. */
+/** The store is with Nawsil for review; checks back by itself and when the tab comes back. */
 export function WaitingStep({
   applications,
   canApply,

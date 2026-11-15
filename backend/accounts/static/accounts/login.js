@@ -4,7 +4,7 @@
   var STRINGS = {
     ar: {
       dir: "rtl",
-      pageTitle: "واصل | تسجيل الدخول",
+      pageTitle: "نوصل | تسجيل الدخول",
       brandLine: "اطلب من مطاعمك وأسواقك المفضلة، ويوصلك الطلب لباب البيت.",
       phoneTitle: "سجّل دخولك",
       phoneLead: "أدخل رقم هاتفك وسنرسل لك رمز الدخول.",
@@ -24,7 +24,7 @@
       checking: "جارٍ التحقق...",
       resend: "إعادة إرسال الرمز",
       resendIn: "يمكنك إعادة الإرسال بعد {s} ثانية",
-      welcomeNew: "أهلاً بك في واصل",
+      welcomeNew: "أهلاً بك في نوصل",
       welcomeBack: "أهلاً بعودتك",
       logout: "تسجيل الخروج",
       errPhone: "رقم الهاتف غير صحيح. تأكد من الدولة والرقم.",
@@ -38,7 +38,7 @@
     },
     ku: {
       dir: "rtl",
-      pageTitle: "واصل | چوونەژوورەوە",
+      pageTitle: "نوصل | چوونەژوورەوە",
       brandLine: "لە چێشتخانە و بازاڕە دڵخوازەکانت داوا بکە، تا بەردەم ماڵەکەت دەگات.",
       phoneTitle: "چوونەژوورەوە",
       phoneLead: "ژمارەی مۆبایلەکەت بنووسە و کۆدی چوونەژوورەوەت بۆ دەنێرین.",
@@ -58,7 +58,7 @@
       checking: "پشکنین...",
       resend: "دووبارە ناردنەوەی کۆد",
       resendIn: "دوای {s} چرکە دەتوانیت دووبارە بینێریتەوە",
-      welcomeNew: "بەخێربێیت بۆ واصل",
+      welcomeNew: "بەخێربێیت بۆ نوصل",
       welcomeBack: "بەخێربێیتەوە",
       logout: "چوونەدەرەوە",
       errPhone: "ژمارەکە هەڵەیە. وڵات و ژمارەکە بپشکنە.",
@@ -72,7 +72,7 @@
     },
     en: {
       dir: "ltr",
-      pageTitle: "Wasel | Log in",
+      pageTitle: "Nawsil | Log in",
       brandLine: "Order from your favourite restaurants and markets, delivered to your door.",
       phoneTitle: "Log in",
       phoneLead: "Enter your phone number and we'll send you a login code.",
@@ -92,7 +92,7 @@
       checking: "Checking...",
       resend: "Resend code",
       resendIn: "You can resend in {s}s",
-      welcomeNew: "Welcome to Wasel",
+      welcomeNew: "Welcome to Nawsil",
       welcomeBack: "Welcome back",
       logout: "Log out",
       errPhone: "That number isn't valid. Check the country and the number.",
@@ -106,9 +106,9 @@
     }
   };
 
-  var TOKEN_KEY = "wasel_token";
-  var LANG_KEY = "wasel_lang";
-  var COUNTRY_KEY = "wasel_country";
+  var TOKEN_KEY = "nawsil_token";
+  var LANG_KEY = "nawsil_lang";
+  var COUNTRY_KEY = "nawsil_country";
 
   var state = { lang: "ar", country: storage("get", COUNTRY_KEY) || "IQ", countries: null, phone: null, channel: "whatsapp", resendAt: 0, timer: null, user: null, isNew: false };
 
@@ -360,7 +360,7 @@
   });
 
   // Submit as soon as 6 digits are typed or pasted. Converts Arabic-Indic
-  // digits, and keeps the last 6 so pasting a whole message ("Your Wasel
+  // digits, and keeps the last 6 so pasting a whole message ("Your Nawsil
   // code for +964...: 482913") still gives the code, not the phone number.
   $("code").addEventListener("input", function (event) {
     var input = event.target;

@@ -1,9 +1,11 @@
 """
-Builds the Wasel logo set from the traced artwork (brand/logo-source.jpeg):
-WASEL in blue, the gold divider with its soft diamond, and واصل in gold.
+Builds the Nawsil logo set: NAWSIL in blue, the gold divider with its soft
+diamond, and نوصل in gold. The letterforms come from the traced artwork
+(brand/logo-source.jpeg), recomposed into the new name by compose_nawsil.py.
 
-  .venv/bin/pip install pillow numpy potracer
+  .venv/bin/pip install pillow numpy potracer skia-pathops fonttools
   .venv/bin/python brand/tools/trace_logo.py brand/tools   # writes brand/tools/traced.json
+  .venv/bin/python brand/tools/compose_nawsil.py           # writes brand/tools/composed.json
   .venv/bin/python brand/tools/build_logo.py               # writes brand/*.svg and brand/logo.json
 """
 
@@ -13,18 +15,18 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE.parent
-t = json.loads((HERE / "traced.json").read_text())
+t = json.loads((HERE / "composed.json").read_text())
 
 BLUE, GOLD, PAPER = "#033990", "#E4A739", "#F4F6FF"
-LATIN, ARABIC, DIVIDER = t["blue"], t["gold"], t["divider"]
+LATIN, ARABIC, DIVIDER = t["latin"], t["arabic"], t["divider"]
 
-# Ink boxes in the source artwork (pixels).
-LAT = (19, 151, 452, 256)  # WASEL
-AR = (520, 115, 838, 283)  # واصل
-DIV_TOP, DIV_BOTTOM = 83, 325
+# Ink boxes of the composed lettering (artwork pixels).
+LAT = tuple(t["latin_box"])  # NAWSIL
+AR = tuple(t["arabic_box"])  # نوصل
+DIV_TOP, DIV_BOTTOM = t["divider_box"][1], t["divider_box"][3]
 PAD = 6
-HX, HY = LAT[0] - PAD, DIV_TOP - PAD
-HW, HH = AR[2] - LAT[0] + 2 * PAD, DIV_BOTTOM - DIV_TOP + 2 * PAD
+HX, HY = round(LAT[0] - PAD, 2), round(DIV_TOP - PAD, 2)
+HW, HH = round(AR[2] - LAT[0] + 2 * PAD, 2), round(DIV_BOTTOM - DIV_TOP + 2 * PAD, 2)
 
 
 def r(v):
@@ -52,14 +54,14 @@ def hbar(x1, x2, y, w=6.0):
 
 def horizontal(latin, arabic, rule):
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{HX} {HY} {HW} {HH}" role="img" aria-label="WASEL واصل">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{HX} {HY} {HW} {HH}" role="img" aria-label="NAWSIL نوصل">'
         f'<path d="{LATIN}" fill="{latin}" fill-rule="evenodd"/>'
         f'<path d="{DIVIDER}" fill="{rule}"/>'
         f'<path d="{ARABIC}" fill="{arabic}" fill-rule="evenodd"/></svg>'
     )
 
 
-# Stacked: واصل, a horizontal divider with the diamond, WASEL below at 58%.
+# Stacked: نوصل, a horizontal divider with the diamond, NAWSIL below at 58%.
 S_LAT = 0.58
 SW = (AR[2] - AR[0]) + 2 * PAD + 20
 ar_dx, ar_dy = PAD + 10 - AR[0], PAD - AR[1]
@@ -73,7 +75,7 @@ STACK_RULE = hbar(SW * 0.12, SW / 2 - 18, rule_y) + soft_diamond(SW / 2, rule_y,
 
 def stacked(latin, arabic, rule):
     return (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {r(SW)} {r(SH)}" role="img" aria-label="WASEL واصل">'
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {r(SW)} {r(SH)}" role="img" aria-label="NAWSIL نوصل">'
         f'<path transform="translate({r(ar_dx)} {r(ar_dy)})" d="{ARABIC}" fill="{arabic}" fill-rule="evenodd"/>'
         f'<path d="{STACK_RULE}" fill="{rule}"/>'
         f'<path transform="translate({r(lat_dx)} {r(lat_dy)}) scale({S_LAT})" d="{LATIN}" fill="{latin}" fill-rule="evenodd"/></svg>'
@@ -95,7 +97,7 @@ def rect_bricks(size, s):
 
 
 def icon(size=1024, rounded=True, bricks=True, background=True):
-    """App icon: the gold واصل over a gold divider on deep blue glaze."""
+    """App icon: the gold نوصل over a gold divider on deep blue glaze."""
     s = size / 1024
     aw, ah = AR[2] - AR[0], AR[3] - AR[1]
     k = 600 * s / aw
@@ -121,14 +123,14 @@ def icon(size=1024, rounded=True, bricks=True, background=True):
 
 
 files = {
-    "wasel-logo.svg": horizontal(BLUE, GOLD, GOLD),
-    "wasel-logo-dark.svg": horizontal(PAPER, GOLD, GOLD),
-    "wasel-logo-on-glaze.svg": horizontal(PAPER, GOLD, GOLD),
-    "wasel-logo-stacked.svg": stacked(BLUE, GOLD, GOLD),
-    "wasel-logo-stacked-dark.svg": stacked(PAPER, GOLD, GOLD),
-    "wasel-icon.svg": icon(),
-    "wasel-icon-square.svg": icon(rounded=False),
-    "wasel-icon-foreground.svg": icon(background=False),
+    "nawsil-logo.svg": horizontal(BLUE, GOLD, GOLD),
+    "nawsil-logo-dark.svg": horizontal(PAPER, GOLD, GOLD),
+    "nawsil-logo-on-glaze.svg": horizontal(PAPER, GOLD, GOLD),
+    "nawsil-logo-stacked.svg": stacked(BLUE, GOLD, GOLD),
+    "nawsil-logo-stacked-dark.svg": stacked(PAPER, GOLD, GOLD),
+    "nawsil-icon.svg": icon(),
+    "nawsil-icon-square.svg": icon(rounded=False),
+    "nawsil-icon-foreground.svg": icon(background=False),
     "favicon.svg": icon(64, bricks=False),
 }
 for name, content in files.items():

@@ -4,10 +4,10 @@ The server only needs two files, `docker-compose.yml` and `.env`. It pulls two i
 
 | Image | What's in it |
 | :--- | :--- |
-| `<user>/wasel-backend` | Django API, live sockets, Celery worker and beat |
-| `<user>/wasel-nginx` | Store portal (`/`), platform admin (`/admin/`), TLS and the proxy to Django |
+| `<user>/nawsil-backend` | Django API, live sockets, Celery worker and beat |
+| `<user>/nawsil-nginx` | Store portal (`/`), platform admin (`/admin/`), TLS and the proxy to Django |
 
-The images contain Wasel's source code, so make both Docker Hub repositories **private**. Docker Hub's free plan has only one private repository; two need a paid plan.
+The images contain Nawsil's source code, so make both Docker Hub repositories **private**. Docker Hub's free plan has only one private repository; two need a paid plan.
 
 ## 1. Build and push (on your Mac)
 
@@ -32,7 +32,7 @@ curl -fsSL https://get.docker.com | sh
 ```
 
 ```bash
-mkdir -p /opt/wasel
+mkdir -p /opt/nawsil
 ```
 
 ## 3. Fill in and upload `.env`
@@ -40,10 +40,10 @@ mkdir -p /opt/wasel
 `deploy/hub/.env` on your Mac already has fresh secrets. Fill in `DOCKERHUB_USER`, your domain (in `SERVER_NAME`, `DJANGO_ALLOWED_HOSTS` and `DJANGO_CSRF_TRUSTED_ORIGINS`), and the WhatsApp keys. Then upload both files (on your Mac):
 
 ```bash
-scp deploy/hub/docker-compose.yml deploy/hub/.env root@YOUR_DROPLET_IP:/opt/wasel/
+scp deploy/hub/docker-compose.yml deploy/hub/.env root@YOUR_DROPLET_IP:/opt/nawsil/
 ```
 
-## 4. Start (on the Droplet, in `/opt/wasel`)
+## 4. Start (on the Droplet, in `/opt/nawsil`)
 
 ```bash
 docker login
@@ -93,16 +93,16 @@ Push new images from your Mac with `build-and-push.sh`, then on the Droplet:
 docker compose pull && docker compose up -d
 ```
 
-Migrations run before the new web container starts. To roll back, set `WASEL_TAG` in `.env` to an earlier commit tag and run `docker compose up -d`.
+Migrations run before the new web container starts. To roll back, set `NAWSIL_TAG` in `.env` to an earlier commit tag and run `docker compose up -d`.
 
 ## Backups
 
 ```bash
-docker compose exec -T db pg_dump -U wasel -Fc wasel > wasel-$(date +%F).dump
+docker compose exec -T db pg_dump -U nawsil -Fc nawsil > nawsil-$(date +%F).dump
 ```
 
 ```bash
-docker run --rm -v wasel_media:/media -v "$PWD":/out alpine tar czf /out/media-$(date +%F).tgz -C /media .
+docker run --rm -v nawsil_media:/media -v "$PWD":/out alpine tar czf /out/media-$(date +%F).tgz -C /media .
 ```
 
 Copy the files off the Droplet, or turn on DigitalOcean's Droplet backups as well.

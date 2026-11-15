@@ -5,7 +5,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../config.dart';
 
@@ -240,9 +240,9 @@ class _TrackingScreenState extends State<TrackingScreen>
             onTap: () => Navigator.pop(context),
             child: Container(
               decoration: BoxDecoration(
-                color: WaselTheme.of(context).surface,
+                color: NawsilTheme.of(context).surface,
                 shape: BoxShape.circle,
-                boxShadow: WaselTheme.of(context).floating,
+                boxShadow: NawsilTheme.of(context).floating,
               ),
               child: Icon(
                 Directionality.of(context) == TextDirection.rtl
@@ -316,7 +316,7 @@ class _Panel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = strings;
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final order = this.order;
 

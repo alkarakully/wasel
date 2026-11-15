@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.wasel.wasel_captain"
+    namespace = "com.nawsil.nawsil_captain"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.wasel.wasel_captain"
+        applicationId = "com.nawsil.nawsil_captain"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

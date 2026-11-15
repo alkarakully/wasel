@@ -1,4 +1,4 @@
-# Wasel vendor portal (React)
+# Nawsil vendor portal (React)
 
 Each store's own admin, on a computer or a kitchen tablet: a live order board with a loud new-order alarm, the menu and opening hours, reports, weekly billing statements and the store team. Owners, managers and cashiers each see what their role allows. Arabic, Kurdish (Sorani) and English, right-to-left where needed, light and dark.
 
@@ -34,7 +34,7 @@ Built with Vite, React 19 and TypeScript. Icons from Phosphor.
    docker compose logs web | grep "login code"
    ```
 
-Store accounts (role `vendor`) log in. New store owners choose **Join Wasel as a store** on the login page: they verify their number, fill in their first store (with its spot on a map and delivery distance) and see **Waiting for approval** until Wasel staff approve it in `/ops/`. Someone invited to a store's team sees the invite when they sign in, and joins by accepting.
+Store accounts (role `vendor`) log in. New store owners choose **Join Nawsil as a store** on the login page: they verify their number, fill in their first store (with its spot on a map and delivery distance) and see **Waiting for approval** until Nawsil staff approve it in `/ops/`. Someone invited to a store's team sees the invite when they sign in, and joins by accepting.
 
 ## How it works
 
@@ -49,9 +49,9 @@ Store accounts (role `vendor`) log in. New store owners choose **Join Wasel as a
 | Menu editing | Owners and managers add items (names in Arabic, Kurdish and English, section, price, per item or per kg), edit them and remove them. Items that were ever ordered are archived rather than deleted, so old orders keep them. |
 | Opening hours | One opening per weekday or closed; a closing time before the opening means after midnight. |
 | Reports | For the last 7 or 30 days, this month, or any dates: earnings after commission, food sales, orders, average order, average prep time, cancellations, sales by day, busiest hours and best sellers. |
-| Billing | Wasel collects every payment and pays the store weekly (Saturday to Friday). The owner sees this week so far, what's due and what's been paid, and each week's statement with every order, downloadable as a spreadsheet. |
+| Billing | Nawsil collects every payment and pays the store weekly (Saturday to Friday). The owner sees this week so far, what's due and what's been paid, and each week's statement with every order, downloadable as a spreadsheet. |
 | Team | The owner invites managers and cashiers by phone and sees invites waiting for an answer (and can cancel them). People join when they accept at their next sign-in, here or in the tablet app. |
-| Store settings | The owner's stores and branches with their approval state (and the reason when one wasn't approved), and **Add a branch**, which goes to Wasel for approval like the first store. |
+| Store settings | The owner's stores and branches with their approval state (and the reason when one wasn't approved), and **Add a branch**, which goes to Nawsil for approval like the first store. |
 | Printing | Every order card has a print button, and **Print when accepting** prints automatically on accept. It prints two 80 mm slips, for kitchen receipt printers (any printer works): a kitchen ticket with the order number, times and items in large type, and a package slip to clip to the bag with a tick box per item, the customer's name and cash to collect. The delivery PIN and the customer's phone are never printed. For printing without the dialog, run Chrome in kiosk printing mode (`--kiosk-printing`). |
 
 Who sees what:

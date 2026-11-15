@@ -26,7 +26,7 @@ interface Props {
   onCancel?: () => void
 }
 
-/** The store's name, kind, address, map spot and delivery radius, sent to Wasel for approval. */
+/** The store's name, kind, address, map spot and delivery radius, sent to Nawsil for approval. */
 export function StoreForm({ mode, from, askName = mode === 'first', onSubmit, onCancel }: Props) {
   const { t, error: errorMessage } = useI18n()
   const [ownerName, setOwnerName] = useState('')

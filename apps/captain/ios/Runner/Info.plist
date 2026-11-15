@@ -3,14 +3,14 @@
 <plist version="1.0">
 <dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>While you're online, Wasel shares your location with the customer and store of the order you're delivering. أثناء اتصالك، يشارك واصل موقعك مع الزبون والمتجر للطلب الذي توصله.</string>
+	<string>While you're online, Nawsil shares your location with the customer and store of the order you're delivering. أثناء اتصالك، يشارك نوصل موقعك مع الزبون والمتجر للطلب الذي توصله.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
 	</array>
 	<!-- Debug builds on a real device talk to the API on the developer's Mac over Wi-Fi. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connects to the Wasel server on your local network during development.</string>
+	<string>Connects to the Nawsil server on your local network during development.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets debug builds reach the local API over http://localhost. -->
@@ -22,7 +22,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Wasel Captain</string>
+	<string>Nawsil Captain</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -30,7 +30,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>wasel_captain</string>
+	<string>nawsil_captain</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

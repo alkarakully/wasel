@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/cart.dart';
 import '../widgets/store_card.dart';
@@ -52,7 +52,7 @@ class _ProductSheetState extends State<ProductSheet> {
     final s = S.of(context);
     final product = widget.product;
     final scheme = Theme.of(context).colorScheme;
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final step = product.soldByKg ? 0.5 : 1.0;
     final quantityLabel = product.soldByKg
         ? '${_quantity.toStringAsFixed(1)} kg'
@@ -292,7 +292,7 @@ class _StepButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,

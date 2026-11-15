@@ -1,4 +1,4 @@
-"""Stores, their applications, menus and teams, as Wasel staff see them."""
+"""Stores, their applications, menus and teams, as Nawsil staff see them."""
 
 from decimal import Decimal
 
@@ -136,7 +136,7 @@ class StoresView(ConsoleView):
             return Response({f: ["This field is required."] for f in missing}, status=400)
         country = d.get("country") or where(d["latitude"], d["longitude"])
         if country is None:
-            return Response({"country": ["Wasel doesn't run stores in this area yet. Choose the country."]}, status=400)
+            return Response({"country": ["Nawsil doesn't run stores in this area yet. Choose the country."]}, status=400)
         if not region_for(country).contains(d["latitude"], d["longitude"]):
             return Response({"latitude": [f"This spot isn't in {country}."]}, status=400)
         with transaction.atomic():

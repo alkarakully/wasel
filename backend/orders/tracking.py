@@ -28,7 +28,7 @@ def update_captain_location(captain, lat, lng, heading=None, speed=None):
     fields = {"point": Point(lng, lat, srid=4326), "heading": heading, "speed": speed, "updated_at": now}
     # One UPDATE does the throttle and the save: it only touches a position older
     # than MIN_INTERVAL. This runs for every captain every few seconds, the most
-    # frequent write Wasel has.
+    # frequent write Nawsil has.
     saved = CaptainLocation.objects.filter(captain=captain, updated_at__lte=now - MIN_INTERVAL).update(**fields)
     if not saved:
         if CaptainLocation.objects.filter(captain=captain).exists():

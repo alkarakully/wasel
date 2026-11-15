@@ -11,7 +11,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from vendors.models import Vendor
-from wasel.asgi import application
+from nawsil.asgi import application
 
 from .models import CaptainLocation, Order
 from .tracking import update_captain_location
@@ -97,7 +97,7 @@ class LocationApiTests(TrackingSetup, TestCase):
     def test_tracking_page_renders(self, send):
         response = self.client.get("/track/42/")
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "window.WASEL_ORDER_ID = 42;")
+        self.assertContains(response, "window.NAWSIL_ORDER_ID = 42;")
 
 
 @override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})

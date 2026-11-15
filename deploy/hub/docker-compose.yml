@@ -1,12 +1,12 @@
-# Wasel on one server, from images on Docker Hub (no source code needed).
+# Nawsil on one server, from images on Docker Hub (no source code needed).
 # Put this file and .env in one folder on the server, then:
 #   docker compose up -d
 # Images are built and pushed from the repository with deploy/hub/build-and-push.sh.
 
-name: wasel
+name: nawsil
 
 x-backend: &backend
-  image: ${DOCKERHUB_USER}/wasel-backend:${WASEL_TAG:-latest}
+  image: ${DOCKERHUB_USER}/nawsil-backend:${NAWSIL_TAG:-latest}
   env_file: .env
   environment:
     DATABASE_URL: postgis://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
@@ -74,7 +74,7 @@ services:
 
   worker:
     <<: *backend
-    command: celery -A wasel worker -l info --concurrency 2
+    command: celery -A nawsil worker -l info --concurrency 2
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -84,7 +84,7 @@ services:
   # Exactly one beat process schedules the periodic jobs.
   beat:
     <<: *backend
-    command: celery -A wasel beat -l info --schedule /tmp/celerybeat-schedule
+    command: celery -A nawsil beat -l info --schedule /tmp/celerybeat-schedule
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -93,7 +93,7 @@ services:
 
   # Store portal (/), platform admin (/admin/), TLS, and the proxy to Django.
   nginx:
-    image: ${DOCKERHUB_USER}/wasel-nginx:${WASEL_TAG:-latest}
+    image: ${DOCKERHUB_USER}/nawsil-nginx:${NAWSIL_TAG:-latest}
     environment:
       SERVER_NAME: ${SERVER_NAME}
       # Must match Django's.

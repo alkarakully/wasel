@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'screens/home_screen.dart';
 import 'state/captain_session.dart';
@@ -43,7 +43,7 @@ class CaptainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<CaptainSession>();
     return MaterialApp(
-      title: 'Wasel Captain',
+      title: 'Nawsil Captain',
       debugShowCheckedModeBanner: false,
       // Kurdish uses Arabic script and right-to-left layout; Flutter's own
       // widget text falls back to Arabic, our strings stay Kurdish.
@@ -54,8 +54,8 @@ class CaptainApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: waselTheme(Brightness.light),
-      darkTheme: waselTheme(Brightness.dark),
+      theme: nawsilTheme(Brightness.light),
+      darkTheme: nawsilTheme(Brightness.dark),
       home: !session.loaded
           ? const BrandSplash(caption: 'كابتن')
           : session.signedIn

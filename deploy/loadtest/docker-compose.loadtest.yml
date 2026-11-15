@@ -1,15 +1,15 @@
-# A production-like copy of Wasel, squeezed onto 4 CPU cores, to load-test.
+# A production-like copy of Nawsil, squeezed onto 4 CPU cores, to load-test.
 # From the repository root:
 #   docker compose -f deploy/loadtest/docker-compose.loadtest.yml up -d --build --force-recreate
 #   docker compose -f deploy/loadtest/docker-compose.loadtest.yml run --rm k6
 # See deploy/loadtest/README.md. Its database is separate from development's.
 
-name: wasel-loadtest
+name: nawsil-loadtest
 
 x-backend: &backend
   build: ../../backend
   environment:
-    DATABASE_URL: postgis://wasel:wasel@db:5432/wasel
+    DATABASE_URL: postgis://nawsil:nawsil@db:5432/nawsil
     REDIS_URL: redis://redis:6379/0
     CELERY_BROKER_URL: redis://redis:6379/1
     DJANGO_DEBUG: "0"
@@ -18,7 +18,7 @@ x-backend: &backend
     DJANGO_LOG_LEVEL: ERROR
     LOADTEST: "1"
     WEB_CONCURRENCY: ${WEB_CONCURRENCY:-8}
-  # Everything Wasel runs shares the same 4 cores, like one 4-core server.
+  # Everything Nawsil runs shares the same 4 cores, like one 4-core server.
   cpuset: "0-3"
   volumes:
     - loadtest-data:/loadtest
@@ -29,9 +29,9 @@ services:
     cpuset: "0-3"
     mem_limit: 3g
     environment:
-      POSTGRES_DB: wasel
-      POSTGRES_USER: wasel
-      POSTGRES_PASSWORD: wasel
+      POSTGRES_DB: nawsil
+      POSTGRES_USER: nawsil
+      POSTGRES_PASSWORD: nawsil
     # Scaled to this test's memory; deploy/docker-compose.prod.yml sizes it for 16 GB.
     command: >
       postgres
@@ -43,7 +43,7 @@ services:
       -c shared_preload_libraries=pg_stat_statements
       -c pg_stat_statements.track_planning=on
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U wasel -d wasel"]
+      test: ["CMD-SHELL", "pg_isready -U nawsil -d nawsil"]
       interval: 3s
       retries: 30
 
@@ -75,12 +75,12 @@ services:
   worker:
     <<: *backend
     mem_limit: 768m
-    command: celery -A wasel worker -B -l warning --concurrency 2 --schedule /tmp/celerybeat-schedule
+    command: celery -A nawsil worker -B -l warning --concurrency 2 --schedule /tmp/celerybeat-schedule
     depends_on:
       setup:
         condition: service_completed_successfully
 
-  # The load generator, on the other cores so it doesn't steal Wasel's.
+  # The load generator, on the other cores so it doesn't steal Nawsil's.
   k6:
     image: grafana/k6:0.55.0
     profiles: ["k6"]

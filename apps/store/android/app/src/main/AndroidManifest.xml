@@ -7,7 +7,7 @@
         android:xlargeScreens="true"
         android:requiresSmallestWidthDp="600" />
     <application
-        android:label="Wasel Store"
+        android:label="Nawsil Store"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

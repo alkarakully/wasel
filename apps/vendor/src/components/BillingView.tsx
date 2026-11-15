@@ -11,7 +11,7 @@ interface Props {
 }
 
 /**
- * What Wasel pays the store: this week so far, weekly statements (Saturday to
+ * What Nawsil pays the store: this week so far, weekly statements (Saturday to
  * Friday) with every order, and payout history. Owners only.
  */
 export function BillingView({ api, storeId, onError }: Props) {

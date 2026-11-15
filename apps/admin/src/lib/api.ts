@@ -120,7 +120,7 @@ export interface OrderDetail extends Omit<OrderRow, 'alerts'> {
   service_fee: Money
   tip: Money
   discount: Money
-  /** The part of `discount` the store pays; the rest is Wasel's. */
+  /** The part of `discount` the store pays; the rest is Nawsil's. */
   store_discount?: Money
   commission: Money
   estimated_ready_at: string | null

@@ -221,12 +221,12 @@ class StatementTests(StoreTestCase):
             vendor=self.store, title="10% off", type=Offer.Type.PERCENT, value=10,
             starts_at=at(start), ends_at=at(start + timedelta(days=30)),
         )
-        wasel_offer = Offer.objects.create(
-            title="Wasel pays", type=Offer.Type.FIXED, value=1000,
+        nawsil_offer = Offer.objects.create(
+            title="Nawsil pays", type=Offer.Type.FIXED, value=1000,
             starts_at=at(start), ends_at=at(start + timedelta(days=30)),
         )
         self.order(at(start), subtotal=10000, commission=1350, discount=1000, offer=own_offer)
-        self.order(at(start + timedelta(days=6), 23), subtotal=20000, commission=3000, discount=1000, offer=wasel_offer)
+        self.order(at(start + timedelta(days=6), 23), subtotal=20000, commission=3000, discount=1000, offer=nawsil_offer)
         self.order(at(start + timedelta(days=7)))  # next week
         self.order(at(start + timedelta(days=2)), status=Order.Status.CANCELLED)
 

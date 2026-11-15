@@ -1,4 +1,4 @@
-/// Captain app text; shared words (login, statuses, errors) come from wasel_core.
+/// Captain app text; shared words (login, statuses, errors) come from nawsil_core.
 /// Kurdish strings should be reviewed by a native speaker before launch.
 const captainStrings = <String, Map<String, String>>{
   'ar': {
@@ -15,8 +15,8 @@ const captainStrings = <String, Map<String, String>>{
     'status_out_for_delivery': 'في الطريق إلى الزبون',
     'status_delivered': 'تم التوصيل',
     'status_cancelled': 'ملغى',
-    'brandLine': 'تطبيق كباتن واصل. استلم الطلبات ووصّلها لأصحابها.',
-    'err_not_captain': 'هذا الرقم غير مسجل ككابتن. تواصل مع فريق واصل للتسجيل.',
+    'brandLine': 'تطبيق كباتن نوصل. استلم الطلبات ووصّلها لأصحابها.',
+    'err_not_captain': 'هذا الرقم غير مسجل ككابتن. تواصل مع فريق نوصل للتسجيل.',
     'online': 'متصل',
     'offline': 'غير متصل',
     'goOnlineHint': 'اتصل لتظهر لك الطلبات ويبدأ مشاركة موقعك.',
@@ -62,9 +62,9 @@ const captainStrings = <String, Map<String, String>>{
     'status_out_for_delivery': 'لە ڕێگادایە بۆ لای کڕیار',
     'status_delivered': 'گەیەندرا',
     'status_cancelled': 'هەڵوەشێنراوەتەوە',
-    'brandLine': 'ئەپی کاپتنەکانی واصل. داواکارییەکان وەربگرە و بیانگەیەنە.',
+    'brandLine': 'ئەپی کاپتنەکانی نوصل. داواکارییەکان وەربگرە و بیانگەیەنە.',
     'err_not_captain':
-        'ئەم ژمارەیە وەک کاپتن تۆمار نەکراوە. پەیوەندی بە تیمی واصلەوە بکە.',
+        'ئەم ژمارەیە وەک کاپتن تۆمار نەکراوە. پەیوەندی بە تیمی نوصلەوە بکە.',
     'online': 'سەرهێڵ',
     'offline': 'دەرهێڵ',
     'goOnlineHint':
@@ -111,8 +111,8 @@ const captainStrings = <String, Map<String, String>>{
     'status_out_for_delivery': 'On the way to the customer',
     'status_delivered': 'Delivered',
     'status_cancelled': 'Cancelled',
-    'brandLine': 'Wasel for captains. Pick up orders and bring them home.',
-    'err_not_captain': "This number isn't registered as a captain. Contact the Wasel team to sign up.",
+    'brandLine': 'Nawsil for captains. Pick up orders and bring them home.',
+    'err_not_captain': "This number isn't registered as a captain. Contact the Nawsil team to sign up.",
     'online': 'Online',
     'offline': 'Offline',
     'goOnlineHint': 'Go online to see orders and start sharing your location.',

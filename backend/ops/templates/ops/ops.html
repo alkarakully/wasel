@@ -5,17 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" href="data:,">
-  <title>واصل | العمليات</title>
+  <title>نوصل | العمليات</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
-  <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'nawsil/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'ops/ops.css' %}">
 </head>
 <body data-admin="{% url 'admin:index' %}" data-login="{% url 'admin:login' %}?next={{ request.path|urlencode }}">
   <header class="bar glaze">
     <a class="brand" href="{% url 'ops' %}">
       <span class="mark" aria-hidden="true">و</span>
-      <span class="word">واصل</span>
+      <span class="word">نوصل</span>
       <span class="tag" data-i18n="tag">العمليات</span>
     </a>
     <nav class="tabs" aria-label="Sections">
@@ -54,7 +54,7 @@
           <p class="sub"><span id="k-orders">…</span> · <span id="k-delivered">…</span></p>
         </article>
         <article class="tile">
-          <p class="label"><i class="ph-light ph-coins" aria-hidden="true"></i><span data-i18n="commission">عمولة واصل</span></p>
+          <p class="label"><i class="ph-light ph-coins" aria-hidden="true"></i><span data-i18n="commission">عمولة نوصل</span></p>
           <p class="num" id="k-commission">…</p>
           <p class="hint" id="k-fees"></p>
         </article>
@@ -180,7 +180,7 @@
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th data-i18n="store">المتجر</th><th data-i18n="week">الأسبوع</th><th data-i18n="orders">الطلبات</th><th data-i18n="foodSales">مبيعات الطعام</th><th data-i18n="commission">عمولة واصل</th><th data-i18n="payout">المستحق</th><th data-i18n="status">الحالة</th><th></th>
+              <th data-i18n="store">المتجر</th><th data-i18n="week">الأسبوع</th><th data-i18n="orders">الطلبات</th><th data-i18n="foodSales">مبيعات الطعام</th><th data-i18n="commission">عمولة نوصل</th><th data-i18n="payout">المستحق</th><th data-i18n="status">الحالة</th><th></th>
             </tr></thead>
             <tbody id="payouts"></tbody>
           </table>

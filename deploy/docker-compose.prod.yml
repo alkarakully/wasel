@@ -2,7 +2,7 @@
 #   docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml up -d --build
 # See deploy/README.md for the first deploy and TLS.
 
-name: wasel-prod
+name: nawsil-prod
 
 x-backend: &backend
   build: ../backend
@@ -76,7 +76,7 @@ services:
 
   worker:
     <<: *backend
-    command: celery -A wasel worker -l info --concurrency 2
+    command: celery -A nawsil worker -l info --concurrency 2
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -86,7 +86,7 @@ services:
   # Exactly one beat process schedules the periodic jobs.
   beat:
     <<: *backend
-    command: celery -A wasel beat -l info --schedule /tmp/celerybeat-schedule
+    command: celery -A nawsil beat -l info --schedule /tmp/celerybeat-schedule
     depends_on:
       migrate:
         condition: service_completed_successfully

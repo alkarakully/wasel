@@ -1,5 +1,5 @@
 /// Build-time settings. Override with --dart-define. The API address
-/// (API_URL) is read by wasel_core.
+/// (API_URL) is read by nawsil_core.
 class Config {
   static const mapStyleLight = String.fromEnvironment(
     'MAP_STYLE_LIGHT',

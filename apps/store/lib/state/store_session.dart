@@ -1,5 +1,5 @@
 import 'package:wakelock_plus/wakelock_plus.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 /// The store owner's session. While signed in, the tablet stays awake (it
 /// sits on the counter all day) so new orders ring over the live connection.

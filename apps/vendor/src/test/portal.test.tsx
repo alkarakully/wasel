@@ -25,7 +25,7 @@ describe('strings', () => {
 
   it('reads the login code from pasted messages and Arabic digits', () => {
     expect(codeDigits('482913')).toBe('482913')
-    expect(codeDigits('Wasel login code for +9647701234567: 482913')).toBe('482913')
+    expect(codeDigits('Nawsil login code for +9647701234567: 482913')).toBe('482913')
     expect(codeDigits('٤٨٢٩١٣')).toBe('482913')
     expect(codeDigits('48 29')).toBe('4829')
   })
@@ -34,7 +34,7 @@ describe('strings', () => {
     expect(errorText('en', 'invalid_code')).toBe('The code is wrong or has expired.')
     expect(errorText('en', 'something_new')).toBe('Something went wrong. Try again.')
     expect(errorText('en', 'delivery_failed')).toBe("We couldn't send the code right now. Try again shortly.")
-    expect(errorText('ar', 'account_disabled')).toBe('هذا الحساب موقوف. تواصل مع فريق واصل.')
+    expect(errorText('ar', 'account_disabled')).toBe('هذا الحساب موقوف. تواصل مع فريق نوصل.')
   })
 })
 
@@ -157,8 +157,8 @@ function loginFetch(role: string, routes: Record<string, unknown> = {}) {
 
 async function signIn(join = false) {
   if (join) {
-    await userEvent.click(screen.getByRole('button', { name: 'Join Wasel as a store' }))
-    expect(screen.getByRole('heading', { name: 'Join Wasel' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Join Nawsil as a store' }))
+    expect(screen.getByRole('heading', { name: 'Join Nawsil' })).toBeInTheDocument()
   }
   await userEvent.type(screen.getByLabelText('Phone number'), '07701234567')
   await userEvent.click(screen.getByRole('button', { name: 'Send code' }))
@@ -176,7 +176,7 @@ describe('Login', () => {
     await signIn()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      "This number isn't a store account yet. Choose “Join Wasel as a store”",
+      "This number isn't a store account yet. Choose “Join Nawsil as a store”",
     )
     expect(onSignedIn).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenLastCalledWith('/api/auth/logout/', expect.anything())
@@ -290,7 +290,7 @@ describe('other countries', () => {
   })
 
   it('signs in with a Saudi number picked from Iraq-first country list', async () => {
-    window.localStorage.removeItem('wasel-portal-phone-country')
+    window.localStorage.removeItem('nawsil-portal-phone-country')
     const fetchMock = loginFetch('vendor', {
       'otp/request': { phone: '+966501234567', channel: 'whatsapp', resend_in: 60 },
     })

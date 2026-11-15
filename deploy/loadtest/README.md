@@ -1,8 +1,8 @@
 # Load test
 
-A production-like copy of Wasel squeezed onto **4 CPU cores**, and a [k6](https://k6.io) script that plays a busy evening against it. Use it to see how many people one server can take, and to check that a change didn't make Wasel slower.
+A production-like copy of Nawsil squeezed onto **4 CPU cores**, and a [k6](https://k6.io) script that plays a busy evening against it. Use it to see how many people one server can take, and to check that a change didn't make Nawsil slower.
 
-The copy has its own database (project `wasel-loadtest`), separate from development's.
+The copy has its own database (project `nawsil-loadtest`), separate from development's.
 
 ## Run it
 
@@ -34,17 +34,17 @@ It passes when fewer than 1% of requests fail, browsing answers within 800 ms fo
 
 ## Notes
 
-- The Wasel containers share CPUs 0–3 (`cpuset`), like one 4-core server. k6 runs on the other cores.
+- The Nawsil containers share CPUs 0–3 (`cpuset`), like one 4-core server. k6 runs on the other cores.
 - On a Mac, Docker's memory limit (Docker Desktop › Settings › Resources) caps what the copy can use. PostgreSQL is sized down to match: about 3 GB for the database and 3 GB for the web processes. `deploy/docker-compose.prod.yml` sizes it for 16 GB.
 - nginx and HTTPS are left out. In production nginx adds a little CPU for TLS and serves photos; k6 sends `X-Forwarded-Proto: https` the way nginx does.
 - `WEB_CONCURRENCY` sets the number of web processes (default 8) and `DB_POOL_SIZE` the database connections per web process (default 10).
 - PostgreSQL's query statistics (`pg_stat_statements`, with planning time) are on in this copy. See the costliest queries with:
 
   ```bash
-  docker exec wasel-loadtest-db-1 psql -U wasel -d wasel -c "select calls, round(mean_plan_time::numeric,2) plan_ms, round(mean_exec_time::numeric,2) exec_ms, left(query, 100) from pg_stat_statements order by total_plan_time + total_exec_time desc limit 10"
+  docker exec nawsil-loadtest-db-1 psql -U nawsil -d nawsil -c "select calls, round(mean_plan_time::numeric,2) plan_ms, round(mean_exec_time::numeric,2) exec_ms, left(query, 100) from pg_stat_statements order by total_plan_time + total_exec_time desc limit 10"
   ```
 
-## Results (November 2026, 4 cores on an Apple Silicon Mac, about 6 GB for Wasel)
+## Results (November 2026, 4 cores on an Apple Silicon Mac, about 6 GB for Nawsil)
 
 | Customers browsing at peak | Also online | Browse p50 / p95 | Order p50 / p95 | Failed | CPU at peak |
 | :--- | :--- | :--- | :--- | :--- | :--- |

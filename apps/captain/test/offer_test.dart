@@ -6,9 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_captain/screens/offer_sheet.dart';
-import 'package:wasel_captain/strings.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_captain/screens/offer_sheet.dart';
+import 'package:nawsil_captain/strings.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'captain_test.dart' show orderJson;
 

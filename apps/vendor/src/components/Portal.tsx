@@ -102,7 +102,7 @@ export function Portal({ api, user, onUserChanged, onLogout, onUnauthorized, set
   // Show the count of new orders in the browser tab, so it's visible from across the kitchen.
   const baseTitle = useRef(document.title)
   useEffect(() => {
-    document.title = newOrders.length ? `(${newOrders.length}) ${t('col_received')} | واصل` : `${t('orders')} | واصل`
+    document.title = newOrders.length ? `(${newOrders.length}) ${t('col_received')} | نوصل` : `${t('orders')} | نوصل`
     const original = baseTitle.current
     return () => {
       document.title = original
@@ -334,7 +334,7 @@ export function Portal({ api, user, onUserChanged, onLogout, onUnauthorized, set
   )
 }
 
-const AUTO_PRINT_KEY = 'wasel_print_on_accept'
+const AUTO_PRINT_KEY = 'nawsil_print_on_accept'
 
 function readFlag(key: string) {
   try {

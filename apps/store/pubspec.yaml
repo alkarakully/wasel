@@ -1,5 +1,5 @@
-name: wasel_store
-description: "Wasel store app: the order board for restaurant and shop tablets."
+name: nawsil_store
+description: "Nawsil store app: the order board for restaurant and shop tablets."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -11,8 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  wasel_core:
-    path: ../wasel_core
+  nawsil_core:
+    path: ../nawsil_core
   audioplayers: ^6.8.1
   provider: ^6.1.5+1
   wakelock_plus: ^1.8.1

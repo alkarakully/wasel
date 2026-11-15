@@ -8,15 +8,15 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wasel_core/wasel_core.dart';
-import 'package:wasel_store/print/printer.dart';
-import 'package:wasel_store/print/slips.dart';
-import 'package:wasel_store/screens/home_screen.dart';
-import 'package:wasel_store/screens/invites_screen.dart';
-import 'package:wasel_store/state/alarm.dart';
-import 'package:wasel_store/state/board.dart';
-import 'package:wasel_store/state/store_session.dart';
-import 'package:wasel_store/strings.dart';
+import 'package:nawsil_core/nawsil_core.dart';
+import 'package:nawsil_store/print/printer.dart';
+import 'package:nawsil_store/print/slips.dart';
+import 'package:nawsil_store/screens/home_screen.dart';
+import 'package:nawsil_store/screens/invites_screen.dart';
+import 'package:nawsil_store/state/alarm.dart';
+import 'package:nawsil_store/state/board.dart';
+import 'package:nawsil_store/state/store_session.dart';
+import 'package:nawsil_store/strings.dart';
 
 /// Live socket the test drives by hand.
 class FakeLive extends LiveUpdates {
@@ -154,7 +154,7 @@ class Harness {
     child: MediaQuery(
       data: const MediaQueryData(disableAnimations: true),
       child: MaterialApp(
-        theme: waselTheme(Brightness.light),
+        theme: nawsilTheme(Brightness.light),
         home: const HomeScreen(),
       ),
     ),
@@ -414,7 +414,7 @@ void main() {
       ],
       child: MediaQuery(
         data: const MediaQueryData(disableAnimations: true),
-        child: MaterialApp(theme: waselTheme(Brightness.light), home: home),
+        child: MaterialApp(theme: nawsilTheme(Brightness.light), home: home),
       ),
     );
 

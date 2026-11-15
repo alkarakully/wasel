@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/session.dart';
 import '../widgets/cart_bar.dart';
@@ -70,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final session = context.watch<Session>();
     // Reload when the phone's location arrives after the first load.
     if (_load == null || _loadedFor != session.deliveryPoint) _reload();
@@ -173,7 +173,7 @@ class _SearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 10),
       child: Semantics(
@@ -223,7 +223,7 @@ class _OfferRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return SizedBox(
       height: 96,
       child: ListView.separated(
@@ -300,7 +300,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 12, 8),
@@ -404,7 +404,7 @@ class _RoundButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final body = Container(
       width: 44,
       height: 44,
@@ -551,7 +551,7 @@ class _OfferBannersState extends State<_OfferBanners> {
                 decoration: ShapeDecoration(
                   color: i == _page
                       ? Gold.c400
-                      : WaselTheme.of(context).hairline,
+                      : NawsilTheme.of(context).hairline,
                   shape: const StadiumBorder(),
                 ),
               ),
@@ -671,7 +671,7 @@ class _IconRail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       height: 98,

@@ -1,4 +1,4 @@
-"""Customers, captains and store accounts; their wallets; Wasel staff; the audit log."""
+"""Customers, captains and store accounts; their wallets; Nawsil staff; the audit log."""
 
 from django.contrib.auth import password_validation
 from django.core.exceptions import ValidationError
@@ -13,7 +13,7 @@ from accounts.models import User, WalletTransaction
 from orders.models import Order
 from regions.regions import region
 from regions.serializers import check_amount
-from subscriptions.models import WaselPlusSubscription
+from subscriptions.models import NawsilPlusSubscription
 from vendors.models import StoreMember, Vendor
 
 from .access import ConsoleView
@@ -74,7 +74,7 @@ class UserView(ConsoleView):
             orders.filter(status=Order.Status.DELIVERED, currency=u.wallet_currency).aggregate(t=Sum("total_amount"))["t"]
         )
         deliveries = Order.objects.filter(captain=u, status=Order.Status.DELIVERED)
-        plus = WaselPlusSubscription.objects.filter(user=u).first()
+        plus = NawsilPlusSubscription.objects.filter(user=u).first()
         stores = [
             {"id": v.pk, "name": v.name, "role": "owner", "status": v.status} for v in Vendor.objects.filter(owner=u)
         ] + [
@@ -207,7 +207,7 @@ class WalletAdjustView(ConsoleView):
         return Response({"id": entry.pk, "wallet_balance": money(u.wallet_balance, currency), "currency": currency}, status=201)
 
 
-# --- Wasel staff ------------------------------------------------------------------
+# --- Nawsil staff ------------------------------------------------------------------
 
 
 def staff_row(p):

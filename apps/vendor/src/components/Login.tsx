@@ -17,7 +17,7 @@ interface Props {
 }
 
 // Once "Not now" is clicked, the password offer doesn't come back in this browser.
-const OFFER_SKIPPED = 'wasel_password_offer_skipped'
+const OFFER_SKIPPED = 'nawsil_password_offer_skipped'
 
 function offerSkipped() {
   try {
@@ -35,7 +35,7 @@ interface Pending {
 
 /**
  * Sign in with a code (WhatsApp to a phone, or email to an address on the
- * account) or with a password (phone number or email). "Join Wasel as a
+ * account) or with a password (phone number or email). "Join Nawsil as a
  * store" lets a new owner verify their number and apply. After a code
  * sign-in, someone without a password is offered one.
  */
@@ -340,7 +340,7 @@ export function Login({ api, onSignedIn, setLang }: Props) {
           </button>
         )}
         <div className="join-switch">
-          <span className="muted">{t(joining ? 'haveStore' : 'newToWasel')}</span>
+          <span className="muted">{t(joining ? 'haveStore' : 'newToNawsil')}</span>
           <button
             type="button"
             className="link"

@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Wasel uses your location to show stores that deliver to you. يستخدم واصل موقعك لعرض المتاجر التي توصل إليك.</string>
+	<string>Nawsil uses your location to show stores that deliver to you. يستخدم نوصل موقعك لعرض المتاجر التي توصل إليك.</string>
 	<!-- Debug builds on a real device talk to the API on the developer's Mac over Wi-Fi. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connects to the Wasel server on your local network during development.</string>
+	<string>Connects to the Nawsil server on your local network during development.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets debug builds reach the local API over http://localhost. -->
@@ -18,7 +18,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Wasel Customer</string>
+	<string>Nawsil Customer</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -26,7 +26,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>wasel_customer</string>
+	<string>nawsil_customer</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

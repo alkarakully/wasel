@@ -1,13 +1,13 @@
-# Wasel store app (Flutter, tablets)
+# Nawsil store app (Flutter, tablets)
 
-The order board for restaurants and shops, made for an iPad or Android tablet on the counter. Log in as the store owner, hear new orders ring, accept with a prep time or reject with a reason, mark orders ready, open or close the store, and switch menu items in or out of stock. Arabic, Kurdish (Sorani) and English, light and dark. It does what the web [store portal](../vendor/README.md) does, plus a ring that works with the screen locked and a screen that stays awake. Shared code (API, login, theme, strings) lives in `../wasel_core`.
+The order board for restaurants and shops, made for an iPad or Android tablet on the counter. Log in as the store owner, hear new orders ring, accept with a prep time or reject with a reason, mark orders ready, open or close the store, and switch menu items in or out of stock. Arabic, Kurdish (Sorani) and English, light and dark. It does what the web [store portal](../vendor/README.md) does, plus a ring that works with the screen locked and a screen that stays awake. Shared code (API, login, theme, strings) lives in `../nawsil_core`.
 
 ## Run against the local backend
 
 1. Start the backend and load demo data, which includes a demo store owner (from the repository root):
 
    ```bash
-   WASEL_WEB_PORT=8010 docker compose up -d
+   NAWSIL_WEB_PORT=8010 docker compose up -d
    ```
 
    ```bash

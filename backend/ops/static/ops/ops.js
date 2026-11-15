@@ -1,4 +1,4 @@
-/* Wasel operations page: staff watch the platform and act on it.
+/* Nawsil operations page: staff watch the platform and act on it.
    Data comes from /api/ops/ (session sign-in through the admin) and refreshes
    every 10 seconds while the tab is visible. */
 (function () {
@@ -17,7 +17,7 @@
       closeWeeks: "إنشاء الكشوفات المتأخرة", statements: "الكشوفات", week: "الأسبوع", foodSales: "مبيعات الطعام", payout: "المستحق",
       markPaid: "تم الدفع", reference: "رقم التحويل", noStatements: "لا توجد كشوفات هنا.", madeStatements: "أُنشئ {n} كشف",
       tag: "العمليات", overview: "نظرة عامة", orders: "الطلبات", captains: "الكباتن", stores: "المتاجر", users: "الحسابات",
-      admin: "الإدارة", signOut: "خروج", todaySales: "مبيعات اليوم", commission: "عمولة واصل", avgDelivery: "متوسط التوصيل",
+      admin: "الإدارة", signOut: "خروج", todaySales: "مبيعات اليوم", commission: "عمولة نوصل", avgDelivery: "متوسط التوصيل",
       activeOrders: "طلبات جارية", openAlerts: "تنبيهات مفتوحة", onlineCaptains: "كباتن متصلون", openStores: "متاجر مفتوحة",
       thisMonth: "هذا الشهر", stuckOrders: "طلبات متأخرة", topStores: "الأكثر طلباً اليوم", liveOrders: "الطلبات الجارية",
       status: "الحالة", store: "المتجر", customer: "الزبون", captain: "الكابتن", total: "المجموع", age: "المدة",
@@ -45,7 +45,7 @@
       closeWeeks: "دروستکردنی کەشفە دواکەوتووەکان", statements: "کەشفەکان", week: "هەفتە", foodSales: "فرۆشی خواردن", payout: "شایستە",
       markPaid: "درا", reference: "ژمارەی گواستنەوە", noStatements: "هیچ کەشفێک نییە.", madeStatements: "{n} کەشف دروستکرا",
       tag: "کارگێڕی", overview: "پوختە", orders: "داواکارییەکان", captains: "کاپتنەکان", stores: "دووکانەکان", users: "هەژمارەکان",
-      admin: "بەڕێوەبردن", signOut: "دەرچوون", todaySales: "فرۆشی ئەمڕۆ", commission: "کۆمیسیۆنی واصل", avgDelivery: "تێکڕای گەیاندن",
+      admin: "بەڕێوەبردن", signOut: "دەرچوون", todaySales: "فرۆشی ئەمڕۆ", commission: "کۆمیسیۆنی نوصل", avgDelivery: "تێکڕای گەیاندن",
       activeOrders: "داواکاری چالاک", openAlerts: "ئاگادارکردنەوەی کراوە", onlineCaptains: "کاپتنی سەرهێڵ", openStores: "دووکانی کراوە",
       thisMonth: "ئەم مانگە", stuckOrders: "داواکاری دواکەوتوو", topStores: "زۆرترین داواکراو ئەمڕۆ", liveOrders: "داواکارییە چالاکەکان",
       status: "دۆخ", store: "دووکان", customer: "کڕیار", captain: "کاپتن", total: "کۆ", age: "ماوە",
@@ -73,7 +73,7 @@
       closeWeeks: "Make missing statements", statements: "Statements", week: "Week", foodSales: "Food sales", payout: "Payout",
       markPaid: "Mark paid", reference: "Transfer number", noStatements: "No statements here.", madeStatements: "{n} statements made",
       tag: "Operations", overview: "Overview", orders: "Orders", captains: "Captains", stores: "Stores", users: "Accounts",
-      admin: "Admin", signOut: "Sign out", todaySales: "Sales today", commission: "Wasel commission", avgDelivery: "Average delivery",
+      admin: "Admin", signOut: "Sign out", todaySales: "Sales today", commission: "Nawsil commission", avgDelivery: "Average delivery",
       activeOrders: "Active orders", openAlerts: "Open alerts", onlineCaptains: "Captains online", openStores: "Stores open",
       thisMonth: "This month", stuckOrders: "Stuck orders", topStores: "Top stores today", liveOrders: "Orders in progress",
       status: "Status", store: "Store", customer: "Customer", captain: "Captain", total: "Total", age: "Age",
@@ -93,7 +93,7 @@
   var STATUSES = ["received", "preparing", "ready", "out_for_delivery"];
   var REFRESH_MS = 10000;
 
-  var lang = STRINGS[read("wasel_lang")] ? read("wasel_lang") : "ar";
+  var lang = STRINGS[read("nawsil_lang")] ? read("nawsil_lang") : "ar";
   var view = "overview";
   var role = "";
   var query = "";
@@ -644,7 +644,7 @@
     document.querySelectorAll(".view").forEach(function (section) {
       section.hidden = section.id !== "view-" + name;
     });
-    write("wasel_ops_view", name);
+    write("nawsil_ops_view", name);
     if (!quiet) refresh();
     if (name === "captains" && map) setTimeout(function () { map.resize(); }, 0);
     if (name === "applications" && appMap) setTimeout(function () { appMap.resize(); }, 0);
@@ -652,10 +652,10 @@
 
   function applyLanguage(code) {
     lang = code;
-    write("wasel_lang", code);
+    write("nawsil_lang", code);
     document.documentElement.lang = code;
     document.documentElement.dir = code === "en" ? "ltr" : "rtl";
-    document.title = (code === "en" ? "Wasel | " : "واصل | ") + t("tag");
+    document.title = (code === "en" ? "Nawsil | " : "نوصل | ") + t("tag");
     document.querySelectorAll("[data-i18n]").forEach(function (node) { node.textContent = t(node.dataset.i18n); });
     document.querySelectorAll("[data-i18n-placeholder]").forEach(function (node) { node.placeholder = t(node.dataset.i18nPlaceholder); });
     document.querySelectorAll("[data-lang]").forEach(function (button) {
@@ -677,7 +677,7 @@
   });
   document.addEventListener("visibilitychange", function () { if (!document.hidden) refresh(); });
 
-  var saved = read("wasel_ops_view");
+  var saved = read("nawsil_ops_view");
   if (saved && $("view-" + saved)) show(saved, true);
   applyLanguage(lang); // renders text and loads the data
 })();

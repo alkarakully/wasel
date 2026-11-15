@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/cart.dart';
 import '../widgets/cart_bar.dart';
@@ -69,7 +69,7 @@ class _StoreScreenState extends State<StoreScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Scaffold(
       backgroundColor: t.canvas,
       bottomNavigationBar: const CartBar(),
@@ -402,7 +402,7 @@ class _StoreOffers extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: SizedBox(
@@ -502,7 +502,7 @@ class ProductPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final placeholder = Container(
       color: t.sunk,
       alignment: Alignment.center,
@@ -557,7 +557,7 @@ class _ProductRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final description = product.description(s.lang);
     return InkWell(

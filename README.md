@@ -1,10 +1,10 @@
-# Wasel (واصل) - Product Architecture & Execution Plan
+# Nawsil (نوصل) - Product Architecture & Execution Plan
 
 ## Food & Grocery Delivery App for Iraq & the Middle East
 
-**Wasel (واصل)** is a restaurant-first delivery app in the style of **Talabatey (طلباتي)**: customers pick their location, browse hundreds of local restaurants and supermarkets, see the full price (meal + delivery) before ordering, and get it delivered by a Wasel captain. It connects three user types—**Customers**, **Vendors (Restaurants & Supermarkets)**, and **Delivery Captains**—through one backend built for Iraq.
+**Nawsil (نوصل)** is a restaurant-first delivery app in the style of **Talabatey (طلباتي)**: customers pick their location, browse hundreds of local restaurants and supermarkets, see the full price (meal + delivery) before ordering, and get it delivered by a Nawsil captain. It connects three user types—**Customers**, **Vendors (Restaurants & Supermarkets)**, and **Delivery Captains**—through one backend built for Iraq.
 
-Wasel follows Talabatey's proven flow and fixes the problems its users complain about most: order status that stops updating, slow support, offers that are hard to use, and drivers asking for tips.
+Nawsil follows Talabatey's proven flow and fixes the problems its users complain about most: order status that stops updating, slow support, offers that are hard to use, and drivers asking for tips.
 
 ---
 
@@ -12,7 +12,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
 
 ```
 +-----------------------------------------------------------------+
-|                        WASEL CENTRAL BACKEND                    |
+|                        NAWSIL CENTRAL BACKEND                    |
 |  (REST API, Order Routing, Auth, Payments, Commission Ledger)   |
 +--------+-----------------------+-----------------------+--------+
          |                       |                       |
@@ -23,7 +23,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
 +------------------+   +------------------+   +------------------+
 ```
 
-### A. Wasel Customer App (Mobile: iOS & Android)
+### A. Nawsil Customer App (Mobile: iOS & Android)
 * **Languages:** Arabic, Kurdish (Sorani/Kurmanji) and English, with full right-to-left layout.
 * **Sign-Up & Login:**
   * A one-time code by **WhatsApp** to the phone, or by **email** once one is added to the account.
@@ -50,7 +50,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
 * **Payment Methods:**
   * Cash on Delivery (most orders in Iraq).
   * Credit/Debit Cards.
-  * **Wasel Wallet** with balance, top-ups, refunds and cashback (top up via ZainCash, FastPay, Qi Card).
+  * **Nawsil Wallet** with balance, top-ups, refunds and cashback (top up via ZainCash, FastPay, Qi Card).
 * **Order Tracking:**
   * Live status (`Received` → `Preparing` → `Ready` → `Out for Delivery` → `Delivered`) pushed over WebSockets while the app is open.
   * Captain on a live map once picked up.
@@ -61,7 +61,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
   * One-tap **Reorder** from order history.
   * **In-app support chat** linked to the order.
 
-### B. Wasel Vendor Portal (Web Dashboard & Tablet App)
+### B. Nawsil Vendor Portal (Web Dashboard & Tablet App)
 * **Order Management:**
   * Loud, repeating alerts for new orders, built for noisy kitchens.
   * Accept, set prep time, reject (with reason), and mark ready.
@@ -74,7 +74,7 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
 * **Earnings Dashboard:**
   * Sales, commission deducted per order, and payout history.
 
-### C. Wasel Captain App (Mobile App)
+### C. Nawsil Captain App (Mobile App)
 * **Captain Sign-Up:** Separate onboarding for delivery captains (ID, vehicle, phone verification), similar to Talabatey's captain recruitment app.
 * **Order Dispatch:**
   * Nearest available captain is offered the order; route-aware batching at peak hours.
@@ -84,24 +84,24 @@ Wasel follows Talabatey's proven flow and fixes the problems its users complain 
   * Call the customer or restaurant from inside the app.
   * Delivery confirmed with the customer's PIN code.
 * **Cash & Earnings:**
-  * Ledger of cash collected on COD orders and the amount owed to Wasel.
+  * Ledger of cash collected on COD orders and the amount owed to Nawsil.
   * Per-delivery earnings, tips and daily/weekly payouts.
 
 ---
 
 ## 2. Business Model: Commission + Delivery Fees
 
-Like most regional delivery apps, Wasel earns mainly from a **commission on each order**, plus customer fees. There are no monthly subscription fees for vendors or captains.
+Like most regional delivery apps, Nawsil earns mainly from a **commission on each order**, plus customer fees. There are no monthly subscription fees for vendors or captains.
 
 ```
 +-----------------------------------------------------------------------+
-|                      WASEL MONETIZATION ENGINE                        |
+|                      NAWSIL MONETIZATION ENGINE                        |
 +-----------------------------------+-----------------------------------+
 |          Customer Side            |           Vendor Side             |
 +-----------------------------------+-----------------------------------+
 | • Delivery fee (by distance)      | • Commission % on each order      |
 | • Small service fee per order     | • 30 days commission-free at      |
-| • "Wasel Plus" monthly pass       |   launch for new vendors          |
+| • "Nawsil Plus" monthly pass       |   launch for new vendors          |
 |   (free delivery, lower fees)     |                                   |
 +-----------------------------------+-----------------------------------+
 ```
@@ -109,26 +109,26 @@ Like most regional delivery apps, Wasel earns mainly from a **commission on each
 ### A. Vendor Commission (Restaurants & Supermarkets)
 * **Commission per order:** a percentage of the food subtotal (e.g., 15–20%), set per vendor so large chains and small shops can get different rates.
 * **Commission-free onboarding:** new vendors pay **0% commission for their first 30 days**, to sign restaurants quickly in each new city.
-* **Settlement:** Wasel collects card/wallet payments, deducts commission, and pays vendors out weekly. For cash orders, the captain's cash ledger tracks what is owed between captain, vendor and Wasel.
+* **Settlement:** Nawsil collects card/wallet payments, deducts commission, and pays vendors out weekly. For cash orders, the captain's cash ledger tracks what is owed between captain, vendor and Nawsil.
 
-### B. Customer Fees & Wasel Plus (واصل بلس)
+### B. Customer Fees & Nawsil Plus (نوصل بلس)
 * **Delivery fee:** based on distance, always shown on the restaurant card and at checkout.
 * **Service fee:** small fixed fee per order.
-* **Wasel Plus:** optional monthly pass (e.g., 6,000 IQD / month) with free delivery over a minimum order, lower service fees and priority captains at peak hours. New users get **14 days free**.
+* **Nawsil Plus:** optional monthly pass (e.g., 6,000 IQD / month) with free delivery over a minimum order, lower service fees and priority captains at peak hours. New users get **14 days free**.
 
 ### C. Captain Earnings
-* Captains keep the delivery fee portion set for each trip (plus 100% of in-app tips). Wasel pays captains per delivery; there is no access fee for captains.
+* Captains keep the delivery fee portion set for each trip (plus 100% of in-app tips). Nawsil pays captains per delivery; there is no access fee for captains.
 
 ---
 
 ## Brand Colors
 
-Wasel avoids the orange, red, yellow and green that most delivery apps in the region use. Its colors come from the **Ishtar Gate of Babylon**: deep lapis blue with gold.
+Nawsil avoids the orange, red, yellow and green that most delivery apps in the region use. Its colors come from the **Ishtar Gate of Babylon**: deep lapis blue with gold.
 
 | Token | Light | Dark | Used for |
 | :--- | :--- | :--- | :--- |
 | Lapis (brand) | `#22379B` | `#1A2A7A` | Brand panels, splash screen, app icon background |
-| Gold | `#F2C75C` | `#F2C75C` | The واصل wordmark on lapis only, never on buttons or text |
+| Gold | `#F2C75C` | `#F2C75C` | The نوصل wordmark on lapis only, never on buttons or text |
 | Accent | `#22379B` | `#93A6FF` | Buttons, links, selected states |
 | Background | `#F2F4F9` | `#0D1020` | Page background |
 | Text | `#141A2E` | `#EDF0FA` | Body text |
@@ -146,7 +146,7 @@ All text colors meet WCAG AA contrast (4.5:1 or better) in both modes.
 | **Backend Framework** | **Django REST Framework (Python)** | Mature API toolkit with built-in admin (useful for support and vendor onboarding), strong auth/permissions, and GeoDjango for PostGIS map queries. |
 | **Primary Database** | **PostgreSQL + PostGIS** | Relational storage for transactions and orders, paired with spatial indexing for map-based queries. |
 | **Caching & Real-Time** | **Redis + Django Channels (WebSockets)** | Instant order alerts, live captain GPS streaming, and high-performance session caching. |
-| **Background Jobs** | **Celery + Redis** | Stuck-order alerts, Wasel Plus trial expiry, dispatch offer timeouts and weekly vendor payouts. |
+| **Background Jobs** | **Celery + Redis** | Stuck-order alerts, Nawsil Plus trial expiry, dispatch offer timeouts and weekly vendor payouts. |
 | **Payments Infrastructure** | **ZainCash API, FastPay API, Local Gateways** | Direct integration with regional digital wallet providers alongside Cash-on-Delivery reconciliation modules. |
 
 ---
@@ -155,7 +155,7 @@ All text colors meet WCAG AA contrast (4.5:1 or better) in both modes.
 
 ```
 +------------------------+    +------------------------+    +------------------------+
-|         USERS          |    |        VENDORS         |    |    WASEL_PLUS_SUBS     |
+|         USERS          |    |        VENDORS         |    |    NAWSIL_PLUS_SUBS     |
 +------------------------+    +------------------------+    +------------------------+
 | id (PK)                |    | id (PK)                |    | id (PK)                |
 | name                   |    | owner_id (FK Users)    |    | user_id (FK)           |
@@ -227,7 +227,7 @@ All text colors meet WCAG AA contrast (4.5:1 or better) in both modes.
 * `VENDORS` 1 → * `PRODUCTS`, `VENDORS` 1 → * `ORDERS`, `VENDORS` 1 → * `OFFERS`.
 * `PRODUCTS` 1 → * `PRODUCT_MODIFIERS` (add-ons, sizes, combo choices).
 * `ORDERS` 1 → * `ORDER_ITEMS` → `PRODUCTS`; each item's chosen add-ons live in `ORDER_ITEM_MODIFIERS`.
-* `ORDERS` 1 → 1 `RATINGS`; `USERS` 1 → * `WALLET_TRANSACTIONS`; `USERS` 1 → * `WASEL_PLUS_SUBS`.
+* `ORDERS` 1 → 1 `RATINGS`; `USERS` 1 → * `WALLET_TRANSACTIONS`; `USERS` 1 → * `NAWSIL_PLUS_SUBS`.
 
 **Design notes:**
 * Each order stores its own `commission_amount`, worked out from the vendor's `commission_rate` at checkout (0 while `commission_free_until` is in the future), so changing a vendor's rate never rewrites past settlements.
@@ -251,7 +251,7 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 ### Phase 1: Specifications & Localized Design (Weeks 1–3)
 * Finalize Arabic/Kurdish UI design systems in Figma (RTL-first components), using Talabatey's home → restaurant → cart → tracking flow as the baseline.
 * Map out captain cash-reconciliation workflows for COD orders.
-* Set commission rates, delivery fee bands and Wasel Plus rules.
+* Set commission rates, delivery fee bands and Nawsil Plus rules.
 
 ### Phase 2: Core Backend & Auth (Weeks 4–7)
 * Set up the Django REST Framework project, PostgreSQL + PostGIS (GeoDjango), Redis, Celery and Django Channels.
@@ -261,7 +261,7 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 ### Phase 3: Order Engine, Payments & Commission (Weeks 8–11)
 * Integrate card payments and wallet top-ups via **ZainCash**, **FastPay** and **Qi Card**.
 * Build WebSocket server for real-time dispatch alerts, status updates and captain tracking, plus stuck-order alerts for support.
-* Build the commission ledger and weekly vendor payouts, and the Wasel Plus trial tracker (Trial → Active → Expired).
+* Build the commission ledger and weekly vendor payouts, and the Nawsil Plus trial tracker (Trial → Active → Expired).
 
 ### Phase 4: Frontend Apps Development (Weeks 12–17)
 * **Customer App:** Location picker, home with banners/cuisines/"Most Ordered", Supermarket tab, restaurant menus, itemized checkout, wallet, live tracking, in-app captain calls, ratings and support chat.
@@ -284,6 +284,6 @@ Phase 5: Field Testing & Deployment          [Weeks 18–20]  ===============>
 | [`apps/customer/`](apps/customer/README.md) | Flutter customer app |
 | [`apps/captain/`](apps/captain/README.md) | Flutter captain app |
 | [`apps/store/`](apps/store/README.md) | Flutter store app for restaurant and shop tablets (iPad, Android) |
-| [`apps/wasel_core/`](apps/wasel_core/README.md) | Code shared by the Flutter apps |
+| [`apps/nawsil_core/`](apps/nawsil_core/README.md) | Code shared by the Flutter apps |
 | [`apps/vendor/`](apps/vendor/README.md) | React store portal |
 | [`deploy/`](deploy/README.md) | Production Docker setup: nginx, TLS, settings |

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/cart.dart';
 import '../state/session.dart';
@@ -112,7 +112,7 @@ class _CartScreenState extends State<CartScreen> {
     final s = S.of(context);
     final cart = context.watch<Cart>();
     final scheme = Theme.of(context).colorScheme;
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
 
     if (cart.isEmpty) {
       return Scaffold(
@@ -280,7 +280,7 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: title == null
@@ -333,7 +333,7 @@ class _Choice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       button: true,
@@ -385,7 +385,7 @@ class _LineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final cart = context.read<Cart>();
     final step = line.product.soldByKg ? 0.5 : 1.0;
@@ -500,8 +500,8 @@ class _Breakdown extends StatelessWidget {
       children: [
         row(s.t('subtotal'), s.money(quote.subtotal, quote.currency)),
         row(
-          quote.waselPlus
-              ? '${s.t('delivery')} (${s.t('waselPlus')})'
+          quote.nawsilPlus
+              ? '${s.t('delivery')} (${s.t('nawsilPlus')})'
               : s.t('delivery'),
           quote.deliveryFee == 0
               ? s.t('free')

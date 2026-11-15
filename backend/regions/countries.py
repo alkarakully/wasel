@@ -3,7 +3,7 @@ Every country a phone number can come from, Iraq first, then the Gulf.
 
 Each row: ISO code, dial code, English name, Arabic name. The first seven are
 the short list shown at the top of every country picker; they are also the
-countries Wasel can run stores in (see regions.py).
+countries Nawsil can run stores in (see regions.py).
 """
 
 SHORT_LIST = ["IQ", "SA", "AE", "KW", "QA", "BH", "OM"]

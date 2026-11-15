@@ -1,5 +1,5 @@
 import 'package:geolocator/geolocator.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../config.dart';
 
@@ -14,7 +14,7 @@ class Session extends BaseSession {
   bool usingDeviceLocation = false;
 
   /// Where the fallback spot is: Baghdad, or the capital of the account's
-  /// country when Wasel runs there.
+  /// country when Nawsil runs there.
   String fallbackCountry = 'IQ';
 
   // Ask for location only once someone is signed in.

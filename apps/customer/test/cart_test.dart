@@ -3,11 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
-import 'package:wasel_customer/screens/product_sheet.dart';
-import 'package:wasel_customer/state/cart.dart';
-import 'package:wasel_customer/state/session.dart';
-import 'package:wasel_customer/strings.dart';
+import 'package:nawsil_core/nawsil_core.dart';
+import 'package:nawsil_customer/screens/product_sheet.dart';
+import 'package:nawsil_customer/state/cart.dart';
+import 'package:nawsil_customer/state/session.dart';
+import 'package:nawsil_customer/strings.dart';
 
 Modifier modifier(int id, String group, int delta, {bool required = false}) =>
     Modifier(
@@ -68,7 +68,7 @@ Widget wrap(Widget child, {Session? session, ApiClient? api}) {
       ),
       ChangeNotifierProvider(create: (_) => Cart()),
     ],
-    child: MaterialApp(theme: waselTheme(Brightness.light), home: child),
+    child: MaterialApp(theme: nawsilTheme(Brightness.light), home: child),
   );
 }
 

@@ -1,11 +1,11 @@
-# Deploying Wasel
+# Deploying Nawsil
 
 One Linux server running Docker serves everything from one domain:
 
 | Path | Served by |
 | :--- | :--- |
 | `/` | Store portal (React, built into the nginx image) |
-| `/admin/` | Platform admin for the Wasel team (React, built into the nginx image) |
+| `/admin/` | Platform admin for the Nawsil team (React, built into the nginx image) |
 | `/api/`, `/ops/`, `/login/`, `/track/`, `/healthz/` | Django (Uvicorn) |
 | `/<DJANGO_ADMIN_PATH>/` | Django admin, superusers only, for emergencies |
 | `/ws/` | Live order socket (Uvicorn, kept open up to an hour between pings) |
@@ -55,7 +55,7 @@ The mobile apps talk to the same domain: build them with `--dart-define=API_URL=
 3. Get the real certificate from Let's Encrypt (replace the domain and email):
 
    ```bash
-   docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot -d wasel.example.com --email you@example.com --agree-tos --no-eff-email --force-renewal
+   docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml run --rm --entrypoint certbot certbot certonly --webroot -w /var/www/certbot -d nawsil.example.com --email you@example.com --agree-tos --no-eff-email --force-renewal
    ```
 
    ```bash
@@ -95,7 +95,7 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml up -d --
 ## Checks
 
 ```bash
-curl https://wasel.example.com/healthz/
+curl https://nawsil.example.com/healthz/
 ```
 
 ```bash
@@ -110,16 +110,16 @@ docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml logs -f 
 
 ## Backups
 
-The database lives in the `wasel-prod_pgdata` volume. Back it up daily, for example:
+The database lives in the `nawsil-prod_pgdata` volume. Back it up daily, for example:
 
 ```bash
-docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml exec -T db pg_dump -U wasel -Fc wasel > wasel-$(date +%F).dump
+docker compose --env-file deploy/.env -f deploy/docker-compose.prod.yml exec -T db pg_dump -U nawsil -Fc nawsil > nawsil-$(date +%F).dump
 ```
 
-Product photos live in the `wasel-prod_media` volume; back it up too:
+Product photos live in the `nawsil-prod_media` volume; back it up too:
 
 ```bash
-docker run --rm -v wasel-prod_media:/media -v "$PWD":/out alpine tar czf /out/media-$(date +%F).tgz -C /media .
+docker run --rm -v nawsil-prod_media:/media -v "$PWD":/out alpine tar czf /out/media-$(date +%F).tgz -C /media .
 ```
 
 Copy the dumps and photo archives off the server.
@@ -141,7 +141,7 @@ All settings live in `deploy/.env` (see `.env.example`):
 | `WHATSAPP_*` | WhatsApp login codes (see `backend/README.md`) |
 | `WEB_CONCURRENCY` | Web processes (default 8, for 4 cores); each takes requests on its own |
 | `DB_POOL_SIZE` | Database connections kept open per web process (default 10) |
-| `PAYMENT_METHODS` | How customers pay: `cod` (cash on delivery, the default) or `cod,wallet` to let the Wasel Wallet pay too |
+| `PAYMENT_METHODS` | How customers pay: `cod` (cash on delivery, the default) or `cod,wallet` to let the Nawsil Wallet pay too |
 | `EMAIL_*`, `DEFAULT_FROM_EMAIL` | Email login codes through any SMTP provider (see `backend/README.md`) |
 | `MAP_STYLE_LIGHT`, `MAP_STYLE_DARK` | Map styles for the tracking page (optional) |
 | `HTTP_PORT`, `HTTPS_PORT` | Host ports for nginx (80/443) |

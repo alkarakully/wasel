@@ -1,4 +1,4 @@
-/// Store tablet text; shared words (login, errors) come from wasel_core.
+/// Store tablet text; shared words (login, errors) come from nawsil_core.
 /// Kurdish (Sorani) should be reviewed by a native speaker before launch.
 const storeStrings = <String, Map<String, String>>{
   'ar': {
@@ -16,10 +16,10 @@ const storeStrings = <String, Map<String, String>>{
     'checkItems': 'تأكد من كل صنف قبل الإغلاق',
     'thanks': 'شكراً لطلبك من {store}',
     'printFailed': 'تعذّرت الطباعة. تحقق من الطابعة.',
-    'brandLine': 'لوحة متاجر واصل. استقبل الطلبات وجهّزها.',
-    'err_not_store': 'هذا الرقم ليس حساب متجر. لتسجيل متجرك افتح بوابة المتاجر واختر «انضم إلى واصل كمتجر».',
+    'brandLine': 'لوحة متاجر نوصل. استقبل الطلبات وجهّزها.',
+    'err_not_store': 'هذا الرقم ليس حساب متجر. لتسجيل متجرك افتح بوابة المتاجر واختر «انضم إلى نوصل كمتجر».',
     'invitesTitle': 'دعوات للانضمام',
-    'invitesLead': 'دعاك صاحب متجر للانضمام إلى فريقه على واصل.',
+    'invitesLead': 'دعاك صاحب متجر للانضمام إلى فريقه على نوصل.',
     'invitedAs': 'دعاك {who} للانضمام بدور {role}',
     'acceptInvite': 'قبول',
     'decline': 'رفض',
@@ -85,10 +85,10 @@ const storeStrings = <String, Map<String, String>>{
     'thanks': 'سوپاس بۆ داواکردنت لە {store}',
     'printFailed': 'چاپ نەکرا. چاپکەرەکە بپشکنە.',
     'brandLine':
-        'پانێڵی دووکانەکانی واصل. داواکارییەکان وەربگرە و ئامادەیان بکە.',
-    'err_not_store': 'ئەم ژمارەیە هەژماری دووکان نییە. بۆ تۆمارکردنی دووکانەکەت دەروازەی دووکانەکان بکەرەوە و «وەک دووکان بەشداری واصل بکە» هەڵبژێرە.',
+        'پانێڵی دووکانەکانی نوصل. داواکارییەکان وەربگرە و ئامادەیان بکە.',
+    'err_not_store': 'ئەم ژمارەیە هەژماری دووکان نییە. بۆ تۆمارکردنی دووکانەکەت دەروازەی دووکانەکان بکەرەوە و «وەک دووکان بەشداری نوصل بکە» هەڵبژێرە.',
     'invitesTitle': 'بانگهێشت بۆ بەشداربوون',
-    'invitesLead': 'خاوەن دووکانێک بانگهێشتی کردوویت بۆ تیمەکەی لە واصل.',
+    'invitesLead': 'خاوەن دووکانێک بانگهێشتی کردوویت بۆ تیمەکەی لە نوصل.',
     'invitedAs': '{who} بانگهێشتی کردوویت وەک {role}',
     'acceptInvite': 'قبوڵکردن',
     'decline': 'ڕەتکردنەوە',
@@ -153,10 +153,10 @@ const storeStrings = <String, Map<String, String>>{
     'checkItems': 'Check every item before sealing',
     'thanks': 'Thanks for ordering from {store}',
     'printFailed': "Couldn't print. Check the printer.",
-    'brandLine': 'Wasel for stores. Take orders and get them ready.',
-    'err_not_store': "This number isn't a store account. To sign your store up, open the store portal and choose “Join Wasel as a store”.",
+    'brandLine': 'Nawsil for stores. Take orders and get them ready.',
+    'err_not_store': "This number isn't a store account. To sign your store up, open the store portal and choose “Join Nawsil as a store”.",
     'invitesTitle': 'Team invites',
-    'invitesLead': 'A store owner invited you to join their team on Wasel.',
+    'invitesLead': 'A store owner invited you to join their team on Nawsil.',
     'invitedAs': '{who} invited you to join as {role}',
     'acceptInvite': 'Accept',
     'decline': 'Decline',

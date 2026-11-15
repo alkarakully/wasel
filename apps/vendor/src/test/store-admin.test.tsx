@@ -288,7 +288,7 @@ describe('Billing', () => {
     })
     inEnglish(<BillingView api={api} storeId={1} onError={vi.fn()} />)
     expect(await screen.findByText('25,500 IQD')).toBeInTheDocument()
-    expect(screen.getByText(/minus Wasel’s commission \(15%\)/)).toBeInTheDocument()
+    expect(screen.getByText(/minus Nawsil’s commission \(15%\)/)).toBeInTheDocument()
 
     const row = screen.getByRole('row', { name: /2026-10-10/ })
     expect(within(row).getByText('Due')).toBeInTheDocument()

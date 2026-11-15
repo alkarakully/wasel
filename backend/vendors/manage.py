@@ -287,7 +287,7 @@ class ProductImageView(ProductView):
 
 
 class StoreOfferInput(serializers.ModelSerializer):
-    # Home banners are Wasel's call.
+    # Home banners are Nawsil's call.
     type = serializers.ChoiceField(choices=[Offer.Type.PERCENT, Offer.Type.FIXED, Offer.Type.FREE_DELIVERY, Offer.Type.BOGO])
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), required=False, allow_null=True)
 

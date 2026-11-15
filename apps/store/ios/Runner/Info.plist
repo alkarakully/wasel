@@ -4,7 +4,7 @@
 <dict>
 	<!-- Debug builds on a real device talk to the API on the developer's Mac over Wi-Fi. -->
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>Connects to the Wasel server on your local network during development.</string>
+	<string>Connects to the Nawsil server on your local network during development.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- Lets debug builds reach the local API over http. -->
@@ -16,7 +16,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Wasel Store</string>
+	<string>Nawsil Store</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,7 +24,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>wasel_store</string>
+	<string>nawsil_store</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

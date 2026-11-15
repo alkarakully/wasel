@@ -16,7 +16,7 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
     Price the cart and create the order with snapshots of every price.
     Wallet orders are paid immediately; cash and card orders stay pending.
     """
-    # Only the ways to pay Wasel takes right now (settings.PAYMENT_METHODS; cash only for now).
+    # Only the ways to pay Nawsil takes right now (settings.PAYMENT_METHODS; cash only for now).
     if payment_type not in settings.PAYMENT_METHODS:
         raise PricingError("payment_not_available", "This way to pay isn't available. Pay cash on delivery.")
     point = Point(longitude, latitude, srid=4326)
@@ -33,10 +33,10 @@ def place_order(customer, *, vendor, items, latitude, longitude, delivery_addres
             if wallet.wallet_currency != currency:
                 raise PricingError(
                     "wallet_currency_mismatch",
-                    f"Your Wasel Wallet is in {wallet.wallet_currency}; this store charges in {currency}.",
+                    f"Your Nawsil Wallet is in {wallet.wallet_currency}; this store charges in {currency}.",
                 )
             if wallet.wallet_balance < quote.total_amount:
-                raise PricingError("insufficient_wallet_balance", "Your Wasel Wallet balance is too low for this order.")
+                raise PricingError("insufficient_wallet_balance", "Your Nawsil Wallet balance is too low for this order.")
             payment_status = Order.PaymentStatus.PAID
 
         order = Order.objects.create(

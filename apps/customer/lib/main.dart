@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'screens/home_screen.dart';
 import 'state/cart.dart';
@@ -33,20 +33,20 @@ void main() {
         ChangeNotifierProvider.value(value: session),
         ChangeNotifierProvider(create: (_) => Cart()),
       ],
-      child: const WaselApp(),
+      child: const NawsilApp(),
     ),
   );
 }
 
-class WaselApp extends StatelessWidget {
-  const WaselApp({super.key});
+class NawsilApp extends StatelessWidget {
+  const NawsilApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     final session = context.watch<Session>();
     return MaterialApp(
       navigatorKey: navigatorKey,
-      title: 'Wasel',
+      title: 'Nawsil',
       debugShowCheckedModeBanner: false,
       // Kurdish (Sorani) uses Arabic script and right-to-left layout; Flutter's
       // built-in widget text falls back to Arabic, our own strings stay Kurdish.
@@ -57,8 +57,8 @@ class WaselApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: waselTheme(Brightness.light),
-      darkTheme: waselTheme(Brightness.dark),
+      theme: nawsilTheme(Brightness.light),
+      darkTheme: nawsilTheme(Brightness.dark),
       home: !session.loaded
           ? const BrandSplash()
           : session.signedIn

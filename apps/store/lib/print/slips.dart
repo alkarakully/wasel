@@ -1,4 +1,4 @@
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 /// One item line on a slip: "2×" and the name, with chosen options below.
 class SlipLine {

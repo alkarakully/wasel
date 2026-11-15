@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'slips.dart';
 
@@ -13,7 +13,7 @@ class OrderPrinter {
   Future<void> printOrder(Order order, S s) async {
     final slips = OrderSlips.of(order, s, storeName: order.vendorName);
     await Printing.layoutPdf(
-      name: 'wasel-order-${order.id}',
+      name: 'nawsil-order-${order.id}',
       format: PdfPageFormat.roll80,
       onLayout: (format) => buildPdf(slips, format),
     );
@@ -25,7 +25,7 @@ class OrderPrinter {
   ) async {
     Future<pw.Font> font(String weight) async => pw.Font.ttf(
       await rootBundle.load(
-        'packages/wasel_core/assets/fonts/IBMPlexSansArabic-$weight.ttf',
+        'packages/nawsil_core/assets/fonts/IBMPlexSansArabic-$weight.ttf',
       ),
     );
     final regular = await font('Regular');
@@ -48,7 +48,7 @@ class OrderPrinter {
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            'واصل',
+            'نوصل',
             style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold),
           ),
           pw.Container(
@@ -144,7 +144,7 @@ class OrderPrinter {
     );
 
     final doc = pw.Document(
-      title: 'Wasel order ${slips.orderNumber}',
+      title: 'Nawsil order ${slips.orderNumber}',
       theme: theme,
     );
 

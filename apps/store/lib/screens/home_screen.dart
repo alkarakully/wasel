@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/board.dart';
 import '../state/store_session.dart';
@@ -22,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final board = context.watch<StoreBoard>();
     final noStores = board.stores != null && board.stores!.isEmpty;
 
@@ -68,7 +68,7 @@ class _TopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final board = context.watch<StoreBoard>();
     final store = board.store;
     final newCount = board.newOrders.length;
@@ -262,7 +262,7 @@ class _Sections extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     Widget tab(
@@ -378,7 +378,7 @@ class _OpenPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final color = open ? t.success : t.muted;
     return Semantics(
       button: true,
@@ -425,7 +425,7 @@ class _Alerts extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
 
     Widget banner({

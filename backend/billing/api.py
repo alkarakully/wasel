@@ -1,5 +1,5 @@
 """
-Billing for store owners, and payouts for Wasel staff.
+Billing for store owners, and payouts for Nawsil staff.
 
   GET  /api/vendors/{id}/billing/                  owner: this week so far, statements, totals
   GET  /api/vendors/{id}/statements/{sid}/         owner: one week with every order (?download=csv)
@@ -125,7 +125,7 @@ class StatementView(APIView):
 
 def _csv(statement, lines):
     response = HttpResponse(content_type="text/csv; charset=utf-8")
-    name = f"wasel-statement-{statement.vendor_id}-{statement.period_start:%Y-%m-%d}.csv"
+    name = f"nawsil-statement-{statement.vendor_id}-{statement.period_start:%Y-%m-%d}.csv"
     response["Content-Disposition"] = f'attachment; filename="{name}"'
     response.write("﻿")  # so Excel reads Arabic store names correctly
     writer = csv.writer(response)
@@ -133,7 +133,7 @@ def _csv(statement, lines):
     writer.writerow(["Week", f"{statement.period_start} to {statement.period_end}"])
     writer.writerow([])
     writer.writerow(
-        ["Order", "Delivered", "Payment", f"Food sales ({statement.currency})", "Store discount", "Wasel commission",
+        ["Order", "Delivered", "Payment", f"Food sales ({statement.currency})", "Store discount", "Nawsil commission",
          "Payout"]
     )
     for line in lines:
@@ -148,7 +148,7 @@ def _csv(statement, lines):
     return response
 
 
-# --- Wasel staff ---------------------------------------------------------------------
+# --- Nawsil staff ---------------------------------------------------------------------
 
 
 class PayoutsView(StaffView):

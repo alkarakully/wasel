@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 /// The owner's stores and their open orders, kept current over the live
 /// socket. Reloads after every reconnect, so nothing missed offline is lost.

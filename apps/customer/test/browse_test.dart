@@ -6,12 +6,12 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wasel_core/wasel_core.dart';
-import 'package:wasel_customer/screens/home_screen.dart';
-import 'package:wasel_customer/screens/search_screen.dart';
-import 'package:wasel_customer/state/cart.dart';
-import 'package:wasel_customer/state/session.dart';
-import 'package:wasel_customer/strings.dart';
+import 'package:nawsil_core/nawsil_core.dart';
+import 'package:nawsil_customer/screens/home_screen.dart';
+import 'package:nawsil_customer/screens/search_screen.dart';
+import 'package:nawsil_customer/state/cart.dart';
+import 'package:nawsil_customer/state/session.dart';
+import 'package:nawsil_customer/strings.dart';
 
 Map<String, dynamic> storeJson(
   int id,
@@ -96,7 +96,7 @@ void main() {
           size: Size(430, 1400),
           disableAnimations: true,
         ),
-        child: MaterialApp(theme: waselTheme(Brightness.light), home: home),
+        child: MaterialApp(theme: nawsilTheme(Brightness.light), home: home),
       ),
     );
   }

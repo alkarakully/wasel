@@ -1,4 +1,4 @@
-"""Store payouts, wallet movements, platform reports, offers and Wasel Plus."""
+"""Store payouts, wallet movements, platform reports, offers and Nawsil Plus."""
 
 from datetime import date, timedelta
 
@@ -15,7 +15,7 @@ from billing.models import Statement
 from billing.weeks import close_finished_weeks
 from orders.models import Order
 from regions.regions import region
-from subscriptions.models import WaselPlusSubscription
+from subscriptions.models import NawsilPlusSubscription
 from vendors.models import Offer, Vendor
 from vendors.offers import check_offer, offer_state, offer_value, times_used
 
@@ -304,23 +304,23 @@ class OfferView(ConsoleView):
         return Response(status=204)
 
 
-# --- Wasel Plus ------------------------------------------------------------------
+# --- Nawsil Plus ------------------------------------------------------------------
 
 
 class PlusView(ConsoleView):
-    """GET ?status=&q=&page=: Wasel Plus members."""
+    """GET ?status=&q=&page=: Nawsil Plus members."""
 
     area = "marketing"
 
     def get(self, request):
         p = request.query_params
-        subs = WaselPlusSubscription.objects.select_related("user")
-        if p.get("status") in WaselPlusSubscription.Status.values:
+        subs = NawsilPlusSubscription.objects.select_related("user")
+        if p.get("status") in NawsilPlusSubscription.Status.values:
             subs = subs.filter(status=p["status"])
         if q := p.get("q", "").strip():
             subs = subs.filter(Q(user__phone__icontains=q.lstrip("0")) | Q(user__name__icontains=q))
         counts = dict(
-            WaselPlusSubscription.objects.values_list("status").annotate(n=Count("id")).values_list("status", "n")
+            NawsilPlusSubscription.objects.values_list("status").annotate(n=Count("id")).values_list("status", "n")
         )
         response = paged(
             self,
@@ -335,7 +335,7 @@ class PlusView(ConsoleView):
                 "created_at": s.created_at.isoformat(),
             },
         )
-        response.data["counts"] = {k: counts.get(k, 0) for k in WaselPlusSubscription.Status.values}
+        response.data["counts"] = {k: counts.get(k, 0) for k in NawsilPlusSubscription.Status.values}
         return response
 
 

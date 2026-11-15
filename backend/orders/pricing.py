@@ -16,7 +16,7 @@ The discount has two parts:
                picked). It's worked out on the food left to pay for.
 
 Who pays: the store pays for deals on its own items and for its own offers
-(store_discount, taken from its payout); Wasel pays for platform-wide offers.
+(store_discount, taken from its payout); Nawsil pays for platform-wide offers.
 
 Commission is charged on the food subtotal less what the store gives away on
 food (item deals and its percent or fixed offers). A store's free-delivery
@@ -33,7 +33,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from regions.regions import quantize, region
-from subscriptions.models import WaselPlusSubscription
+from subscriptions.models import NawsilPlusSubscription
 from vendors.models import Offer, Product, Vendor
 
 
@@ -72,7 +72,7 @@ class Quote:
     commission_amount: Decimal = Decimal(0)
     total_amount: Decimal = Decimal(0)
     offer: Offer = None
-    wasel_plus: bool = False
+    nawsil_plus: bool = False
 
 
 def _config(key):
@@ -95,12 +95,12 @@ def delivery_fee_for(distance_m, country="IQ"):
     return quantize(_round_up(fee, _price(country, "FEE_ROUNDING")), region(country).currency)
 
 
-def has_wasel_plus(user, at):
+def has_nawsil_plus(user, at):
     return (
-        WaselPlusSubscription.objects.filter(user=user)
+        NawsilPlusSubscription.objects.filter(user=user)
         .filter(
-            Q(status=WaselPlusSubscription.Status.ACTIVE)
-            | Q(status=WaselPlusSubscription.Status.TRIAL, trial_end_date__gt=at)
+            Q(status=NawsilPlusSubscription.Status.ACTIVE)
+            | Q(status=NawsilPlusSubscription.Status.TRIAL, trial_end_date__gt=at)
         )
         .exists()
     )
@@ -204,7 +204,7 @@ def apply_item_deals(vendor, lines, subtotal, at):
 
 
 def _pick_offer(vendor, offer_id, subtotal, delivery_fee, at):
-    # The store's own offers, and Wasel's offers for the store's country (in its currency).
+    # The store's own offers, and Nawsil's offers for the store's country (in its currency).
     # Buy-one-get-one deals are per item and handled by apply_item_deals().
     running = Offer.objects.filter(starts_at__lte=at, ends_at__gte=at).exclude(type=Offer.Type.BOGO).filter(
         Q(vendor=vendor) | Q(vendor__isnull=True, country=vendor.country)
@@ -252,12 +252,12 @@ def build_quote(customer, vendor_id, items, delivery_point, offer_id=None, tip=0
     quote.lines = _price_lines(vendor, items)
     quote.subtotal = sum((line.line_total for line in quote.lines), Decimal(0))
 
-    quote.wasel_plus = has_wasel_plus(customer, at)
-    if quote.wasel_plus and quote.subtotal >= _price(country, "PLUS_FREE_DELIVERY_MIN"):
+    quote.nawsil_plus = has_nawsil_plus(customer, at)
+    if quote.nawsil_plus and quote.subtotal >= _price(country, "PLUS_FREE_DELIVERY_MIN"):
         quote.delivery_fee = Decimal(0)
     else:
         quote.delivery_fee = delivery_fee_for(distance_m, country)
-    quote.service_fee = _price(country, "PLUS_SERVICE_FEE" if quote.wasel_plus else "SERVICE_FEE")
+    quote.service_fee = _price(country, "PLUS_SERVICE_FEE" if quote.nawsil_plus else "SERVICE_FEE")
 
     quote.items_discount = apply_item_deals(vendor, quote.lines, quote.subtotal, at)
     food_left = quote.subtotal - quote.items_discount

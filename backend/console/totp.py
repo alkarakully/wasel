@@ -53,6 +53,6 @@ def verify(secret, code, last_step=0, now=None):
     return None
 
 
-def provisioning_uri(secret, email, issuer="Wasel"):
+def provisioning_uri(secret, email, issuer="Nawsil"):
     label = quote(f"{issuer}:{email}", safe=":")
     return f"otpauth://totp/{label}?secret={secret}&issuer={quote(issuer)}&digits={DIGITS}&period={STEP}"

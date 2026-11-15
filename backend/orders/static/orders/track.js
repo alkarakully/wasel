@@ -1,13 +1,13 @@
 (function () {
   "use strict";
 
-  var ORDER_ID = window.WASEL_ORDER_ID;
+  var ORDER_ID = window.NAWSIL_ORDER_ID;
   var STEPS = ["received", "preparing", "ready", "out_for_delivery", "delivered"];
 
   var STRINGS = {
     ar: {
       dir: "rtl",
-      pageTitle: "واصل | تتبع الطلب",
+      pageTitle: "نوصل | تتبع الطلب",
       order: "طلب #{id}",
       steps: ["استلام", "تحضير", "جاهز", "بالطريق", "توصيل"],
       status: {
@@ -31,7 +31,7 @@
     },
     ku: {
       dir: "rtl",
-      pageTitle: "واصل | بەدواداچوونی داواکاری",
+      pageTitle: "نوصل | بەدواداچوونی داواکاری",
       order: "داواکاری #{id}",
       steps: ["وەرگرتن", "ئامادەکردن", "ئامادە", "لە ڕێگا", "گەیاندن"],
       status: {
@@ -55,7 +55,7 @@
     },
     en: {
       dir: "ltr",
-      pageTitle: "Wasel | Track order",
+      pageTitle: "Nawsil | Track order",
       order: "Order #{id}",
       steps: ["Received", "Preparing", "Ready", "On the way", "Delivered"],
       status: {
@@ -84,13 +84,13 @@
   }
 
   var $ = function (id) { return document.getElementById(id); };
-  var lang = STRINGS[storage("wasel_lang")] ? storage("wasel_lang") : "ar";
+  var lang = STRINGS[storage("nawsil_lang")] ? storage("nawsil_lang") : "ar";
   var S = STRINGS[lang];
   document.documentElement.lang = lang === "ku" ? "ckb" : lang;
   document.documentElement.dir = S.dir;
   document.title = S.pageTitle;
 
-  var token = storage("wasel_token");
+  var token = storage("nawsil_token");
   var state = { order: null, captainAt: null, socket: null, retry: 0 };
 
   // --- Map -------------------------------------------------------------------

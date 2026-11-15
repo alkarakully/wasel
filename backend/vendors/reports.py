@@ -2,7 +2,7 @@
 GET /api/vendors/{id}/report/?from=YYYY-MM-DD&to=YYYY-MM-DD
 
 A store's numbers for a date range (calendar days where the store is, both ends included;
-the last 7 days by default): sales, orders, what they earned after Wasel's
+the last 7 days by default): sales, orders, what they earned after Nawsil's
 commission, a day-by-day series, top items, busiest hours, prep times and
 cancellations. For the owner and managers.
 """
@@ -43,7 +43,7 @@ def store_payout(orders):
     sums = orders.aggregate(
         food=Sum("subtotal"),
         commission=Sum("commission_amount"),
-        # Recorded at checkout: the store's item deals and its own offers; Wasel pays for its own.
+        # Recorded at checkout: the store's item deals and its own offers; Nawsil pays for its own.
         store_discounts=Sum("store_discount"),
     )
     food, commission, discounts = _money(sums["food"]), _money(sums["commission"]), _money(sums["store_discounts"])

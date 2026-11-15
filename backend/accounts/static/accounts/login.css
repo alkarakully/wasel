@@ -39,7 +39,7 @@ body {
   line-height: 0;
 }
 
-/* WASEL ◆ واصل, drawn as SVG; sized by width so it never pushes the page wider. */
+/* NAWSIL ◆ نوصل, drawn as SVG; sized by width so it never pushes the page wider. */
 .brand-mark img {
   display: block;
   width: min(100%, clamp(15rem, 38vw, 30rem));

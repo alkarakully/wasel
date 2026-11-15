@@ -59,7 +59,7 @@ from decimal import Decimal  # noqa: E402
 from django.utils import timezone  # noqa: E402
 
 from accounts.models import WalletTransaction  # noqa: E402
-from subscriptions.models import WaselPlusSubscription  # noqa: E402
+from subscriptions.models import NawsilPlusSubscription  # noqa: E402
 from vendors.models import Offer, Product, ProductModifier  # noqa: E402
 
 from .models import OrderItem, OrderItemModifier  # noqa: E402
@@ -137,7 +137,7 @@ class QuoteTests(PricingTestBase):
         self.assertEqual(body["service_fee"], "500")
         self.assertEqual(body["discount"], "0")
         self.assertEqual(body["total_amount"], "25250")
-        self.assertFalse(body["wasel_plus"])
+        self.assertFalse(body["nawsil_plus"])
         self.assertNotIn("commission_amount", body)
 
     def test_delivery_fee_grows_per_started_km(self):
@@ -294,12 +294,12 @@ class OfferAndCommissionTests(PricingTestBase):
         # Commission on what the store really sells the food for: 15% of (12750 - 1275) = 1721.25.
         self.assertEqual(order.commission_amount, Decimal(1721))
 
-    def test_wasel_pays_for_its_offer_and_the_store_for_its_deal(self):
+    def test_nawsil_pays_for_its_offer_and_the_store_for_its_deal(self):
         self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
-        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Wasel 2000")
+        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Nawsil 2000")
         order = Order.objects.get(pk=self.place().json()["id"])
         self.assertEqual((order.discount, order.store_discount), (Decimal(12500), Decimal(10500)))
-        # Wasel's 2000 doesn't lower commission: 15% of 12750.
+        # Nawsil's 2000 doesn't lower commission: 15% of 12750.
         self.assertEqual(order.commission_amount, Decimal(1913))
         item = order.items.get(product=self.kebab)
         self.assertEqual((item.discount, item.deal.type), (Decimal(10500), Offer.Type.BOGO))
@@ -315,7 +315,7 @@ class OfferAndCommissionTests(PricingTestBase):
 
     def test_store_report_takes_its_deals_off_the_payout(self):
         self.make_offer(type=Offer.Type.BOGO, product=self.kebab)
-        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Wasel 2000")
+        self.make_offer(vendor=None, type=Offer.Type.FIXED, value=2000, title="Nawsil 2000")
         order = Order.objects.get(pk=self.place().json()["id"])
         from vendors.reports import store_payout
 
@@ -332,27 +332,27 @@ class OfferAndCommissionTests(PricingTestBase):
         self.assertEqual(self.commission_of_placed_order(), Decimal(0))
 
 
-class WaselPlusPricingTests(PricingTestBase):
+class NawsilPlusPricingTests(PricingTestBase):
     def test_member_gets_free_delivery_above_minimum_and_lower_service_fee(self):
-        WaselPlusSubscription.objects.create(user=self.customer, status=WaselPlusSubscription.Status.ACTIVE)
+        NawsilPlusSubscription.objects.create(user=self.customer, status=NawsilPlusSubscription.Status.ACTIVE)
         body = self.quote().json()  # subtotal 23250 >= 15000
-        self.assertTrue(body["wasel_plus"])
+        self.assertTrue(body["nawsil_plus"])
         self.assertEqual(body["delivery_fee"], "0")
         self.assertEqual(body["service_fee"], "250")
 
     def test_member_pays_delivery_below_minimum(self):
-        WaselPlusSubscription.objects.create(user=self.customer, status=WaselPlusSubscription.Status.ACTIVE)
+        NawsilPlusSubscription.objects.create(user=self.customer, status=NawsilPlusSubscription.Status.ACTIVE)
         body = self.quote(items=[{"product": self.tomatoes.pk, "quantity": 2}]).json()
         self.assertEqual(body["delivery_fee"], "1500")
         self.assertEqual(body["service_fee"], "250")
 
     def test_expired_trial_is_not_a_member(self):
-        WaselPlusSubscription.objects.create(
+        NawsilPlusSubscription.objects.create(
             user=self.customer,
-            status=WaselPlusSubscription.Status.TRIAL,
+            status=NawsilPlusSubscription.Status.TRIAL,
             trial_end_date=timezone.now() - timedelta(days=1),
         )
-        self.assertFalse(self.quote().json()["wasel_plus"])
+        self.assertFalse(self.quote().json()["nawsil_plus"])
 
 
 class PlaceOrderTests(PricingTestBase):

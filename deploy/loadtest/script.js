@@ -1,4 +1,4 @@
-// Wasel load test (k6). Everyone at once, like a busy evening:
+// Nawsil load test (k6). Everyone at once, like a busy evening:
 //   customers  browse, search, open a store, quote, sometimes order (ramping up to PEAK)
 //   trackers   customers with the app open on an order: live socket + a reload every 30 s
 //   captains   online, GPS every 3 s over the socket, decline the offers they get

@@ -5,11 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_captain/screens/home_screen.dart';
-import 'package:wasel_captain/state/captain_session.dart';
-import 'package:wasel_captain/state/location_sharer.dart';
-import 'package:wasel_captain/strings.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_captain/screens/home_screen.dart';
+import 'package:nawsil_captain/state/captain_session.dart';
+import 'package:nawsil_captain/state/location_sharer.dart';
+import 'package:nawsil_captain/strings.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 /// Records start/stop instead of touching the phone's GPS.
 class FakeSharer extends LocationSharer {
@@ -99,7 +99,7 @@ class Harness {
       ChangeNotifierProvider.value(value: session),
     ],
     child: MaterialApp(
-      theme: waselTheme(Brightness.light),
+      theme: nawsilTheme(Brightness.light),
       home: const HomeScreen(),
     ),
   );

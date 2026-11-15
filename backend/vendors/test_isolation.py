@@ -19,7 +19,7 @@ from rest_framework.test import APIClient
 from accounts.models import User
 from billing.models import Statement
 from orders.models import Order, OrderItem
-from wasel.asgi import application
+from nawsil.asgi import application
 
 from .models import Product, StoreInvite, StoreMember, Vendor
 

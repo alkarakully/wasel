@@ -1,4 +1,4 @@
-name: wasel_customer
+name: nawsil_customer
 description: "A new Flutter project."
 publish_to: 'none'
 version: 0.1.0+1
@@ -11,8 +11,8 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  wasel_core:
-    path: ../wasel_core
+  nawsil_core:
+    path: ../nawsil_core
   geolocator: ^14.1.1
   http: ^1.6.0
   maplibre_gl: ^0.27.1

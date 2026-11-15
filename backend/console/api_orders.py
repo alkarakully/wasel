@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from accounts.models import User
 from orders import dispatch, realtime, workflow
 from orders.models import CaptainLocation, Order, StuckOrderAlert
-from subscriptions.models import WaselPlusSubscription
+from subscriptions.models import NawsilPlusSubscription
 from regions.regions import region
 from vendors.models import Vendor
 
@@ -72,8 +72,8 @@ class OverviewView(ConsoleView):
                     "stores": stores.filter(status=Vendor.Status.APPROVED).count(),
                     "applications": stores.filter(status=Vendor.Status.PENDING).count(),
                     "customers": User.objects.filter(role=User.Role.CUSTOMER, country=country).count(),
-                    "plus_members": WaselPlusSubscription.objects.filter(user__country=country)
-                    .exclude(status=WaselPlusSubscription.Status.EXPIRED)
+                    "plus_members": NawsilPlusSubscription.objects.filter(user__country=country)
+                    .exclude(status=NawsilPlusSubscription.Status.EXPIRED)
                     .count(),
                 },
                 "by_status": {s: by_status.get(s, 0) for s in ACTIVE},
@@ -170,7 +170,7 @@ def order_detail(o):
         "service_fee": money(o.service_fee, o.currency),
         "tip": money(o.tip, o.currency),
         "discount": money(o.discount, o.currency),
-        # The part of the discount the store pays (its deals and offers); the rest is Wasel's.
+        # The part of the discount the store pays (its deals and offers); the rest is Nawsil's.
         "store_discount": money(o.store_discount, o.currency),
         "commission": money(o.commission_amount, o.currency),
         "time_zone": o.vendor.region.time_zone,
@@ -237,7 +237,7 @@ def _resolve_alerts(order_id):
 
 
 class CancelOrderView(ConsoleView):
-    """POST {reason}: Wasel support cancels the order. A wallet payment goes back to the wallet."""
+    """POST {reason}: Nawsil support cancels the order. A wallet payment goes back to the wallet."""
 
     area = "orders"
 

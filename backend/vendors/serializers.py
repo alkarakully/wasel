@@ -87,7 +87,7 @@ class VendorSerializer(serializers.ModelSerializer):
         return round(distance.km, 2) if distance is not None else None
 
     def get_delivery_fee(self, vendor):
-        # Standard fee before Wasel Plus or offers; checkout shows the final price.
+        # Standard fee before Nawsil Plus or offers; checkout shows the final price.
         distance = getattr(vendor, "distance", None)
         if distance is None:
             return None

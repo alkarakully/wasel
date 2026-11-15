@@ -224,7 +224,7 @@ class WhatsAppSenderTests(TestCase):
         WHATSAPP={
             "TOKEN": "test-token",
             "PHONE_NUMBER_ID": "123",
-            "TEMPLATE": "wasel_login_code",
+            "TEMPLATE": "nawsil_login_code",
             "TEMPLATE_LANGUAGE": "ar",
             "API_VERSION": "v21.0",
         }

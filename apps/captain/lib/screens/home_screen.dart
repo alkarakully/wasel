@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../state/captain_session.dart';
 import '../state/location_sharer.dart';
@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final session = context.watch<CaptainSession>();
     final sharer = context.watch<LocationSharer>();
     final scheme = Theme.of(context).colorScheme;
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final name = session.user?.name ?? '';
 
     return Scaffold(
@@ -357,7 +357,7 @@ class _StatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final content = Row(
       children: [
         Container(
@@ -500,7 +500,7 @@ class _OrderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final cash = order.cashToCollect > 0;
     return Padding(

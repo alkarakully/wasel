@@ -4,8 +4,8 @@ import type { Api, Invite, StoreApplication, User } from './api'
  * Where a signed-in person goes next:
  *   invites  someone invited them to a store's team; they accept or decline first
  *   portal   they own or work at an approved store
- *   waiting  their store is waiting for Wasel's approval, or was rejected
- *   apply    they're joining Wasel and fill in their first store
+ *   waiting  their store is waiting for Nawsil's approval, or was rejected
+ *   apply    they're joining Nawsil and fill in their first store
  *   refused  this number can't use the portal (error code to show)
  */
 export type Step =
@@ -15,7 +15,7 @@ export type Step =
   | { kind: 'apply' }
   | { kind: 'refused'; code: string }
 
-/** `joining`: they came through "Join Wasel as a store", so a customer number may apply. */
+/** `joining`: they came through "Join Nawsil as a store", so a customer number may apply. */
 export async function nextStep(api: Api, user: User, joining: boolean): Promise<Step> {
   const invites = await api.myInvites()
   if (invites.length) return { kind: 'invites', invites }

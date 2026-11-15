@@ -1,4 +1,4 @@
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'location_sharer.dart';
 

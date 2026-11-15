@@ -1,5 +1,5 @@
-/* Wasel design tokens v2: same values as backend/accounts/static/wasel/tokens.css
-   and the Flutter apps (wasel_core/lib/src/theme.dart). */
+/* Nawsil design tokens v2: same values as backend/accounts/static/nawsil/tokens.css
+   and the Flutter apps (nawsil_core/lib/src/theme.dart). */
 :root {
   /* Babylon lapis and gold */
   --lapis-50: #f0f3fd;
@@ -156,14 +156,14 @@ button:disabled {
   color: var(--accent);
 }
 
-/* The wordmark (WASEL ◆ واصل) drawn as SVG; height sets its size. */
+/* The wordmark (NAWSIL ◆ نوصل) drawn as SVG; height sets its size. */
 .logo {
   display: block;
   min-width: 0;
   height: auto;
 }
 
-/* On the lapis glaze: light WASEL, gold واصل. */
+/* On the lapis glaze: light NAWSIL, gold نوصل. */
 .logo.wordmark {
   width: min(100%, clamp(15rem, 34vw, 28rem));
   --logo-latin: #f4f6ff;

@@ -20,8 +20,8 @@ function json(status: number, body: unknown) {
 
 beforeEach(() => {
   calls = []
-  localStorage.setItem('wasel-admin-lang', 'en')
-  localStorage.removeItem('wasel-admin-country')
+  localStorage.setItem('nawsil-admin-lang', 'en')
+  localStorage.removeItem('nawsil-admin-country')
   window.history.replaceState(null, '', import.meta.env.BASE_URL)
   vi.stubGlobal('fetch', (url: string, init: RequestInit = {}) => {
     const path = url.replace('/api/console/', '')
@@ -39,7 +39,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 const admin: Me = {
   id: 1,
-  email: 'admin@wasel.iq',
+  email: 'admin@nawsil.com',
   name: 'Admin',
   role: 'admin',
   areas: {
@@ -104,7 +104,7 @@ describe('sign in', () => {
               {
                 next: 'setup',
                 secret: 'JBSWY3DPEHPK3PXP',
-                uri: 'otpauth://totp/Wasel:admin%40wasel.iq?secret=JBSWY3DPEHPK3PXP',
+                uri: 'otpauth://totp/Nawsil:admin%40nawsil.com?secret=JBSWY3DPEHPK3PXP',
               },
             ]
           : [400, { error: 'invalid_login', detail: 'Wrong email or password.' }],
@@ -117,7 +117,7 @@ describe('sign in', () => {
     }
     const user = userEvent.setup()
     render(<App />)
-    await user.type(await screen.findByLabelText('Work email'), 'admin@wasel.iq')
+    await user.type(await screen.findByLabelText('Work email'), 'admin@nawsil.com')
     await user.type(screen.getByLabelText('Password'), 'wrong')
     await user.click(screen.getByRole('button', { name: /Continue/ }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Wrong email or password.')
@@ -214,7 +214,7 @@ describe('orders', () => {
     await waitFor(() =>
       expect(calls.find((c) => c.path === 'orders/7/cancel/')?.body).toEqual({ reason: 'Store closed' }),
     )
-    expect(await screen.findByText('Cancelled by Wasel support')).toBeInTheDocument()
+    expect(await screen.findByText('Cancelled by Nawsil support')).toBeInTheDocument()
   })
 })
 

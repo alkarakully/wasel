@@ -177,7 +177,7 @@ export const COUNTRIES: Country[] = [
   { code: 'ZW', dial: '263', en: 'Zimbabwe', ar: 'زيمبابوي' },
 ]
 
-/** The countries Wasel runs stores in, each with its own currency and clock. */
+/** The countries Nawsil runs stores in, each with its own currency and clock. */
 export const REGIONS: Region[] = [
   { country: 'IQ', currency: 'IQD', decimals: 0, timeZone: 'Asia/Baghdad', center: { lat: 33.3152, lng: 44.3661 } },
   { country: 'SA', currency: 'SAR', decimals: 2, timeZone: 'Asia/Riyadh', center: { lat: 24.7136, lng: 46.6753 } },

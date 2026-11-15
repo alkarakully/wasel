@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../config.dart';
 import '../state/location_sharer.dart';
@@ -225,9 +225,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
             onTap: () => Navigator.pop(context),
             child: Container(
               decoration: BoxDecoration(
-                color: WaselTheme.of(context).surface,
+                color: NawsilTheme.of(context).surface,
                 shape: BoxShape.circle,
-                boxShadow: WaselTheme.of(context).floating,
+                boxShadow: NawsilTheme.of(context).floating,
               ),
               child: Icon(
                 Directionality.of(context) == TextDirection.rtl
@@ -267,7 +267,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   Widget _panel(S s) {
     final scheme = Theme.of(context).colorScheme;
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final order = _order;
     final muted = TextStyle(color: t.muted, fontSize: 13);
 
@@ -472,7 +472,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     VoidCallback? onCall,
   }) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     Widget round(IconData icon, String tip, VoidCallback onTap, bool filled) =>
         Padding(

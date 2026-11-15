@@ -1,4 +1,4 @@
-# Wasel Backend (Django REST Framework)
+# Nawsil Backend (Django REST Framework)
 
 Runs in Docker with PostGIS, since GeoDjango needs GDAL/GEOS/PROJ which are easiest to get from the image.
 
@@ -10,10 +10,10 @@ From the repository root:
 docker compose up
 ```
 
-This starts the API server, PostGIS, Redis and a Celery worker. The API is at http://localhost:8000/api/ and the Django admin at http://localhost:8000/django-admin/ (superusers only; set `DJANGO_ADMIN_PATH` to move it). The Wasel team's day-to-day tool is the platform admin in `apps/admin` (see below). If port 8000 (or 5432) is taken, pick others:
+This starts the API server, PostGIS, Redis and a Celery worker. The API is at http://localhost:8000/api/ and the Django admin at http://localhost:8000/django-admin/ (superusers only; set `DJANGO_ADMIN_PATH` to move it). The Nawsil team's day-to-day tool is the platform admin in `apps/admin` (see below). If port 8000 (or 5432) is taken, pick others:
 
 ```bash
-WASEL_WEB_PORT=8010 WASEL_DB_PORT=5433 docker compose up
+NAWSIL_WEB_PORT=8010 NAWSIL_DB_PORT=5433 docker compose up
 ```
 
 Create an admin user:
@@ -24,12 +24,12 @@ docker compose run --rm web python manage.py createsuperuser
 
 ## Platform admin
 
-The Wasel team runs the platform from the platform admin, a React app at `/admin/` (source in [`apps/admin`](../apps/admin/README.md)). Staff sign in with a work email, a password and a 6-digit code from an authenticator app (set up on first sign-in), separately from the phone-code login the apps use. Five wrong tries lock the account for 15 minutes; a session lasts 12 hours.
+The Nawsil team runs the platform from the platform admin, a React app at `/admin/` (source in [`apps/admin`](../apps/admin/README.md)). Staff sign in with a work email, a password and a 6-digit code from an authenticator app (set up on first sign-in), separately from the phone-code login the apps use. Five wrong tries lock the account for 15 minutes; a session lasts 12 hours.
 
 Create the first login (it asks for the password; `--phone` instead gives an existing superuser a login):
 
 ```bash
-docker compose run --rm web python manage.py create_console_admin --email you@wasel.iq --name "Your Name"
+docker compose run --rm web python manage.py create_console_admin --email you@nawsil.com --name "Your Name"
 ```
 
 Each teammate has one role, and the server enforces it on every request:
@@ -42,7 +42,7 @@ Each teammate has one role, and the server enforces it on every request:
 | People (block, unblock) | change | change | change | view | — |
 | Money (payouts, wallet ledger, wallet adjustments) | change | — | — | change | — |
 | Reports | view | view | — | view | view |
-| Marketing (offers, banners, Wasel Plus) | change | view | — | — | change |
+| Marketing (offers, banners, Nawsil Plus) | change | view | — | — | change |
 | Team and audit log | change | — | — | — | — |
 
 Every change made there (store edits and approvals, cancellations with refunds, released captains, blocks, wallet adjustments with their reason, payouts, offers, team changes, sign-ins) is written to the audit log with who, when, what changed and from which IP. The API is `/api/console/` (`backend/console/`); it only accepts the platform admin's session cookie with CSRF, never an app token, and not a Django admin session without the authenticator code.
@@ -51,9 +51,9 @@ Every change made there (store edits and approvals, cancellations with refunds, 
 
 The Django admin is kept as an emergency tool at `/django-admin/` (set `DJANGO_ADMIN_PATH` to a long random path in production). Only superusers get in, with the account from `createsuperuser` (any phone number works for staff; app accounts need an Iraqi number because they sign in by code). Day-to-day work happens in the platform admin; the old operations page at `/ops/` now sends people there.
 
-## Joining Wasel: store sign-up and approval
+## Joining Nawsil: store sign-up and approval
 
-Store owners sign themselves up from the store portal (**Join Wasel as a store**): they verify their number with the login code, then send their name and first store (name, restaurant or supermarket, cuisine, address, map spot, delivery distance). That makes the account a store account and the store an application (`Vendor.status` `pending`). Wasel staff approve or reject it in the platform admin › Stores › Applications, and the owner gets a push and sees the result in the portal (with the reason when rejected, and a way to fix and resend). An approved owner adds more branches from **Store settings** in the portal; each goes through the same approval.
+Store owners sign themselves up from the store portal (**Join Nawsil as a store**): they verify their number with the login code, then send their name and first store (name, restaurant or supermarket, cuisine, address, map spot, delivery distance). That makes the account a store account and the store an application (`Vendor.status` `pending`). Nawsil staff approve or reject it in the platform admin › Stores › Applications, and the owner gets a push and sees the result in the portal (with the reason when rejected, and a way to fix and resend). An approved owner adds more branches from **Store settings** in the portal; each goes through the same approval.
 
 Until a store is approved, customers never see it (lists, details, offers, quotes and orders all act as if it doesn't exist), it can't open or take orders, and nobody has a role there, so none of the store endpoints below work for it. Stores staff create in the admin start out approved.
 
@@ -89,7 +89,7 @@ Everyone on the team gets the store's live order updates and new-order pushes.
 | `GET /api/vendors/{id}/billing/` | This week so far, totals due and paid, statements |
 | `GET /api/vendors/{id}/statements/{sid}/` | One week with every order; `?download=csv` for a spreadsheet |
 
-**Billing.** Wasel collects every payment (cash through captains for now; the in-app wallet can be switched back on) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Wasel's commission and minus discounts from the store's own offers (platform-wide offers are paid by Wasel). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in the platform admin › Money › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
+**Billing.** Nawsil collects every payment (cash through captains for now; the in-app wallet can be switched back on) and pays each store weekly, Saturday to Friday in Baghdad. For each delivered order the store gets the food subtotal minus Nawsil's commission and minus discounts from the store's own offers (platform-wide offers are paid by Nawsil). A Celery job makes the `Statement`s hourly once a week has ended (it catches up on missed weeks and never makes one twice). Staff see what's due in the platform admin › Money › Payouts and mark statements paid with a transfer reference; owners see it in the portal.
 
 ## Tenant isolation
 
@@ -117,7 +117,7 @@ docker compose run --rm web python manage.py test
 | App | Models |
 | :--- | :--- |
 | `accounts` | `User` (phone, optional email and password, role: customer/captain/vendor), `PhoneOTP` (WhatsApp and email codes), `AuthToken` (one per signed-in device), `WalletTransaction` |
-| `subscriptions` | `WaselPlusSubscription` |
+| `subscriptions` | `NawsilPlusSubscription` |
 | `vendors` | `Vendor`, `StoreMember`, `Product`, `ProductModifier`, `Offer` |
 | `orders` | `Order`, `OrderItem`, `OrderItemModifier`, `Rating` |
 | `ops` | No models: the staff operations page and its API |
@@ -163,7 +163,7 @@ To send real WhatsApp codes, create an authentication template with a copy-code 
 | :--- | :--- |
 | `WHATSAPP_TOKEN` | Cloud API access token |
 | `WHATSAPP_PHONE_NUMBER_ID` | Sender phone number ID |
-| `WHATSAPP_TEMPLATE` | Template name (default `wasel_login_code`) |
+| `WHATSAPP_TEMPLATE` | Template name (default `nawsil_login_code`) |
 | `WHATSAPP_TEMPLATE_LANGUAGE` | Template language (default `ar`) |
 
 To send real email codes, point these at any SMTP provider (Gmail or Google Workspace, Zoho, Mailgun, Brevo, Amazon SES SMTP...):
@@ -174,7 +174,7 @@ To send real email codes, point these at any SMTP provider (Gmail or Google Work
 | `EMAIL_PORT` | Default `587` |
 | `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP login |
 | `EMAIL_USE_TLS` / `EMAIL_USE_SSL` | `1` for STARTTLS (default) / `1` for SSL on port 465 |
-| `DEFAULT_FROM_EMAIL` | Sender, e.g. `Wasel <no-reply@example.com>` |
+| `DEFAULT_FROM_EMAIL` | Sender, e.g. `Nawsil <no-reply@example.com>` |
 
 ## API (so far)
 
@@ -212,7 +212,7 @@ How the price is built (`orders/pricing.py`, values in `ORDER_PRICING` in settin
 * **Subtotal:** each line is (product price + chosen options) × quantity. Per-kg items accept decimals; other items need whole numbers. Every required option group must be chosen.
 * **Delivery fee:** 1,500 IQD for the first 2 km, then 250 IQD per started km, rounded up to 250 IQD. The store must be open and the address inside its delivery radius.
 * **Service fee:** 500 IQD.
-* **Wasel Plus:** members get free delivery from a 15,000 IQD subtotal and a 250 IQD service fee.
+* **Nawsil Plus:** members get free delivery from a 15,000 IQD subtotal and a 250 IQD service fee.
 * **Offers:** the best running offer for that store or the whole platform is applied automatically. Sending `offer` uses that one instead, or fails with `offer_not_applicable`.
 * **Total:** subtotal + delivery fee + service fee + tip - discount.
 * **Commission:** the store's rate on the subtotal, or on the discounted subtotal when the store funds the offer. Platform offers don't reduce it, and it is 0 during the commission-free period. It is saved on the order but not shown to customers.
@@ -258,7 +258,7 @@ On connect the server sends `{"type": "connected", "user_id": 12}`. A missing or
 | `{"type": "order.available", "order": {...}}` | All captains | A store accepts an order that has no captain yet. |
 | `{"type": "order.unavailable", "order_id": 12}` | All captains | That order was claimed or cancelled; remove it from the list. |
 | `{"type": "order.stuck", "alert": {...}}` | Staff users | An order has sat in one step too long (see below). |
-| `{"type": "wasel_plus.trial_ended"}` | That customer | Their free Wasel Plus trial has ended; offer the paid plan. |
+| `{"type": "nawsil_plus.trial_ended"}` | That customer | Their free Nawsil Plus trial has ended; offer the paid plan. |
 | `{"type": "captain.location", "order_id": 12, "location": {...}}` | The customer and the store | The order's captain moved (see below). |
 | `{"type": "dispatch.offer", "offer": {...}}` | One captain | An order offered to them alone, until `expires_at` (see below). |
 | `{"type": "dispatch.offer_closed", "offer_id": 3, "reason": "expired"}` | That captain | The offer ended; close it. |
@@ -298,7 +298,7 @@ Offers expire on time through a scheduled Celery task, with a sweep every 15 sec
 
 ## Live updates, no pushes
 
-Wasel sends no push notifications (no Firebase). Everything reaches the apps over the live socket while they are open:
+Nawsil sends no push notifications (no Firebase). Everything reaches the apps over the live socket while they are open:
 
 | Update | Who sees it |
 | :--- | :--- |
@@ -311,7 +311,7 @@ If an app is closed, it catches up from the API when it opens again.
 
 ## Background jobs (Celery)
 
-The `worker` service runs Celery with its beat schedule (`celery -A wasel worker -B`). In production, run beat as its own single process (`celery -A wasel beat`) next to one or more workers.
+The `worker` service runs Celery with its beat schedule (`celery -A nawsil worker -B`). In production, run beat as its own single process (`celery -A nawsil beat`) next to one or more workers.
 
 **Stuck-order alerts** (every minute). An order is flagged when it sits too long in one step (minutes in `STUCK_ORDER_MINUTES`):
 
@@ -325,6 +325,6 @@ The `worker` service runs Celery with its beat schedule (`celery -A wasel worker
 
 Each alert is saved as a `StuckOrderAlert` (admin: Orders > Stuck order alerts) and pushed to staff sockets. There is only one open alert per order and reason, and it is resolved automatically once the order moves on.
 
-**Wasel Plus trials.** A customer's first login starts a free 14-day trial (`WASEL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `wasel_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
+**Nawsil Plus trials.** A customer's first login starts a free 14-day trial (`NAWSIL_PLUS_TRIAL_DAYS`). Every 15 minutes, finished trials are marked expired and the customer's app gets `nawsil_plus.trial_ended`. Pricing already stops the benefits at the trial's end date, so the check never lets anyone keep free delivery.
 
-Not built yet: Wasel Plus billing and card payments.
+Not built yet: Nawsil Plus billing and card payments.

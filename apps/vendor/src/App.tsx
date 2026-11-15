@@ -8,7 +8,7 @@ import { LangContext } from './lib/i18n'
 import { nextStep, type Step } from './lib/onboarding'
 import { isRtl } from './lib/strings'
 
-const LANG_KEY = 'wasel_vendor_lang'
+const LANG_KEY = 'nawsil_vendor_lang'
 
 function storedLang(): Lang {
   try {
@@ -24,7 +24,7 @@ export default function App() {
   const [lang, setLangState] = useState<Lang>(storedLang)
   const [user, setUser] = useState<User | null>(null)
   const [step, setStep] = useState<Step | null>(null)
-  // Came through "Join Wasel as a store": a fresh customer number may still apply.
+  // Came through "Join Nawsil as a store": a fresh customer number may still apply.
   const [joining, setJoining] = useState(false)
   const [checking, setChecking] = useState(Boolean(api.token))
 

@@ -1,4 +1,4 @@
-// Wasel API types and calls used by the vendor portal.
+// Nawsil API types and calls used by the vendor portal.
 
 export type Lang = 'ar' | 'ku' | 'en'
 export type Names = { ar: string; ku: string; en: string }
@@ -108,7 +108,7 @@ export interface StoreOffer {
   currency: string
   starts_at: string
   ends_at: string
-  /** Shown on the customer app's home banner (Wasel staff decide). */
+  /** Shown on the customer app's home banner (Nawsil staff decide). */
   is_banner: boolean
   /** Buy one, get one free: the menu item it's on. */
   product: number | null
@@ -164,7 +164,7 @@ export const CUISINES = ['popular', 'eastern', 'western', 'fast_food', 'sweets',
 export type Cuisine = (typeof CUISINES)[number]
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected'
 
-/** One of the owner's stores in any state: waiting for Wasel, approved or rejected. */
+/** One of the owner's stores in any state: waiting for Nawsil, approved or rejected. */
 export interface StoreApplication {
   id: number
   name: string
@@ -285,7 +285,7 @@ export class ApiError extends Error {
   }
 }
 
-const TOKEN_KEY = 'wasel_vendor_token'
+const TOKEN_KEY = 'nawsil_vendor_token'
 
 export function loadToken(): string | null {
   try {
@@ -373,7 +373,7 @@ export class Api {
   me = () => this.send<User>('GET', '/api/auth/me/')
   logout = () => this.send<null>('POST', '/api/auth/logout/')
 
-  // Joining Wasel: store applications and team invites
+  // Joining Nawsil: store applications and team invites
   applications = () => this.send<Applications>('GET', '/api/store-applications/')
   apply = (input: ApplicationInput) => this.send<StoreApplication>('POST', '/api/store-applications/', input)
   myInvites = () => this.send<Invite[]>('GET', '/api/store-invites/')
@@ -442,7 +442,7 @@ export class Api {
     const url = URL.createObjectURL(await response.blob())
     const link = document.createElement('a')
     link.href = url
-    link.download = `wasel-${statement.period_start}.csv`
+    link.download = `nawsil-${statement.period_start}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }

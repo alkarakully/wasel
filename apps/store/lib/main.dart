@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import 'print/printer.dart';
 import 'screens/home_screen.dart';
@@ -77,7 +77,7 @@ class StoreApp extends StatelessWidget {
       ],
       child: Consumer<StoreSession>(
         builder: (context, session, _) => MaterialApp(
-          title: 'Wasel Store',
+          title: 'Nawsil Store',
           debugShowCheckedModeBanner: false,
           // Kurdish uses Arabic script and right-to-left layout; Flutter's
           // own widget text falls back to Arabic, our strings stay Kurdish.
@@ -88,8 +88,8 @@ class StoreApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          theme: waselTheme(Brightness.light),
-          darkTheme: waselTheme(Brightness.dark),
+          theme: nawsilTheme(Brightness.light),
+          darkTheme: nawsilTheme(Brightness.dark),
           home: !session.loaded || (session.signedIn && session.invites == null)
               ? BrandSplash(caption: S.read(context).t('orders'))
               : !session.signedIn

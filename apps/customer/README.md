@@ -1,4 +1,4 @@
-# Wasel customer app (Flutter)
+# Nawsil customer app (Flutter)
 
 The customer app: phone login, stores near you, store menus, cart and checkout, and live order tracking on a map. Arabic, Kurdish (Sorani) and English, right-to-left where needed, light and dark.
 
@@ -20,7 +20,7 @@ The customer app: phone login, stores near you, store menus, cart and checkout, 
    flutter run --dart-define=API_URL=http://localhost:8000
    ```
 
-   If the backend runs on another port (for example `WASEL_WEB_PORT=8010`), use that port in `API_URL`. An Android emulator reaches your computer at `http://10.0.2.2:8000` instead.
+   If the backend runs on another port (for example `NAWSIL_WEB_PORT=8010`), use that port in `API_URL`. An Android emulator reaches your computer at `http://10.0.2.2:8000` instead.
 
 3. Log in with any Iraqi mobile number. In development the code is printed in the backend log:
 
@@ -49,7 +49,7 @@ xcrun simctl location booted set 33.3045,44.4214
 | `lib/state/` | Session with delivery location, and the cart |
 | `lib/screens/` | Home, store, product options, cart, tracking, order history |
 | `lib/strings.dart` | Customer text in Arabic, Kurdish and English |
-| `../wasel_core` | Shared API client, login screen, live socket, theme and shared text |
+| `../nawsil_core` | Shared API client, login screen, live socket, theme and shared text |
 
 ## Tests
 

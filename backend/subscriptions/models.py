@@ -2,13 +2,13 @@ from django.conf import settings
 from django.db import models
 
 
-class WaselPlusSubscription(models.Model):
+class NawsilPlusSubscription(models.Model):
     class Status(models.TextChoices):
         TRIAL = "trial", "Trial"
         ACTIVE = "active", "Active"
         EXPIRED = "expired", "Expired"
 
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="wasel_plus_subs")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="nawsil_plus_subs")
     trial_start_date = models.DateTimeField(null=True, blank=True)
     trial_end_date = models.DateTimeField(null=True, blank=True)
     renews_at = models.DateTimeField(null=True, blank=True)
@@ -19,4 +19,4 @@ class WaselPlusSubscription(models.Model):
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Wasel Plus for {self.user} ({self.status})"
+        return f"Nawsil Plus for {self.user} ({self.status})"

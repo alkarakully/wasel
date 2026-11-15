@@ -14,10 +14,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run as an unprivileged user; static files are collected into a shared volume.
-RUN useradd --system --uid 1001 --home /app wasel \
+RUN useradd --system --uid 1001 --home /app nawsil \
     && mkdir -p /app/staticfiles /app/media \
-    && chown wasel /app/staticfiles /app/media
-USER wasel
+    && chown nawsil /app/staticfiles /app/media
+USER nawsil
 
 EXPOSE 8000
 # Uvicorn serves HTTP and WebSockets (ASGI) with WEB_CONCURRENCY worker
@@ -26,4 +26,4 @@ EXPOSE 8000
 # --proxy-headers trusts nginx's X-Forwarded-For so logs and throttling see
 # the real client address. nginx keeps the access log. (Development keeps `runserver`.)
 ENV WEB_CONCURRENCY=8
-CMD ["sh", "-c", "exec uvicorn wasel.asgi:application --host 0.0.0.0 --port 8000 --workers \"$WEB_CONCURRENCY\" --proxy-headers --forwarded-allow-ips '*' --timeout-keep-alive 5 --no-server-header --no-access-log"]
+CMD ["sh", "-c", "exec uvicorn nawsil.asgi:application --host 0.0.0.0 --port 8000 --workers \"$WEB_CONCURRENCY\" --proxy-headers --forwarded-allow-ips '*' --timeout-keep-alive 5 --no-server-header --no-access-log"]

@@ -35,7 +35,7 @@ class Vendor(models.Model):
 
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="vendors")
     name = models.CharField(max_length=150)
-    # New stores wait for Wasel staff to approve them. Until then customers
+    # New stores wait for Nawsil staff to approve them. Until then customers
     # never see them and they can't take orders.
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
     rejection_reason = models.CharField(max_length=300, blank=True)

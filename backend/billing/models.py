@@ -7,9 +7,9 @@ from accounts.models import currency_field, money_field
 class Statement(models.Model):
     """
     One store's week, on its country's calendar (Saturday to Friday in Iraq,
-    Sunday to Saturday in Saudi Arabia, ...). Wasel collects every
+    Sunday to Saturday in Saudi Arabia, ...). Nawsil collects every
     payment (cash through captains, card and wallet in the app) and pays the
-    store its food sales minus the store's own discounts and Wasel's
+    store its food sales minus the store's own discounts and Nawsil's
     commission. Made after the week ends; staff mark it paid.
     """
 

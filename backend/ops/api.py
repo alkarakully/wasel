@@ -1,5 +1,5 @@
 """
-Platform operations for Wasel staff: today's numbers, live orders, stuck-order
+Platform operations for Nawsil staff: today's numbers, live orders, stuck-order
 alerts, captains on the map, stores, store applications and accounts. Staff sign in through the
 admin (session), so every endpoint here needs an active staff account.
 """
@@ -341,7 +341,7 @@ class ApplicationsView(StaffView):
                         "lng": v.location.x,
                         "delivery_radius_km": str(v.delivery_radius_km.normalize()),
                         "owner": {"id": v.owner_id, "name": v.owner.name, "phone": v.owner.phone},
-                        # A new branch of an owner Wasel already works with, or a newcomer.
+                        # A new branch of an owner Nawsil already works with, or a newcomer.
                         "new_branch": v.owner_approved_stores > 0,
                         "status": v.status,
                         "commission_rate": str(v.commission_rate.normalize()),

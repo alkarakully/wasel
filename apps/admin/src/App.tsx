@@ -19,7 +19,7 @@ import { StoresPage } from './pages/StoresPage'
 
 function savedLang(): Lang {
   try {
-    return localStorage.getItem('wasel-admin-lang') === 'en' ? 'en' : 'ar'
+    return localStorage.getItem('nawsil-admin-lang') === 'en' ? 'en' : 'ar'
   } catch {
     return 'ar'
   }
@@ -27,7 +27,7 @@ function savedLang(): Lang {
 
 function savedCountry() {
   try {
-    const code = localStorage.getItem('wasel-admin-country') ?? 'IQ'
+    const code = localStorage.getItem('nawsil-admin-country') ?? 'IQ'
     return REGIONS.some((r) => r.country === code) ? code : 'IQ'
   } catch {
     return 'IQ'
@@ -40,7 +40,7 @@ export default function App() {
   const setCountry = useCallback((code: string) => {
     setCountryState(code)
     try {
-      localStorage.setItem('wasel-admin-country', code)
+      localStorage.setItem('nawsil-admin-country', code)
     } catch {
       /* private mode */
     }
@@ -51,7 +51,7 @@ export default function App() {
   const setLang = useCallback((next: Lang) => {
     setLangState(next)
     try {
-      localStorage.setItem('wasel-admin-lang', next)
+      localStorage.setItem('nawsil-admin-lang', next)
     } catch {
       /* private mode */
     }
@@ -60,7 +60,7 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = lang
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr'
-    document.title = lang === 'ar' ? 'واصل | إدارة المنصة' : 'Wasel | Platform admin'
+    document.title = lang === 'ar' ? 'نوصل | إدارة المنصة' : 'Nawsil | Platform admin'
   }, [lang])
 
   useEffect(() => {

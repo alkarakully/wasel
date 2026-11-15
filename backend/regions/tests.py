@@ -1,4 +1,4 @@
-"""Wasel outside Iraq: phones from anywhere, and a Kuwaiti store in dinars with three decimals."""
+"""Nawsil outside Iraq: phones from anywhere, and a Kuwaiti store in dinars with three decimals."""
 
 from datetime import date, datetime, timedelta
 from decimal import Decimal
@@ -218,7 +218,7 @@ class KuwaitStoreTests(TestCase):
 
 class ConsoleCountryTests(TestCase):
     def setUp(self):
-        self.admin = create_staff("admin@wasel.iq", "Admin", StaffProfile.Role.ADMIN, "lapis-and-gold-2026")
+        self.admin = create_staff("admin@nawsil.com", "Admin", StaffProfile.Role.ADMIN, "lapis-and-gold-2026")
         self.client.force_login(self.admin.user)
         session = self.client.session
         session[VERIFIED] = self.admin.user_id

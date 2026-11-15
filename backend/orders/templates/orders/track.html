@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <link rel="icon" href="{% static 'wasel/favicon.svg' %}" type="image/svg+xml">
-  <title>واصل | تتبع الطلب</title>
+  <link rel="icon" href="{% static 'nawsil/favicon.svg' %}" type="image/svg+xml">
+  <title>نوصل | تتبع الطلب</title>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
   <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
-  <link rel="stylesheet" href="{% static 'wasel/tokens.css' %}">
+  <link rel="stylesheet" href="{% static 'nawsil/tokens.css' %}">
   <link rel="stylesheet" href="{% static 'orders/track.css' %}">
 </head>
 <body>
@@ -48,7 +48,7 @@
     </div>
   </section>
 
-  <script>window.WASEL_ORDER_ID = {{ order_id }};</script>
+  <script>window.NAWSIL_ORDER_ID = {{ order_id }};</script>
   {{ map_styles|json_script:"map-styles" }}
   <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   <script src="{% static 'orders/track.js' %}"></script>

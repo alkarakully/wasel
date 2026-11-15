@@ -227,6 +227,6 @@ def quote_to_dict(quote):
         "offer": quote.offer.pk if quote.offer else None,
         "tip": _money(quote.tip),
         "total_amount": _money(quote.total_amount),
-        "wasel_plus": quote.wasel_plus,
+        "nawsil_plus": quote.nawsil_plus,
         "distance_km": round(quote.distance_m / 1000, 2),
     }

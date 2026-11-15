@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../screens/store_screen.dart';
 
@@ -32,7 +32,7 @@ class StoreCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final meta = TextStyle(color: t.muted, fontSize: 13);
     final kind = store.type == 'restaurant'
         ? (store.cuisine.isEmpty ? '' : s.t(store.cuisine))
@@ -199,7 +199,7 @@ class _Meta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -217,7 +217,7 @@ class _OpenBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final color = open ? t.success : t.muted;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -248,7 +248,7 @@ class StoreSkeletons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     Widget bone(double w, double h, [double r = 6]) => Container(
       width: w,
       height: h,
@@ -308,7 +308,7 @@ class ListMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 40, 32, 32),
       child: Column(

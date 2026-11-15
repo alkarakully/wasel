@@ -42,7 +42,7 @@ export function PrintSlips({ order, storeName }: Props) {
     <div id="print-root" aria-hidden="true">
       <section className="slip">
         <header>
-          <span className="slip-brand">واصل</span>
+          <span className="slip-brand">نوصل</span>
           <span className="slip-kind">{t('kitchenTicket')}</span>
         </header>
         <p className="slip-store">{storeName}</p>
@@ -63,7 +63,7 @@ export function PrintSlips({ order, storeName }: Props) {
 
       <section className="slip">
         <header>
-          <span className="slip-brand">واصل</span>
+          <span className="slip-brand">نوصل</span>
           <span className="slip-kind">{t('packageSlip')}</span>
         </header>
         <p className="slip-number">#{order.id}</p>

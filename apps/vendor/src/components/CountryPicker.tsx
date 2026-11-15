@@ -5,7 +5,7 @@ import { COUNTRIES, country as countryInfo, flag, SHORT_LIST, type Country } fro
 import { useI18n } from '../lib/i18n'
 import { isRtl } from '../lib/strings'
 
-const KEY = 'wasel-portal-phone-country'
+const KEY = 'nawsil-portal-phone-country'
 
 /** The phone country last picked on this device (Iraq at first). */
 export function savedPhoneCountry() {

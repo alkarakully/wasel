@@ -1,5 +1,5 @@
 """
-Self-service onboarding: people apply to sell on Wasel and answer team invites.
+Self-service onboarding: people apply to sell on Nawsil and answer team invites.
 
   GET  /api/store-applications/                 your stores in every state, and whether you may apply
   POST /api/store-applications/                 apply with a store: your first one, or another branch
@@ -12,7 +12,7 @@ account; applying or accepting an invite turns a fresh customer account (no
 orders, no wallet history) into a store account. Accounts with a customer
 history, captains and staff can't double as store accounts.
 
-Stores start out pending; Wasel staff approve or reject them from /ops/.
+Stores start out pending; Nawsil staff approve or reject them from /ops/.
 """
 
 from decimal import Decimal
@@ -28,7 +28,7 @@ from rest_framework.views import APIView
 from accounts.models import User
 from regions.regions import CODES as REGION_CODES
 from regions.regions import region, where
-from subscriptions.models import WaselPlusSubscription
+from subscriptions.models import NawsilPlusSubscription
 
 from . import access
 from .models import StoreInvite, StoreMember, Vendor
@@ -55,9 +55,9 @@ def make_store_account(user, name=""):
     if user.role != User.Role.VENDOR:
         user.role = User.Role.VENDOR
         fields.append("role")
-        # The free Wasel Plus trial is for customers.
-        WaselPlusSubscription.objects.filter(user=user, status=WaselPlusSubscription.Status.TRIAL).update(
-            status=WaselPlusSubscription.Status.EXPIRED, trial_end_date=timezone.now()
+        # The free Nawsil Plus trial is for customers.
+        NawsilPlusSubscription.objects.filter(user=user, status=NawsilPlusSubscription.Status.TRIAL).update(
+            status=NawsilPlusSubscription.Status.EXPIRED, trial_end_date=timezone.now()
         )
     if name and not user.name:
         user.name = name
@@ -99,7 +99,7 @@ def apply_problem(user):
     return "application_pending" if pending else None
 
 
-OUTSIDE = "Wasel doesn't run in this area yet. Check the map spot."
+OUTSIDE = "Nawsil doesn't run in this area yet. Check the map spot."
 
 
 class ApplicationSerializer(serializers.Serializer):
@@ -136,7 +136,7 @@ class ApplicationSerializer(serializers.Serializer):
         # Only restaurants have a cuisine.
         if data["type"] != Vendor.Type.RESTAURANT:
             data["cuisine"] = ""
-        # The spot must be in a country Wasel runs in, so a slip of the map doesn't put the store abroad.
+        # The spot must be in a country Nawsil runs in, so a slip of the map doesn't put the store abroad.
         country = data.get("country") or where(data["latitude"], data["longitude"])
         if country is None or not region(country).contains(data["latitude"], data["longitude"]):
             raise serializers.ValidationError({"latitude": OUTSIDE})

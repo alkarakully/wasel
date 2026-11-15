@@ -164,7 +164,7 @@ class WalletTransaction(models.Model):
         PAYMENT = "payment", "Payment"
         REFUND = "refund", "Refund"
         CASHBACK = "cashback", "Cashback"
-        # Made by Wasel staff in the platform admin; the reason is in the audit log.
+        # Made by Nawsil staff in the platform admin; the reason is in the audit log.
         ADJUSTMENT = "adjustment", "Adjustment"
 
     user = models.ForeignKey(User, on_delete=models.PROTECT, related_name="wallet_transactions")

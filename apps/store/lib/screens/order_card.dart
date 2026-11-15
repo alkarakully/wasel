@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:wasel_core/wasel_core.dart';
+import 'package:nawsil_core/nawsil_core.dart';
 
 import '../print/printer.dart';
 import '../state/board.dart';
@@ -100,7 +100,7 @@ class _OrderCardState extends State<OrderCard>
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final order = widget.order;
     final fresh = order.status == 'received';
@@ -273,7 +273,7 @@ class _OrderCardState extends State<OrderCard>
     );
   }
 
-  List<Widget> _nextStep(S s, WaselTheme t, ColorScheme scheme) {
+  List<Widget> _nextStep(S s, NawsilTheme t, ColorScheme scheme) {
     final order = widget.order;
     switch (order.status) {
       case 'received':
@@ -417,7 +417,7 @@ class _PayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: ShapeDecoration(
@@ -471,7 +471,7 @@ class _RejectSheetState extends State<RejectSheet> {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
-    final t = WaselTheme.of(context);
+    final t = NawsilTheme.of(context);
     final scheme = Theme.of(context).colorScheme;
     final reason = _choice == 'other' ? _other.text.trim() : s.t(_choice);
 

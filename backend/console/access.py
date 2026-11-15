@@ -1,5 +1,5 @@
 """
-What each Wasel staff role may see and change in the platform admin.
+What each Nawsil staff role may see and change in the platform admin.
 
 Every console endpoint names its area; reading needs the role in READ,
 changing anything needs it in WRITE. The server enforces this; the admin app

@@ -1,5 +1,5 @@
 """
-Store owners sign themselves up, Wasel staff approve or reject the store,
+Store owners sign themselves up, Nawsil staff approve or reject the store,
 approved owners add branches, and team members join by accepting invites.
 """
 
@@ -11,8 +11,8 @@ from rest_framework.test import APIClient
 
 from accounts.models import User
 from orders.models import Order
-from subscriptions.models import WaselPlusSubscription
-from subscriptions.services import start_wasel_plus_trial
+from subscriptions.models import NawsilPlusSubscription
+from subscriptions.services import start_nawsil_plus_trial
 
 from .models import Product, StoreInvite, StoreMember, Vendor
 
@@ -37,9 +37,9 @@ def client_for(user):
 
 
 def new_number(phone="+9647800000501"):
-    """What verifying a login code makes for a number Wasel hasn't seen."""
+    """What verifying a login code makes for a number Nawsil hasn't seen."""
     user = User.objects.create_user(phone)
-    start_wasel_plus_trial(user)
+    start_nawsil_plus_trial(user)
     return user
 
 
@@ -57,7 +57,7 @@ class ApplyTests(TestCase):
         user.refresh_from_db()
         self.assertEqual((user.role, user.name), (User.Role.VENDOR, "Hassan Ali"))
         # The free trial was for customers.
-        self.assertFalse(WaselPlusSubscription.objects.filter(user=user, status="trial").exists())
+        self.assertFalse(NawsilPlusSubscription.objects.filter(user=user, status="trial").exists())
 
         store = Vendor.objects.get(owner=user)
         self.assertEqual(store.status, Vendor.Status.PENDING)

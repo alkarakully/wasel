@@ -9,7 +9,7 @@ from .regions import CODES, as_api, region
 class CountriesView(APIView):
     """
     GET: every country for phone pickers (Iraq first, then the Gulf short list,
-    then A–Z), and the countries Wasel runs stores in with their currency,
+    then A–Z), and the countries Nawsil runs stores in with their currency,
     time zone, map centre and tip choices.
     """
 

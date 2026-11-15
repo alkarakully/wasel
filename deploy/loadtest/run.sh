@@ -13,9 +13,9 @@ mkdir -p "$OUT"
   while true; do
     date +%T >> "$OUT/stats-$RUN.txt"
     docker stats --no-stream --format '{{.Name}} {{.CPUPerc}} {{.MemUsage}}' \
-      wasel-loadtest-web-1 wasel-loadtest-db-1 wasel-loadtest-redis-1 wasel-loadtest-worker-1 >> "$OUT/stats-$RUN.txt"
-    docker exec wasel-loadtest-db-1 psql -U wasel -d wasel -tAc \
-      "select 'db connections ' || count(*) from pg_stat_activity where datname='wasel'" >> "$OUT/stats-$RUN.txt" 2>/dev/null
+      nawsil-loadtest-web-1 nawsil-loadtest-db-1 nawsil-loadtest-redis-1 nawsil-loadtest-worker-1 >> "$OUT/stats-$RUN.txt"
+    docker exec nawsil-loadtest-db-1 psql -U nawsil -d nawsil -tAc \
+      "select 'db connections ' || count(*) from pg_stat_activity where datname='nawsil'" >> "$OUT/stats-$RUN.txt" 2>/dev/null
     sleep 5
   done
 ) &
